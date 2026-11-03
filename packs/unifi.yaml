@@ -1,0 +1,213 @@
+pack:
+  id: unifi
+  name: "UniFi (switch et point d'accès)"
+  version: 1.0.0
+  category: "Réseau"
+  description: "Diagnostic d'équipements UniFi en SSH: informations et état (info, mca-dump), journaux, réseau, et selon le modèle les commandes de switch (swctrl: ports, PoE, VLAN, table MAC) ou de point d'accès Wi-Fi (iwconfig, wlanconfig). Écrit d'après la documentation et les usages courants du shell UniFi, sans test sur du matériel: les commandes absentes d'un modèle ou d'un firmware échouent sans effet (à valider chez vous). Ne lit jamais /tmp/system.cfg ni /etc/persistent (clés Wi-Fi, mot de passe SSH, authkey). Compte SSH: celui défini dans les paramètres d'appareil du contrôleur UniFi."
+
+commands:
+  - id: unifi.info
+    name: "Informations de l'appareil"
+    description: "Affiche modèle, version du firmware, adresse MAC et IP, nom, uptime et état vis-à-vis du contrôleur (Connected, Unreachable, Adopting…). Première commande pour tout appareil UniFi."
+    risk: read
+    template: "info"
+    params: {}
+
+  - id: unifi.version
+    name: "Version du firmware"
+    description: "Affiche la version du firmware installée."
+    risk: read
+    template: "cat /etc/version"
+    params: {}
+
+  - id: unifi.board
+    name: "Matériel"
+    description: "Affiche le modèle et les identifiants matériels de la carte (/proc/ubnthal/board)."
+    risk: read
+    template: "cat /proc/ubnthal/board"
+    params: {}
+
+  - id: unifi.uptime
+    name: "Uptime et charge"
+    description: "Affiche depuis combien de temps l'appareil tourne et sa charge moyenne. Un uptime court signale un redémarrage récent."
+    risk: read
+    template: "uptime"
+    params: {}
+
+  - id: unifi.memory
+    name: "Mémoire"
+    description: "Affiche l'utilisation de la mémoire."
+    risk: read
+    template: "free"
+    params: {}
+
+  - id: unifi.disk_usage
+    name: "Occupation des partitions"
+    description: "Affiche l'occupation des partitions de l'appareil. Une partition de journaux ou /tmp pleine peut déstabiliser l'appareil."
+    risk: read
+    template: "df -h"
+    params: {}
+
+  - id: unifi.top
+    name: "Processus actifs"
+    description: "Photographie des processus les plus gourmands (une itération de top)."
+    risk: read
+    template: "top -b -n 1"
+    max_output_kb: 32
+    params: {}
+
+  - id: unifi.processes
+    name: "Liste des processus"
+    description: "Liste les processus en cours d'exécution."
+    risk: read
+    template: "ps"
+    max_output_kb: 32
+    params: {}
+
+  - id: unifi.mca_dump
+    name: "État détaillé (JSON)"
+    description: "Affiche l'état complet que l'appareil remonte au contrôleur, au format JSON: ports et PoE pour un switch, radios et clients pour un point d'accès, versions, uptime, statistiques. Sortie volumineuse, à lire quand `info` ne suffit pas."
+    risk: read
+    template: "mca-dump"
+    timeout_s: 60
+    max_output_kb: 512
+    params: {}
+
+  - id: unifi.interfaces
+    name: "Interfaces réseau"
+    description: "Affiche les interfaces réseau de l'appareil avec leurs adresses et compteurs."
+    risk: read
+    template: "ifconfig"
+    params: {}
+
+  - id: unifi.routes
+    name: "Table de routage"
+    description: "Affiche la table de routage de l'appareil."
+    risk: read
+    template: "route -n"
+    params: {}
+
+  - id: unifi.arp
+    name: "Table ARP"
+    description: "Affiche les voisins IPv4 connus de l'appareil."
+    risk: read
+    template: "cat /proc/net/arp"
+    params: {}
+
+  - id: unifi.bridges
+    name: "Ponts réseau"
+    description: "Affiche les ponts (bridges) et les interfaces qu'ils contiennent: ports, VLAN, SSID du point d'accès."
+    risk: read
+    template: "brctl show"
+    params: {}
+
+  - id: unifi.ping
+    name: "Ping depuis l'appareil"
+    description: "Envoie quelques pings depuis l'appareil vers une adresse (contrôleur, passerelle, DNS) pour tester sa connectivité."
+    risk: read
+    template: "ping -c {{count}} {{host}}"
+    params:
+      count: {"type": "int", "min": 1, "max": 10, "description": "Nombre de paquets", "default": 4}
+      host: {"type": "identifier", "description": "Nom d'hôte ou adresse IPv4", "max_length": 253}
+
+  - id: unifi.log_messages
+    name: "Journal système"
+    description: "Affiche les dernières lignes du journal de l'appareil (/var/log/messages): adoption, connexion au contrôleur, erreurs de lien, de radio ou de PoE."
+    risk: read
+    template: "tail -n {{lines}} /var/log/messages"
+    max_output_kb: 128
+    params:
+      lines: {"type": "int", "min": 1, "max": 1000, "description": "Nombre de lignes à afficher", "default": 100}
+
+  - id: unifi.dmesg
+    name: "Messages du noyau"
+    description: "Affiche les messages du noyau (pilotes, liens, erreurs matérielles)."
+    risk: read
+    template: "dmesg"
+    max_output_kb: 128
+    params: {}
+
+  - id: unifi.sw_ports
+    name: "Switch: état des ports"
+    description: "Affiche l'état de chaque port du switch: lien, vitesse, duplex, PoE, VLAN. À utiliser pour savoir si un port est monté et à quelle vitesse."
+    risk: read
+    template: "swctrl port show"
+    max_output_kb: 128
+    params: {}
+
+  - id: unifi.sw_counters
+    name: "Switch: compteurs des ports"
+    description: "Affiche les compteurs de chaque port (paquets, octets, erreurs, pertes). Des erreurs croissantes signalent un câble ou un port défectueux. La commande peut ne pas exister sur tous les firmwares."
+    risk: read
+    template: "swctrl port show counters"
+    max_output_kb: 128
+    params: {}
+
+  - id: unifi.sw_poe
+    name: "Switch: état PoE"
+    description: "Affiche l'alimentation PoE par port: mode, puissance délivrée, tension, courant. Permet de voir un appareil qui ne s'alimente pas ou un budget PoE saturé."
+    risk: read
+    template: "swctrl poe show"
+    params: {}
+
+  - id: unifi.sw_vlans
+    name: "Switch: VLAN"
+    description: "Affiche les VLAN configurés et leurs ports (étiquetés ou non)."
+    risk: read
+    template: "swctrl vlan show"
+    params: {}
+
+  - id: unifi.sw_mac_table
+    name: "Switch: table MAC"
+    description: "Affiche la table d'adresses MAC apprises par port. Permet de retrouver sur quel port se trouve un appareil."
+    risk: read
+    template: "swctrl mac show"
+    max_output_kb: 256
+    params: {}
+
+  - id: unifi.sw_poe_restart
+    name: "Switch: redémarrer le PoE d'un port"
+    description: "Coupe puis rétablit l'alimentation PoE d'un port: l'appareil branché (caméra, point d'accès, téléphone) redémarre. Coupure de quelques secondes pour cet appareil seulement."
+    risk: write
+    template: "swctrl poe restart id {{port}}"
+    params:
+      port: {"type": "int", "min": 1, "max": 52, "description": "Numéro du port du switch"}
+
+  - id: unifi.ap_radios
+    name: "AP: radios Wi-Fi"
+    description: "Affiche l'état de chaque interface radio (SSID, fréquence, canal, puissance, mode)."
+    risk: read
+    template: "iwconfig"
+    params: {}
+
+  - id: unifi.ap_radio
+    name: "AP: détail d'une radio"
+    description: "Affiche l'état d'une interface Wi-Fi précise (ex. ath0 pour le 2,4 GHz, ath1 pour le 5 GHz; les noms varient selon les modèles)."
+    risk: read
+    template: "iwconfig {{interface}}"
+    params:
+      interface: {"type": "identifier", "description": "Nom de l'interface Wi-Fi (ex. ath0, ath1, wifi0)", "max_length": 16}
+
+  - id: unifi.ap_clients
+    name: "AP: clients Wi-Fi d'une radio"
+    description: "Liste les clients associés à une interface Wi-Fi: adresse MAC, signal, débit, durée de connexion. Permet de voir qui est connecté et avec quelle qualité de signal."
+    risk: read
+    template: "wlanconfig {{interface}} list sta"
+    max_output_kb: 128
+    params:
+      interface: {"type": "identifier", "description": "Nom de l'interface Wi-Fi (ex. ath0, ath1)", "max_length": 16}
+
+  - id: unifi.set_inform
+    name: "Pointer vers un contrôleur"
+    description: "Change l'URL du contrôleur UniFi auquel l'appareil se rapporte. L'appareil quitte son contrôleur actuel jusqu'à nouvelle adoption: à n'utiliser que pour migrer ou réadopter un appareil. Validation humaine toujours requise."
+    risk: destructive
+    template: "mca-cli-op set-inform {{url}}"
+    params:
+      url: {"type": "regex", "pattern": "http://[A-Za-z0-9.-]{1,253}:\\d{1,5}/inform", "description": "URL d'inform du contrôleur (ex. http://192.168.1.10:8080/inform)", "max_length": 300}
+
+  - id: unifi.reboot
+    name: "Redémarrer l'appareil"
+    description: "Redémarre l'appareil: coupure complète (réseau, PoE, Wi-Fi) pendant 1 à 3 minutes. Validation humaine toujours requise."
+    risk: destructive
+    template: "reboot"
+    params: {}

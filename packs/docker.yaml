@@ -1,0 +1,75 @@
+pack:
+  id: docker
+  name: Docker
+  version: 1.0.0
+  category: Conteneurs
+  description: Diagnostic et pilotage des conteneurs Docker.
+
+commands:
+  - id: docker.ps
+    name: Conteneurs
+    description: Liste tous les conteneurs (y compris arrêtés) avec leur image, leur état et leurs ports.
+    risk: read
+    template: docker ps -a
+    params: {}
+
+  - id: docker.stats
+    name: Consommation des conteneurs
+    description: Affiche un instantané de la consommation CPU, mémoire, réseau et disque de chaque conteneur en cours d'exécution.
+    risk: read
+    template: docker stats --no-stream
+    params: {}
+
+  - id: docker.logs
+    name: Logs d'un conteneur
+    description: Affiche les dernières lignes de log d'un conteneur, avec horodatage.
+    risk: read
+    template: docker logs --timestamps --tail {{lines}} {{container}}
+    params:
+      container:
+        type: identifier
+        description: Nom ou identifiant du conteneur (voir docker.ps)
+      lines:
+        type: int
+        min: 1
+        max: 1000
+        default: 100
+        description: Nombre de lignes à afficher
+
+  - id: docker.inspect
+    name: Détails d'un conteneur
+    description: Affiche la configuration complète d'un conteneur au format JSON (image, variables, montages, réseau, état, healthcheck). Peut contenir des variables d'environnement sensibles.
+    risk: read
+    template: docker inspect {{container}}
+    max_output_kb: 128
+    params:
+      container:
+        type: identifier
+        description: Nom ou identifiant du conteneur
+
+  - id: docker.disk_usage
+    name: Espace disque Docker
+    description: Affiche l'espace occupé par les images, conteneurs, volumes et le cache de build.
+    risk: read
+    template: docker system df
+    params: {}
+
+  - id: docker.restart
+    name: Redémarrer un conteneur
+    description: Redémarre un conteneur. Provoque une courte coupure du service qu'il porte.
+    risk: write
+    template: docker restart {{container}}
+    params:
+      container:
+        type: identifier
+        description: Nom ou identifiant du conteneur
+
+  - id: docker.stop
+    name: Arrêter un conteneur
+    description: Arrête un conteneur. Il reste arrêté jusqu'à son redémarrage (sauf politique de redémarrage). Validation humaine toujours requise.
+    risk: destructive
+    template: docker stop {{container}}
+    params:
+      container:
+        type: identifier
+        description: Nom ou identifiant du conteneur

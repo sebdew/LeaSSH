@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rapport d'audit LeaSSH — {{day .Snapshot.Period.From}} au {{day .Snapshot.Period.To}}</title>
+<style>
+:root{color-scheme:light;--ink:#14181f;--muted:#5b6472;--line:#d9dde3;--soft:#f3f4f6;--accent:#4f46e5;--high:#b42318;--medium:#9a5b00;--low:#375a9e;--ok:#067647}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:980px;margin:0 auto;padding:32px 28px 64px}
+h1{font-size:28px;margin:0 0 4px}h2{font-size:20px;margin:36px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--accent)}h3{font-size:15px;margin:20px 0 6px}
+p{margin:6px 0}.muted{color:var(--muted)}small{color:var(--muted)}code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;word-break:break-all}
+.cover{border:1px solid var(--line);border-radius:10px;padding:24px;background:var(--soft)}
+.cover dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:16px 0 0}.cover dt{color:var(--muted)}.cover dd{margin:0}
+.note{border:1px solid var(--line);border-left:4px solid var(--medium);border-radius:6px;padding:10px 14px;margin:16px 0;background:#fffaf0}
+.ai{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:6px;padding:10px 14px;margin:16px 0;background:#f7f7ff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}
+.tile{border:1px solid var(--line);border-radius:8px;padding:10px 12px}.tile b{display:block;font-size:22px}.tile span{color:var(--muted);font-size:12px}
+table{width:100%;border-collapse:collapse;margin:8px 0 14px;font-size:13px}th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}th{background:var(--soft);font-weight:600}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.sev{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:600;border:1px solid currentColor;white-space:nowrap}
+.sev.high{color:var(--high)}.sev.medium{color:var(--medium)}.sev.low{color:var(--low)}.sev.info,.sev.elements{color:var(--muted)}.sev.points{color:var(--high)}.sev.mineurs{color:var(--low)}.ok{color:var(--ok);font-weight:600}.bad{color:var(--high);font-weight:600}
+.finding{border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:10px 0;break-inside:avoid}.finding h3{margin:0 0 4px}
+ul{margin:4px 0 4px 20px;padding:0}
+footer{margin-top:40px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+@media print{main{max-width:none;padding:0}h2{break-after:avoid}table,.finding{break-inside:avoid}.cover{break-after:page}a{color:inherit;text-decoration:none}body{font-size:11.5px}}
+@page{size:A4;margin:16mm 14mm}
+</style>
+</head>
+<body>
+<main>
+<section class="cover">
+<h1>Rapport d'audit — accès SSH des agents</h1>
+<p class="muted">LeaSSH {{.Snapshot.LeashVersion}} · aide à l'audit pour un auditeur sécurité (ISO 27001, HDS)</p>
+<dl>
+<dt>Période auditée</dt><dd>{{day .Snapshot.Period.From}} au {{day .Snapshot.Period.To}} inclus ({{.Snapshot.Period.Days}} jour(s), UTC)</dd>
+<dt>Généré le</dt><dd>{{ts .Snapshot.GeneratedAt}}{{if .Report.CreatedByName}} par {{.Report.CreatedByName}}{{end}}</dd>
+<dt>Identifiant</dt><dd class="mono">{{.Report.ID}}</dd>
+<dt>Empreinte SHA-256 des faits</dt><dd class="mono">{{.Report.SHA256}}</dd>
+</dl>
+</section>
+
+<div class="note"><b>À lire d'abord.</b> Ce document est une <b>aide à l'audit</b>. Il n'est ni une certification, ni une attestation de conformité à l'ISO 27001 ou au référentiel HDS. Les <b>faits</b> ci-dessous sont calculés par des règles fixes à partir de la base de LeaSSH, sans intervention d'une IA. La correspondance aux contrôles est indicative: c'est l'auditeur qui apprécie.</div>
+
+<h2>1. Synthèse chiffrée</h2>
+<div class="grid">
+<div class="tile"><b>{{.Snapshot.Activity.Requests}}</b><span>demandes d'exécution</span></div>
+<div class="tile"><b>{{.Snapshot.Activity.Succeeded}}</b><span>réussies ({{pct .Snapshot.Activity.Succeeded .Snapshot.Activity.Requests}})</span></div>
+<div class="tile"><b>{{.Snapshot.Activity.Denied}}</b><span>refusées ({{pct .Snapshot.Activity.Denied .Snapshot.Activity.Requests}})</span></div>
+<div class="tile"><b>{{.Snapshot.Activity.Failed}}</b><span>en échec</span></div>
+<div class="tile"><b>{{.Snapshot.Activity.Approvals.Approved}}</b><span>décisions humaines d'approbation</span></div>
+<div class="tile"><b>{{.Snapshot.Activity.DestructiveTot}}</b><span>demandes destructives</span></div>
+<div class="tile"><b>{{.High}} / {{.Medium}} / {{.Low}}</b><span>constats élevés / moyens / faibles</span></div>
+<div class="tile"><b class="{{if and .Snapshot.Integrity.Executions.Verified.OK .Snapshot.Integrity.Admin.Verified.OK}}ok{{else}}bad{{end}}">{{if and .Snapshot.Integrity.Executions.Verified.OK .Snapshot.Integrity.Admin.Verified.OK}}intègres{{else}}ROMPUE{{end}}</b><span>chaînes d'intégrité des journaux</span></div>
+</div>
+
+{{if .Summary}}
+<div class="ai">
+<p><b>Synthèse rédigée par une IA — à relire.</b> <small>Modèle : {{.SummaryModel}} · {{ts .SummaryAt}}. Ce texte ne fait pas partie des faits ni de l'empreinte; il a été écrit à partir de chiffres agrégés (aucun nom, aucune sortie de commande) et peut contenir des erreurs.</small></p>
+{{range paras .Summary}}<p>{{.}}</p>{{end}}
+</div>
+{{end}}
+
+<h2>2. Constats automatiques</h2>
+<p class="muted">Règles fixes appliquées à l'état de l'instance et à la période. Les seuils (90 jours d'inactivité, 365 jours de rétention) sont indicatifs.</p>
+{{if .Snapshot.Findings}}
+{{range .Snapshot.Findings}}
+<div class="finding">
+<h3><span class="sev {{.Severity}}">{{label (printf "%s" .Severity)}}</span> {{.Title}}{{if gt .Count 1}} <small>({{.Count}})</small>{{end}}</h3>
+<p>{{.Detail}}</p>
+{{if .Items}}<p><small>Concerné(s) : {{join .Items}}</small></p>{{end}}
+<p><small>Contrôles liés : {{join .Controls}}</small></p>
+</div>
+{{end}}
+{{else}}<p class="ok">Aucun constat automatique.</p>{{end}}
+
+<h2>3. Correspondance indicative aux contrôles</h2>
+<p class="muted">ISO/IEC 27001:2022, annexe A, et thèmes du référentiel HDS (sans numérotation de clauses: le référentiel HDS s'appuie sur l'ISO 27001 et ajoute des exigences propres à l'hébergement de données de santé). « Éléments de preuve » signifie que le rapport contient des éléments utiles, pas que le contrôle est satisfait.</p>
+<table>
+<thead><tr><th>Référentiel</th><th>Contrôle</th><th>Éléments fournis par LeaSSH</th><th>Statut</th></tr></thead>
+<tbody>
+{{range .Snapshot.Controls}}
+<tr><td>{{.Framework}}</td><td>{{if .ID}}<b>{{.ID}}</b> {{end}}{{.Title}}</td>
+<td><ul>{{range .Evidence}}<li>{{.}}</li>{{end}}</ul>{{if .Findings}}<small>Constats : {{join .Findings}}</small>{{end}}</td>
+<td><span class="sev {{.Status}}">{{label .Status}}</span></td></tr>
+{{end}}
+</tbody></table>
+
+<h2>4. Périmètre (état au {{ts .Snapshot.GeneratedAt}})</h2>
+<h3>Serveurs ({{.Snapshot.Scope.Servers.Total}})</h3>
+<p>{{.Snapshot.Scope.Servers.Enabled}} actif(s) · {{.Snapshot.Scope.Servers.Pinned}} clé(s) d'hôte épinglée(s) · {{.Snapshot.Scope.Servers.Unknown}} sans clé validée · {{.Snapshot.Scope.Servers.Mismatch}} divergente(s) · {{.Snapshot.Scope.Servers.Synced}} synchronisé(s) depuis une source.</p>
+<table><thead><tr><th>Serveur</th><th>Identité SSH</th><th>Clé d'hôte</th><th>Actif</th><th>Synchronisé</th></tr></thead><tbody>
+{{range .Snapshot.Scope.Servers.Items}}<tr><td><code>{{.Slug}}</code><br><small>{{.Name}}</small></td><td>{{.Identity}} <small>({{.AuthMethod}})</small></td><td>{{label .HostKey}}</td><td>{{yesno .Enabled}}</td><td>{{yesno .Synced}}</td></tr>{{end}}
+</tbody></table>
+
+<h3>Groupes</h3>
+<table><thead><tr><th>Groupes de serveurs</th><th class="num">Membres</th><th>Groupes de commandes</th><th class="num">Membres</th></tr></thead><tbody>
+<tr><td>{{range .Snapshot.Scope.Groups.ServerGroups}}{{.Name}}{{if .Synced}} <small>(synchronisé)</small>{{end}}<br>{{end}}</td><td class="num">{{range .Snapshot.Scope.Groups.ServerGroups}}{{.Members}}<br>{{end}}</td>
+<td>{{range .Snapshot.Scope.Groups.CommandGroups}}{{.Name}}<br>{{end}}</td><td class="num">{{range .Snapshot.Scope.Groups.CommandGroups}}{{.Members}}<br>{{end}}</td></tr>
+</tbody></table>
+
+<h3>Catalogue de commandes ({{.Snapshot.Scope.Commands.Total}})</h3>
+<p>Par risque : {{range $k, $v := .Snapshot.Scope.Commands.ByRisk}}{{label $k}} {{$v}} · {{end}} Par origine : {{range $k, $v := .Snapshot.Scope.Commands.BySource}}{{label $k}} {{$v}} · {{end}} Par état : {{range $k, $v := .Snapshot.Scope.Commands.ByStatus}}{{label $k}} {{$v}} · {{end}}</p>
+<p class="muted">Commandes d'écriture et destructives (les destructives exigent toujours une validation humaine):</p>
+<table><thead><tr><th>Commande</th><th>Risque</th><th>Origine</th><th>État</th><th>Version</th><th>Approuvée par</th></tr></thead><tbody>
+{{range .Snapshot.Scope.Commands.Privileged}}<tr><td><code>{{.Slug}}</code></td><td>{{label .Risk}}</td><td>{{label .Source}}</td><td>{{label .Status}}</td><td class="num">{{.Version}}</td><td>{{if .ApprovedBy}}{{.ApprovedBy}} <small>{{ts .ApprovedAt}}</small>{{else}}—{{end}}</td></tr>{{end}}
+</tbody></table>
+
+<h3>Clés MCP ({{.Snapshot.Scope.Keys.Total}})</h3>
+<p>{{.Snapshot.Scope.Keys.Active}} active(s) · {{.Snapshot.Scope.Keys.Disabled}} désactivée(s) ou révoquée(s) · {{.Snapshot.Scope.Keys.Expired}} expirée(s) · {{.Snapshot.Scope.Keys.NoExpiry}} active(s) sans expiration · {{.Snapshot.Scope.Keys.Unused}} active(s) inutilisée(s) depuis plus de 90 jours.</p>
+<table><thead><tr><th>Clé</th><th>État</th><th>Expiration</th><th>Dernière utilisation</th><th class="num">Appels</th><th>Règles</th></tr></thead><tbody>
+{{range .Snapshot.Scope.Keys.Items}}<tr><td>{{.Name}}<br><small class="mono">{{.Prefix}}…</small>{{if .CanPropose}}<br><small>peut proposer des commandes</small>{{end}}</td><td>{{label .State}}</td><td>{{if .ExpiresAt}}{{ts .ExpiresAt}}{{else}}<b>aucune</b>{{end}}</td><td>{{ts .LastUsedAt}}</td><td class="num">{{.UseCount}}</td><td>{{join .Rules}}</td></tr>{{end}}
+</tbody></table>
+
+<h3>Règles d'accès ({{.Snapshot.Scope.Rules.Total}})</h3>
+<p>{{.Snapshot.Scope.Rules.ReadOnly}} en lecture seule · {{.Snapshot.Scope.Rules.ReadWrite}} en lecture/écriture dont {{.Snapshot.Scope.Rules.RWNoApproval}} active(s) sans validation humaine.</p>
+<table><thead><tr><th>Règle</th><th>Profil</th><th>Validation des écritures</th><th>Groupes de serveurs</th><th>Groupes de commandes</th><th class="num">Clés</th><th>Active</th></tr></thead><tbody>
+{{range .Snapshot.Scope.Rules.Items}}<tr><td>{{.Name}}</td><td>{{.Profile}}</td><td>{{if eq .Profile "RW"}}{{if .Approval}}requise{{else}}<b>non requise</b>{{end}}{{else}}—{{end}}</td><td>{{join .ServerGroups}}</td><td>{{join .CommandGroups}}</td><td class="num">{{.Keys}}</td><td>{{yesno .Enabled}}</td></tr>{{end}}
+</tbody></table>
+
+<h3>Comptes d'administration ({{.Snapshot.Scope.Users.Total}})</h3>
+<table><thead><tr><th>Compte</th><th>Rôle</th><th>Actif</th><th>Créé le</th><th>Dernière connexion</th></tr></thead><tbody>
+{{range .Snapshot.Scope.Users.Items}}<tr><td>{{.Username}}</td><td>{{label .Role}}</td><td>{{if .Disabled}}non{{else}}oui{{end}}</td><td>{{ts .CreatedAt}}</td><td>{{ts .LastLoginAt}}</td></tr>{{end}}
+</tbody></table>
+<p>Identités SSH : {{.Snapshot.Scope.Identities.Total}} ({{.Snapshot.Scope.Identities.KeyAuth}} par clé, {{.Snapshot.Scope.Identities.Password}} par mot de passe). Aucun secret n'est reproduit dans ce rapport.</p>
+{{if .Snapshot.Scope.Provisioners}}
+<h3>Connecteurs de provisioning</h3>
+<table><thead><tr><th>Connecteur</th><th>Type</th><th>Actif</th><th>Dernière synchro</th><th class="num">Serveurs</th><th>Règles par défaut</th></tr></thead><tbody>
+{{range .Snapshot.Scope.Provisioners}}<tr><td>{{.Name}}</td><td>{{.Type}}</td><td>{{yesno .Enabled}}</td><td>{{if .LastSyncAt}}{{ts .LastSyncAt}} ({{.LastStatus}}){{else}}—{{end}}</td><td class="num">{{.Servers}}</td><td>{{join .Rules}}</td></tr>{{end}}
+</tbody></table>
+{{end}}
+<h3>Configuration</h3>
+<table><tbody>
+<tr><th>Rétention des journaux</th><td>{{.Snapshot.Config.RetentionDays}} jours</td></tr>
+<tr><th>Durée de validité d'une demande de validation</th><td>{{.Snapshot.Config.ApprovalTTLMin}} minutes</td></tr>
+<tr><th>Durée d'une session d'administration</th><td>{{.Snapshot.Config.SessionTTLHours}} heures</td></tr>
+<tr><th>URL publique</th><td>{{.Snapshot.Config.BaseURL}} (HTTPS : {{yesno .Snapshot.Config.BaseURLHTTPS}})</td></tr>
+<tr><th>Webhook d'alerte</th><td>{{if .Snapshot.Config.WebhookEnabled}}activé{{else}}non configuré{{end}}</td></tr>
+</tbody></table>
+
+<h2>5. Activité du {{day .Snapshot.Period.From}} au {{day .Snapshot.Period.To}}</h2>
+<p>{{.Snapshot.Activity.Requests}} demande(s) d'exécution · {{.Snapshot.Activity.DistinctKeys}} clé(s) distincte(s) · {{.Snapshot.Activity.DistinctServers}} serveur(s) distinct(s).</p>
+<table><thead><tr><th>Issue</th><th class="num">Demandes</th><th>Risque</th><th class="num">Demandes</th></tr></thead><tbody>
+<tr><td>{{range .Snapshot.Activity.ByStatus}}{{label .Name}}<br>{{end}}</td><td class="num">{{range .Snapshot.Activity.ByStatus}}{{.Count}}<br>{{end}}</td><td>{{range .Snapshot.Activity.ByRisk}}{{label .Name}}<br>{{end}}</td><td class="num">{{range .Snapshot.Activity.ByRisk}}{{.Count}}<br>{{end}}</td></tr>
+</tbody></table>
+{{if .Snapshot.Activity.DenialReasons}}<h3>Refus par cause</h3>
+<table><tbody>{{range .Snapshot.Activity.DenialReasons}}<tr><td>{{label .Name}}</td><td class="num">{{.Count}}</td></tr>{{end}}</tbody></table>{{end}}
+{{if .Snapshot.Activity.ByKey}}<h3>Demandes par clé</h3>
+<table><tbody>{{range .Snapshot.Activity.ByKey}}<tr><td>{{.Name}}</td><td class="num">{{.Count}}</td></tr>{{end}}</tbody></table>{{end}}
+{{if .Snapshot.Activity.FailedByCommand}}<h3>Commandes les plus en échec</h3>
+<table><tbody>{{range .Snapshot.Activity.FailedByCommand}}<tr><td><code>{{.Name}}</code></td><td class="num">{{.Count}}</td></tr>{{end}}</tbody></table>{{end}}
+
+<h3>Validations humaines</h3>
+<p>{{.Snapshot.Activity.Approvals.Approved}} approbation(s) · {{.Snapshot.Activity.Approvals.Rejected}} rejet(s) · {{.Snapshot.Activity.Approvals.Expired}} demande(s) expirée(s) sans décision · délai moyen de décision {{dur .Snapshot.Activity.Approvals.AvgDelaySec}}, maximal {{dur .Snapshot.Activity.Approvals.MaxDelaySec}} (une demande expire après {{.Snapshot.Activity.Approvals.ApprovalTTLMin}} minutes).</p>
+{{if .Snapshot.Activity.Approvals.Deciders}}<table><thead><tr><th>Décideur</th><th class="num">Décisions</th></tr></thead><tbody>{{range .Snapshot.Activity.Approvals.Deciders}}<tr><td>{{.Name}}</td><td class="num">{{.Count}}</td></tr>{{end}}</tbody></table>{{end}}
+<p>Commandes d'écriture menées à terme sans validation humaine (règle sans validation) : <b>{{.Snapshot.Activity.WriteNoApproval}}</b>.</p>
+
+<h3>Demandes destructives ({{.Snapshot.Activity.DestructiveTot}})</h3>
+{{if .Snapshot.Activity.Destructive}}
+<table><thead><tr><th>Date</th><th>Clé</th><th>Serveur</th><th>Commande exécutée</th><th>Issue</th><th>Motif</th><th>Décideur</th></tr></thead><tbody>
+{{range .Snapshot.Activity.Destructive}}<tr><td>{{ts .At}}</td><td>{{.Key}}</td><td><code>{{.Server}}</code></td><td><code>{{.Command}}</code>{{if .Rendered}}<br><small class="mono">{{.Rendered}}</small>{{end}}</td><td>{{label .Status}}</td><td>{{.Reason}}</td><td>{{if .DecidedBy}}{{.DecidedBy}}{{if gt .ApprovalSec 0}}<br><small>après {{dur .ApprovalSec}}</small>{{end}}{{else}}—{{end}}</td></tr>{{end}}
+</tbody></table>
+{{if gt .Snapshot.Activity.DestructiveTot (len .Snapshot.Activity.Destructive)}}<p class="muted">Liste limitée aux 200 plus récentes.</p>{{end}}
+{{else}}<p class="muted">Aucune demande destructive sur la période.</p>{{end}}
+{{if .Snapshot.Activity.Security}}<h3>Événements de sécurité</h3>
+<table><tbody>{{range .Snapshot.Activity.Security}}<tr><td>{{label .Name}}</td><td class="num">{{.Count}}</td></tr>{{end}}</tbody></table>{{end}}
+
+<h2>6. Intégrité des journaux</h2>
+<p class="muted">{{.Snapshot.Integrity.Method}}</p>
+<table><thead><tr><th>Journal</th><th>Verdict</th><th class="num">Lignes</th><th>Séquences</th><th>Plus ancienne / récente</th><th>Tête de chaîne (SHA-256)</th></tr></thead><tbody>
+<tr><td>Exécutions</td><td>{{if .Snapshot.Integrity.Executions.Verified.OK}}<span class="ok">intègre</span>{{else}}<span class="bad">ROMPU — {{.Snapshot.Integrity.Executions.Verified.Reason}} (séquence {{.Snapshot.Integrity.Executions.Verified.BadSeq}})</span>{{end}}</td><td class="num">{{.Snapshot.Integrity.Executions.Info.Count}}</td><td>{{.Snapshot.Integrity.Executions.Info.MinSeq}} → {{.Snapshot.Integrity.Executions.Info.MaxSeq}}</td><td>{{ts .Snapshot.Integrity.Executions.Info.Oldest}}<br>{{ts .Snapshot.Integrity.Executions.Info.Newest}}</td><td class="mono">{{.Snapshot.Integrity.Executions.Info.HeadHash}}</td></tr>
+<tr><td>Administration</td><td>{{if .Snapshot.Integrity.Admin.Verified.OK}}<span class="ok">intègre</span>{{else}}<span class="bad">ROMPU — {{.Snapshot.Integrity.Admin.Verified.Reason}} (séquence {{.Snapshot.Integrity.Admin.Verified.BadSeq}})</span>{{end}}</td><td class="num">{{.Snapshot.Integrity.Admin.Info.Count}}</td><td>{{.Snapshot.Integrity.Admin.Info.MinSeq}} → {{.Snapshot.Integrity.Admin.Info.MaxSeq}}</td><td>{{ts .Snapshot.Integrity.Admin.Info.Oldest}}<br>{{ts .Snapshot.Integrity.Admin.Info.Newest}}</td><td class="mono">{{.Snapshot.Integrity.Admin.Info.HeadHash}}</td></tr>
+</tbody></table>
+<p>Rétention configurée : {{.Snapshot.Integrity.RetentionDays}} jours · purges pendant la période : {{.Snapshot.Integrity.PurgeEvents}} · vérifié le {{ts .Snapshot.Integrity.VerifiedAt}}.</p>
+<p class="muted">{{.Snapshot.Integrity.KnownLimitNote}}</p>
+
+<h2>7. Changements de configuration</h2>
+<p>{{.Snapshot.Changes.Total}} événement(s) d'administration sur la période.</p>
+{{if .Snapshot.Changes.ByAction}}<table><thead><tr><th>Action</th><th class="num">Événements</th></tr></thead><tbody>{{range .Snapshot.Changes.ByAction}}<tr><td><code>{{.Name}}</code></td><td class="num">{{.Count}}</td></tr>{{end}}</tbody></table>{{end}}
+{{if .Snapshot.Changes.Listed}}
+<table><thead><tr><th>Date</th><th>Auteur</th><th>Action</th><th>Objet</th></tr></thead><tbody>
+{{range .Snapshot.Changes.Listed}}<tr><td>{{ts .TS}}</td><td>{{.ActorName}} <small>({{.ActorType}})</small></td><td><code>{{.Action}}</code></td><td>{{if .TargetType}}{{.TargetType}} {{end}}{{.TargetName}}</td></tr>{{end}}
+</tbody></table>
+{{if .Snapshot.Changes.Truncated}}<p class="muted">Liste limitée aux 1000 premiers événements de la période; les totaux ci-dessus sont exacts.</p>{{end}}
+{{end}}
+
+<h2>8. Méthode, limites et vérification</h2>
+<ul>{{range .Snapshot.Limitations}}<li>{{.}}</li>{{end}}</ul>
+<p>Version du schéma du rapport : {{.Snapshot.SchemaVersion}}. Les faits sont figés à la génération: l'instantané JSON est conservé tel quel et ce document n'en est que la mise en forme.</p>
+<p><b>Vérifier l'intégrité de ce rapport.</b> Récupérer le fichier JSON signé depuis LeaSSH, puis comparer l'empreinte au pied de ce document : <code>jq -cj .snapshot rapport.json | sha256sum</code>. L'écran Audit de LeaSSH permet en outre de vérifier qu'un fichier a bien été émis par cette instance.</p>
+
+<footer>
+Rapport {{.Report.ID}} · LeaSSH {{.Snapshot.LeashVersion}} · empreinte SHA-256 des faits : <span class="mono">{{.Report.SHA256}}</span>
+</footer>
+</main>
+</body>
+</html>

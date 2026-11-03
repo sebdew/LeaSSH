@@ -1,0 +1,602 @@
+pack:
+  id: pfsense
+  name: "pfSense"
+  version: 1.0.0
+  category: "Réseau"
+  description: "Diagnostic et exploitation d'un pare-feu pfSense en SSH (FreeBSD): système, interfaces, routage, pf, DNS, DHCP, VPN, journaux. Ne lit jamais /conf/config.xml (mots de passe, clés). Écrit d'après la documentation de pfSense CE 2.7 / FreeBSD 14, sans test sur un pare-feu réel: à valider chez vous avant usage. Compte SSH: utiliser un utilisateur dont le shell accepte les commandes (root, ou admin avec un shell /bin/sh), pas le menu de la console."
+
+commands:
+  - id: pfsense.version
+    name: "Version de pfSense"
+    description: "Affiche la version de pfSense installée. À lancer en premier pour savoir quelle version de commandes et de journaux s'applique."
+    risk: read
+    template: "cat /etc/version"
+    params: {}
+
+  - id: pfsense.uname
+    name: "Noyau FreeBSD"
+    description: "Affiche la version du noyau FreeBSD et l'architecture (uname -a)."
+    risk: read
+    template: "uname -a"
+    params: {}
+
+  - id: pfsense.uptime
+    name: "Uptime et charge"
+    description: "Affiche depuis combien de temps le pare-feu tourne et sa charge moyenne (1, 5, 15 min). Vérifie qu'il n'a pas redémarré récemment."
+    risk: read
+    template: "uptime"
+    params: {}
+
+  - id: pfsense.date
+    name: "Date et heure"
+    description: "Affiche la date et l'heure du pare-feu. Utile pour comparer à l'horodatage des journaux ou détecter une dérive d'horloge."
+    risk: read
+    template: "date"
+    params: {}
+
+  - id: pfsense.hardware
+    name: "Matériel"
+    description: "Affiche le modèle de CPU, le nombre de cœurs et la mémoire physique."
+    risk: read
+    template: "sysctl hw.model hw.ncpu hw.physmem hw.realmem"
+    params: {}
+
+  - id: pfsense.memory
+    name: "Mémoire"
+    description: "Affiche la mémoire physique, utilisable et le nombre de pages libres (taille de page incluse pour convertir). À lancer si le pare-feu ralentit ou swappe."
+    risk: read
+    template: "sysctl hw.physmem hw.usermem vm.stats.vm.v_page_count vm.stats.vm.v_free_count vm.stats.vm.v_page_size"
+    params: {}
+
+  - id: pfsense.swap
+    name: "Utilisation du swap"
+    description: "Affiche l'espace de swap total et utilisé. Un swap utilisé en continu signale un manque de mémoire."
+    risk: read
+    template: "swapinfo -h"
+    params: {}
+
+  - id: pfsense.temperature
+    name: "Températures CPU"
+    description: "Affiche la température du processeur (sondes dev.cpu et ACPI). Certaines sondes n'existent pas sur tous les matériels: une erreur « unknown oid » est normale."
+    risk: read
+    template: "sysctl dev.cpu.0.temperature hw.acpi.thermal.tz0.temperature"
+    params: {}
+
+  - id: pfsense.top
+    name: "Processus actifs (top)"
+    description: "Photographie des processus et threads système les plus actifs, avec la charge CPU et la mémoire. À utiliser quand le CPU est élevé."
+    risk: read
+    template: "top -b -S -d 1 {{count}}"
+    max_output_kb: 32
+    params:
+      count: {"type": "int", "min": 5, "max": 50, "description": "Nombre de processus à afficher", "default": 20}
+
+  - id: pfsense.processes
+    name: "Processus par consommation CPU"
+    description: "Liste les processus triés par consommation CPU (PID, utilisateur, %CPU, %MEM, durée, commande)."
+    risk: read
+    template: "ps -axwwo pid,user,pcpu,pmem,etime,command -r"
+    max_output_kb: 32
+    params: {}
+
+  - id: pfsense.process_check
+    name: "Un processus tourne-t-il ?"
+    description: "Cherche les processus dont le nom correspond (PID et nom). Aucune ligne = le processus ne tourne pas. Exemples: unbound, dhcpd, ntpd, openvpn, charon."
+    risk: read
+    template: "pgrep -l {{process}}"
+    params:
+      process: {"type": "identifier", "description": "Nom du processus (ex. unbound, dpinger, charon)", "max_length": 64}
+
+  - id: pfsense.disk_usage
+    name: "Occupation disque"
+    description: "Affiche l'occupation de chaque système de fichiers. Un disque plein bloque les journaux et la configuration."
+    risk: read
+    template: "df -h"
+    params: {}
+
+  - id: pfsense.disk_inodes
+    name: "Occupation des inodes"
+    description: "Affiche l'utilisation des inodes de chaque système de fichiers."
+    risk: read
+    template: "df -i"
+    params: {}
+
+  - id: pfsense.zfs_status
+    name: "État ZFS"
+    description: "Affiche l'état des pools ZFS (erreurs, disques dégradés). Sans ZFS, répond qu'il n'y a pas de pool."
+    risk: read
+    template: "zpool status"
+    params: {}
+
+  - id: pfsense.dmesg
+    name: "Messages du noyau"
+    description: "Affiche le tampon de messages du noyau (pilotes, liens réseau, erreurs matérielles). Utile après un redémarrage ou un lien qui bascule."
+    risk: read
+    template: "dmesg"
+    max_output_kb: 128
+    params: {}
+
+  - id: pfsense.packages
+    name: "Paquets pfSense installés"
+    description: "Liste les paquets pfSense installés (pfBlockerNG, Suricata, WireGuard…) avec leur version."
+    risk: read
+    template: "pfSsh.php playback listpkg"
+    params: {}
+
+  - id: pfsense.pkg_list
+    name: "Paquets système (pkg)"
+    description: "Liste tous les paquets FreeBSD installés avec leur version."
+    risk: read
+    template: "pkg info"
+    max_output_kb: 128
+    params: {}
+
+  - id: pfsense.crash_reports
+    name: "Rapports de plantage"
+    description: "Liste les fichiers de /var/crash. Un fichier récent indique un plantage du noyau ou d'un composant: à signaler avant de redémarrer."
+    risk: read
+    template: "ls -l /var/crash"
+    params: {}
+
+  - id: pfsense.config_backups
+    name: "Sauvegardes de configuration"
+    description: "Liste les sauvegardes automatiques de la configuration (date, taille), sans en lire le contenu. Utile pour savoir quand la configuration a changé."
+    risk: read
+    template: "ls -lt /conf/backup"
+    max_output_kb: 128
+    params: {}
+
+  - id: pfsense.ntp_status
+    name: "Synchronisation NTP"
+    description: "Affiche les serveurs de temps, leur décalage et leur gigue. Un décalage important casse certificats et VPN."
+    risk: read
+    template: "ntpq -pn"
+    params: {}
+
+  - id: pfsense.sysctl_get
+    name: "Lire une valeur sysctl"
+    description: "Lit une variable noyau (hw., kern., net., vm., dev., machdep.). Lecture seule."
+    risk: read
+    template: "sysctl {{name}}"
+    params:
+      name: {"type": "regex", "pattern": "(hw|kern|net|vm|dev|machdep)\\.[A-Za-z0-9_.]{1,100}", "description": "Nom de la variable (ex. net.inet.ip.forwarding, kern.ipc.nmbclusters)", "max_length": 120}
+
+  - id: pfsense.interfaces
+    name: "Toutes les interfaces"
+    description: "Affiche toutes les interfaces (état du lien, adresses IPv4/IPv6, MAC, VLAN, LAGG, CARP, tunnels). Première commande pour tout diagnostic réseau."
+    risk: read
+    template: "ifconfig -a"
+    max_output_kb: 128
+    params: {}
+
+  - id: pfsense.interface
+    name: "Détail d'une interface"
+    description: "Affiche une interface précise: lien, adresses, MTU, options matérielles, VLAN parent."
+    risk: read
+    template: "ifconfig {{interface}}"
+    params:
+      interface: {"type": "identifier", "description": "Nom de l'interface FreeBSD (ex. igb0, em1, lagg0, igb0.100, ovpns1)", "max_length": 32}
+
+  - id: pfsense.interface_stats
+    name: "Compteurs des interfaces"
+    description: "Affiche paquets, octets, erreurs et pertes par interface. Des erreurs ou pertes croissantes indiquent un câble, un port ou une saturation."
+    risk: read
+    template: "netstat -ibdn"
+    params: {}
+
+  - id: pfsense.routes
+    name: "Table de routage"
+    description: "Affiche la table de routage IPv4 et IPv6."
+    risk: read
+    template: "netstat -rn"
+    params: {}
+
+  - id: pfsense.route_get
+    name: "Route vers une destination"
+    description: "Affiche la route et l'interface utilisées pour joindre une adresse."
+    risk: read
+    template: "route -n get {{host}}"
+    params:
+      host: {"type": "identifier", "description": "Adresse IPv4 ou nom de la destination", "max_length": 253}
+
+  - id: pfsense.arp
+    name: "Table ARP"
+    description: "Affiche la table ARP: quelle adresse MAC correspond à quelle IP, sur quelle interface."
+    risk: read
+    template: "arp -an"
+    params: {}
+
+  - id: pfsense.ndp
+    name: "Table de voisinage IPv6"
+    description: "Affiche la table de voisinage IPv6 (équivalent de l'ARP)."
+    risk: read
+    template: "ndp -an"
+    params: {}
+
+  - id: pfsense.sockets
+    name: "Ports en écoute"
+    description: "Liste les sockets en écoute et les processus qui les tiennent (SSH, interface web, DNS, DHCP, VPN)."
+    risk: read
+    template: "sockstat -l"
+    params: {}
+
+  - id: pfsense.mbufs
+    name: "Tampons réseau (mbufs)"
+    description: "Affiche l'utilisation des tampons réseau du noyau. Des « requests denied » indiquent un manque de mbufs, à augmenter."
+    risk: read
+    template: "netstat -m"
+    params: {}
+
+  - id: pfsense.proto_stats
+    name: "Statistiques par protocole"
+    description: "Affiche les compteurs détaillés d'un protocole (retransmissions TCP, fragments IP, erreurs ICMP…)."
+    risk: read
+    template: "netstat -s -p {{protocol}}"
+    max_output_kb: 128
+    params:
+      protocol: {"type": "enum", "values": ["tcp", "udp", "ip", "icmp", "ip6", "icmp6"], "description": "Protocole", "default": "tcp"}
+
+  - id: pfsense.gateways
+    name: "État des passerelles"
+    description: "Affiche l'état de chaque passerelle (en ligne, perte de paquets, latence, gigue) tel que le voit dpinger. Premier réflexe pour une coupure WAN ou un basculement."
+    risk: read
+    template: "pfSsh.php playback gatewaystatus"
+    params: {}
+
+  - id: pfsense.ping
+    name: "Ping depuis le pare-feu"
+    description: "Envoie quelques pings depuis le pare-feu vers une adresse pour tester la connectivité et la latence."
+    risk: read
+    template: "ping -c {{count}} {{host}}"
+    params:
+      count: {"type": "int", "min": 1, "max": 10, "description": "Nombre de paquets", "default": 4}
+      host: {"type": "identifier", "description": "Nom d'hôte ou adresse IPv4", "max_length": 253}
+
+  - id: pfsense.traceroute
+    name: "Traceroute depuis le pare-feu"
+    description: "Affiche le chemin réseau vers une adresse, saut par saut, sans résolution de noms."
+    risk: read
+    template: "traceroute -n -w 2 -m {{hops}} {{host}}"
+    timeout_s: 90
+    params:
+      hops: {"type": "int", "min": 1, "max": 30, "description": "Nombre maximal de sauts", "default": 15}
+      host: {"type": "identifier", "description": "Nom d'hôte ou adresse IPv4", "max_length": 253}
+
+  - id: pfsense.dns_lookup
+    name: "Résolution DNS"
+    description: "Interroge le résolveur local pour un nom (type A, AAAA, MX…). Distingue une panne DNS d'une panne réseau."
+    risk: read
+    template: "drill {{name}} {{type}}"
+    params:
+      name: {"type": "identifier", "description": "Nom à résoudre", "max_length": 253}
+      type: {"type": "enum", "values": ["A", "AAAA", "MX", "NS", "TXT", "PTR", "SOA", "CNAME"], "description": "Type d'enregistrement", "default": "A"}
+
+  - id: pfsense.tcpdump
+    name: "Capture de paquets (en-têtes)"
+    description: "Capture quelques paquets d'une interface, filtrés sur un hôte, et affiche leurs en-têtes (pas le contenu). S'arrête après le nombre de paquets demandé ou au bout de 30 s. Sert à vérifier qu'un trafic arrive bien ou ressort."
+    risk: read
+    template: "tcpdump -l -nn -c {{count}} -i {{interface}} host {{host}}"
+    params:
+      count: {"type": "int", "min": 1, "max": 200, "description": "Nombre de paquets à capturer", "default": 20}
+      interface: {"type": "identifier", "description": "Nom de l'interface FreeBSD (ex. igb0, em1, lagg0, igb0.100, ovpns1)", "max_length": 32}
+      host: {"type": "identifier", "description": "Adresse IPv4 de l'hôte à observer", "max_length": 253}
+
+  - id: pfsense.dhcp_leases
+    name: "Baux DHCP"
+    description: "Affiche la fin du fichier des baux DHCP (ISC DHCP): adresse, MAC, nom d'hôte, validité. Les baux Kea ne sont pas dans ce fichier."
+    risk: read
+    template: "tail -n {{lines}} /var/dhcpd/var/db/dhcpd.leases"
+    max_output_kb: 128
+    params:
+      lines: {"type": "int", "min": 1, "max": 2000, "description": "Nombre de lignes à afficher", "default": 300}
+
+  - id: pfsense.carp
+    name: "État CARP (haute disponibilité)"
+    description: "Affiche les variables CARP: activé ou non, rétrogradation. À comparer entre les deux pare-feux d'une paire HA."
+    risk: read
+    template: "sysctl net.inet.carp"
+    params: {}
+
+  - id: pfsense.wireguard
+    name: "État WireGuard"
+    description: "Affiche les tunnels WireGuard, leurs pairs, le dernier échange et les volumes. Nécessite le paquet WireGuard."
+    risk: read
+    template: "wg show"
+    params: {}
+
+  - id: pfsense.ipsec_status
+    name: "État IPsec"
+    description: "Affiche les tunnels IPsec (établis ou non), leurs SA et leurs échéances."
+    risk: read
+    template: "ipsec statusall"
+    max_output_kb: 128
+    params: {}
+
+  - id: pfsense.ipsec_sas
+    name: "Associations de sécurité IPsec"
+    description: "Liste les SA IPsec actives vues par strongSwan (swanctl)."
+    risk: read
+    template: "swanctl --list-sas"
+    max_output_kb: 128
+    params: {}
+
+  - id: pfsense.dns_status
+    name: "État du résolveur DNS"
+    description: "Affiche l'état du résolveur Unbound (en marche, threads)."
+    risk: read
+    template: "unbound-control -c /var/unbound/unbound.conf status"
+    params: {}
+
+  - id: pfsense.dns_stats
+    name: "Statistiques du résolveur DNS"
+    description: "Affiche les compteurs d'Unbound (requêtes, cache, temps de réponse) sans les remettre à zéro."
+    risk: read
+    template: "unbound-control -c /var/unbound/unbound.conf stats_noreset"
+    max_output_kb: 128
+    params: {}
+
+  - id: pfsense.dns_forwards
+    name: "Redirecteurs DNS"
+    description: "Liste les serveurs DNS vers lesquels Unbound redirige les requêtes."
+    risk: read
+    template: "unbound-control -c /var/unbound/unbound.conf list_forwards"
+    params: {}
+
+  - id: pfsense.pf_info
+    name: "État de pf"
+    description: "Affiche l'état du pare-feu pf: activé, nombre d'états, compteurs de paquets bloqués ou passés, recherches dans la table d'états."
+    risk: read
+    template: "pfctl -si"
+    params: {}
+
+  - id: pfsense.pf_rules
+    name: "Règles de filtrage"
+    description: "Affiche les règles de filtrage pf actives, telles que générées par pfSense."
+    risk: read
+    template: "pfctl -sr"
+    max_output_kb: 256
+    params: {}
+
+  - id: pfsense.pf_rules_counters
+    name: "Règles avec compteurs"
+    description: "Affiche les règles actives avec leurs compteurs (évaluations, paquets, octets, états). Permet de voir quelle règle laisse passer ou bloque un trafic."
+    risk: read
+    template: "pfctl -vvsr"
+    max_output_kb: 512
+    params: {}
+
+  - id: pfsense.pf_nat
+    name: "Règles NAT"
+    description: "Affiche les règles NAT et redirections de ports actives."
+    risk: read
+    template: "pfctl -sn"
+    max_output_kb: 256
+    params: {}
+
+  - id: pfsense.pf_states
+    name: "Table d'états"
+    description: "Affiche les connexions suivies par pf (source, destination, protocole, état, expiration). Sortie très longue sur un pare-feu chargé: elle est tronquée."
+    risk: read
+    template: "pfctl -ss"
+    max_output_kb: 512
+    params: {}
+
+  - id: pfsense.pf_limits
+    name: "Limites mémoire de pf"
+    description: "Affiche les limites de pf (états, fragments, entrées de table). À lire si des états sont refusés."
+    risk: read
+    template: "pfctl -sm"
+    params: {}
+
+  - id: pfsense.pf_timeouts
+    name: "Délais d'expiration de pf"
+    description: "Affiche les délais d'expiration des états par protocole."
+    risk: read
+    template: "pfctl -st"
+    params: {}
+
+  - id: pfsense.pf_interfaces
+    name: "Interfaces suivies par pf"
+    description: "Liste les interfaces gérées par pf avec leurs compteurs."
+    risk: read
+    template: "pfctl -sI"
+    params: {}
+
+  - id: pfsense.pf_anchors
+    name: "Ancres pf"
+    description: "Liste les ancres pf (paquets comme Suricata ou pfBlockerNG, redirections, VPN)."
+    risk: read
+    template: "pfctl -sA"
+    params: {}
+
+  - id: pfsense.pf_tables
+    name: "Tables pf (alias)"
+    description: "Liste les tables pf, qui correspondent aux alias pfSense (URL, réseaux, IP bloquées)."
+    risk: read
+    template: "pfctl -sT"
+    params: {}
+
+  - id: pfsense.pf_table_show
+    name: "Contenu d'une table pf"
+    description: "Affiche les adresses contenues dans une table pf (alias). Permet de vérifier qu'une IP est bien dans une liste de blocage."
+    risk: read
+    template: "pfctl -t {{table}} -T show"
+    max_output_kb: 256
+    params:
+      table: {"type": "identifier", "description": "Nom de la table ou de l'alias", "max_length": 64}
+
+  - id: pfsense.log_system
+    name: "Journal système"
+    description: "Affiche les dernières lignes du journal système (/var/log/system.log). Événements généraux: démarrages, services, interfaces, passerelles."
+    risk: read
+    template: "tail -n {{lines}} /var/log/system.log"
+    max_output_kb: 128
+    params:
+      lines: {"type": "int", "min": 1, "max": 1000, "description": "Nombre de lignes à afficher", "default": 100}
+
+  - id: pfsense.log_filter
+    name: "Journal pare-feu"
+    description: "Affiche les dernières lignes du journal pare-feu (/var/log/filter.log). Paquets bloqués ou autorisés par les règles journalisées."
+    risk: read
+    template: "tail -n {{lines}} /var/log/filter.log"
+    max_output_kb: 128
+    params:
+      lines: {"type": "int", "min": 1, "max": 1000, "description": "Nombre de lignes à afficher", "default": 100}
+
+  - id: pfsense.log_gateways
+    name: "Journal passerelles"
+    description: "Affiche les dernières lignes du journal passerelles (/var/log/gateways.log). Passages en ligne ou hors ligne des passerelles et changements de routes (dpinger)."
+    risk: read
+    template: "tail -n {{lines}} /var/log/gateways.log"
+    max_output_kb: 128
+    params:
+      lines: {"type": "int", "min": 1, "max": 1000, "description": "Nombre de lignes à afficher", "default": 100}
+
+  - id: pfsense.log_dhcp
+    name: "Journal DHCP"
+    description: "Affiche les dernières lignes du journal DHCP (/var/log/dhcpd.log). Attributions de baux DHCP, demandes et refus."
+    risk: read
+    template: "tail -n {{lines}} /var/log/dhcpd.log"
+    max_output_kb: 128
+    params:
+      lines: {"type": "int", "min": 1, "max": 1000, "description": "Nombre de lignes à afficher", "default": 100}
+
+  - id: pfsense.log_resolver
+    name: "Journal résolveur DNS"
+    description: "Affiche les dernières lignes du journal résolveur DNS (/var/log/resolver.log). Activité et erreurs d'Unbound."
+    risk: read
+    template: "tail -n {{lines}} /var/log/resolver.log"
+    max_output_kb: 128
+    params:
+      lines: {"type": "int", "min": 1, "max": 1000, "description": "Nombre de lignes à afficher", "default": 100}
+
+  - id: pfsense.log_openvpn
+    name: "Journal OpenVPN"
+    description: "Affiche les dernières lignes du journal OpenVPN (/var/log/openvpn.log). Connexions, déconnexions et erreurs OpenVPN (serveur et clients)."
+    risk: read
+    template: "tail -n {{lines}} /var/log/openvpn.log"
+    max_output_kb: 128
+    params:
+      lines: {"type": "int", "min": 1, "max": 1000, "description": "Nombre de lignes à afficher", "default": 100}
+
+  - id: pfsense.log_ipsec
+    name: "Journal IPsec"
+    description: "Affiche les dernières lignes du journal IPsec (/var/log/ipsec.log). Négociations et erreurs des tunnels IPsec."
+    risk: read
+    template: "tail -n {{lines}} /var/log/ipsec.log"
+    max_output_kb: 128
+    params:
+      lines: {"type": "int", "min": 1, "max": 1000, "description": "Nombre de lignes à afficher", "default": 100}
+
+  - id: pfsense.log_auth
+    name: "Journal authentification"
+    description: "Affiche les dernières lignes du journal authentification (/var/log/auth.log). Connexions à l'interface web et en SSH, réussies ou non. Premier endroit à lire en cas de tentative d'intrusion."
+    risk: read
+    template: "tail -n {{lines}} /var/log/auth.log"
+    max_output_kb: 128
+    params:
+      lines: {"type": "int", "min": 1, "max": 1000, "description": "Nombre de lignes à afficher", "default": 100}
+
+  - id: pfsense.log_ntpd
+    name: "Journal NTP"
+    description: "Affiche les dernières lignes du journal NTP (/var/log/ntpd.log). Synchronisation de l'heure."
+    risk: read
+    template: "tail -n {{lines}} /var/log/ntpd.log"
+    max_output_kb: 128
+    params:
+      lines: {"type": "int", "min": 1, "max": 1000, "description": "Nombre de lignes à afficher", "default": 100}
+
+  - id: pfsense.log_webgui
+    name: "Journal interface web"
+    description: "Affiche les dernières lignes du journal interface web (/var/log/nginx.log). Erreurs du serveur web de l'interface d'administration."
+    risk: read
+    template: "tail -n {{lines}} /var/log/nginx.log"
+    max_output_kb: 128
+    params:
+      lines: {"type": "int", "min": 1, "max": 1000, "description": "Nombre de lignes à afficher", "default": 100}
+
+  - id: pfsense.log_ppp
+    name: "Journal PPP / PPPoE"
+    description: "Affiche les dernières lignes du journal PPP / PPPoE (/var/log/ppp.log). Connexion PPPoE ou PPP des accès WAN."
+    risk: read
+    template: "tail -n {{lines}} /var/log/ppp.log"
+    max_output_kb: 128
+    params:
+      lines: {"type": "int", "min": 1, "max": 1000, "description": "Nombre de lignes à afficher", "default": 100}
+
+  - id: pfsense.log_tail
+    name: "Journal quelconque"
+    description: "Affiche les dernières lignes d'un fichier de /var/log (journaux spécifiques aux paquets: suricata, pfblockerng, squid…)."
+    risk: read
+    template: "tail -n {{lines}} {{file}}"
+    max_output_kb: 128
+    params:
+      lines: {"type": "int", "min": 1, "max": 1000, "description": "Nombre de lignes à afficher", "default": 100}
+      file: {"type": "path", "allowed_prefixes": ["/var/log"], "description": "Fichier sous /var/log"}
+
+  - id: pfsense.pf_kill_host
+    name: "Supprimer les états d'un hôte"
+    description: "Supprime tous les états pf dont la source est l'adresse donnée: ses connexions en cours sont coupées et se rétablissent (ou non) selon les règles. À utiliser après un changement de règle pour qu'il s'applique à une connexion déjà ouverte."
+    risk: write
+    template: "pfctl -k {{host}}"
+    params:
+      host: {"type": "regex", "pattern": "(\\d{1,3}\\.){3}\\d{1,3}", "description": "Adresse IPv4 de l'hôte", "max_length": 15}
+
+  - id: pfsense.pf_kill_pair
+    name: "Supprimer les états entre deux hôtes"
+    description: "Supprime les états pf entre une source et une destination. Plus ciblé que pfsense.pf_kill_host."
+    risk: write
+    template: "pfctl -k {{source}} -k {{destination}}"
+    params:
+      source: {"type": "regex", "pattern": "(\\d{1,3}\\.){3}\\d{1,3}", "description": "Adresse IPv4 source", "max_length": 15}
+      destination: {"type": "regex", "pattern": "(\\d{1,3}\\.){3}\\d{1,3}", "description": "Adresse IPv4 destination", "max_length": 15}
+
+  - id: pfsense.pf_table_add
+    name: "Ajouter une adresse à une table pf"
+    description: "Ajoute une adresse ou un réseau à une table pf (alias), par exemple une liste de blocage. Effet immédiat mais temporaire: un rechargement du filtre ou un changement de configuration pfSense le remplace par le contenu réel de l'alias."
+    risk: write
+    template: "pfctl -t {{table}} -T add {{address}}"
+    params:
+      table: {"type": "identifier", "description": "Nom de la table ou de l'alias", "max_length": 64}
+      address: {"type": "regex", "pattern": "(\\d{1,3}\\.){3}\\d{1,3}(/\\d{1,2})?", "description": "Adresse IPv4 ou réseau (ex. 203.0.113.7 ou 203.0.113.0/24)", "max_length": 18}
+
+  - id: pfsense.pf_table_delete
+    name: "Retirer une adresse d'une table pf"
+    description: "Retire une adresse ou un réseau d'une table pf (alias). Effet immédiat mais temporaire, comme pour l'ajout."
+    risk: write
+    template: "pfctl -t {{table}} -T delete {{address}}"
+    params:
+      table: {"type": "identifier", "description": "Nom de la table ou de l'alias", "max_length": 64}
+      address: {"type": "regex", "pattern": "(\\d{1,3}\\.){3}\\d{1,3}(/\\d{1,2})?", "description": "Adresse IPv4 ou réseau", "max_length": 18}
+
+  - id: pfsense.filter_reload
+    name: "Recharger le filtre"
+    description: "Régénère et recharge les règles du pare-feu à partir de la configuration. Brève interruption possible des états. À utiliser si le filtre semble désynchronisé de la configuration."
+    risk: write
+    template: "/etc/rc.filter_configure"
+    timeout_s: 120
+    params: {}
+
+  - id: pfsense.service_restart
+    name: "Redémarrer un service"
+    description: "Redémarre un service du pare-feu. Interrompt brièvement ce service: unbound coupe la résolution DNS, dhcpd les nouveaux baux, dpinger la surveillance des passerelles."
+    risk: write
+    template: "pfSsh.php playback svc restart {{service}}"
+    timeout_s: 120
+    params:
+      service: {"type": "enum", "values": ["unbound", "dhcpd", "dpinger", "ntpd", "syslogd", "radvd", "snmpd", "miniupnpd"], "description": "Service"}
+
+  - id: pfsense.pf_flush_states
+    name: "Vider toute la table d'états"
+    description: "Supprime TOUS les états pf: toutes les connexions qui traversent le pare-feu sont coupées (VPN, sessions SSH, téléchargements). À réserver à un incident grave. Validation humaine toujours requise."
+    risk: destructive
+    template: "pfctl -F states"
+    params: {}
+
+  - id: pfsense.reboot
+    name: "Redémarrer le pare-feu"
+    description: "Redémarre le pare-feu: tout le trafic est coupé plusieurs minutes (et la bascule HA se déclenche s'il y a une paire). Validation humaine toujours requise."
+    risk: destructive
+    template: "/etc/rc.reboot"
+    timeout_s: 60
+    params: {}

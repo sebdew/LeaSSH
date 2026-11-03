@@ -1,0 +1,47 @@
+pack:
+  id: nginx
+  name: nginx
+  version: 1.0.0
+  category: Web
+  description: Diagnostic et rechargement de nginx.
+
+commands:
+  - id: nginx.config_test
+    name: Tester la configuration
+    description: Vérifie la syntaxe de la configuration nginx sans rien modifier. À lancer avant tout rechargement.
+    risk: read
+    template: nginx -t
+    params: {}
+
+  - id: nginx.error_log
+    name: Log d'erreurs
+    description: Affiche les dernières lignes du log d'erreurs nginx par défaut.
+    risk: read
+    template: tail -n {{lines}} /var/log/nginx/error.log
+    params:
+      lines:
+        type: int
+        min: 1
+        max: 1000
+        default: 100
+        description: Nombre de lignes à afficher
+
+  - id: nginx.access_log
+    name: Log d'accès
+    description: Affiche les dernières lignes du log d'accès nginx par défaut.
+    risk: read
+    template: tail -n {{lines}} /var/log/nginx/access.log
+    params:
+      lines:
+        type: int
+        min: 1
+        max: 1000
+        default: 100
+        description: Nombre de lignes à afficher
+
+  - id: nginx.reload
+    name: Recharger nginx
+    description: Recharge la configuration nginx sans coupure. Lancer nginx.config_test avant ; si la configuration est invalide, le rechargement échoue sans impact.
+    risk: write
+    template: systemctl reload nginx
+    params: {}

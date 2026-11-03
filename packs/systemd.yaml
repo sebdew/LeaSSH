@@ -1,0 +1,70 @@
+pack:
+  id: systemd
+  name: Services systemd
+  version: 1.0.0
+  category: Système
+  description: Consultation et pilotage des services systemd.
+
+commands:
+  - id: systemd.status
+    name: État d'un service
+    description: Affiche l'état d'un service systemd (actif, en échec, depuis quand) et ses dernières lignes de log. À utiliser avant toute action sur un service.
+    risk: read
+    template: systemctl status {{service}} --no-pager --lines 20
+    params:
+      service:
+        type: service
+        description: Nom de l'unité systemd (ex. nginx, mysql, postgresql)
+
+  - id: systemd.failed
+    name: Services en échec
+    description: Liste toutes les unités systemd en état d'échec sur le serveur.
+    risk: read
+    template: systemctl --failed --no-pager
+    params: {}
+
+  - id: systemd.logs
+    name: Logs d'un service
+    description: Affiche les dernières lignes du journal d'un service systemd.
+    risk: read
+    template: journalctl -u {{service}} -n {{lines}} --no-pager
+    params:
+      service:
+        type: service
+        description: Nom de l'unité systemd
+      lines:
+        type: int
+        min: 1
+        max: 1000
+        default: 100
+        description: Nombre de lignes à afficher
+
+  - id: systemd.restart
+    name: Redémarrer un service
+    description: Redémarre un service systemd. Provoque une courte coupure du service. À utiliser après avoir vérifié son état avec systemd.status.
+    risk: write
+    template: systemctl restart {{service}}
+    params:
+      service:
+        type: service
+        description: Nom de l'unité systemd
+
+  - id: systemd.reload
+    name: Recharger un service
+    description: Recharge la configuration d'un service sans l'arrêter (si le service le supporte). Préférer à un redémarrage quand c'est possible.
+    risk: write
+    template: systemctl reload {{service}}
+    params:
+      service:
+        type: service
+        description: Nom de l'unité systemd
+
+  - id: systemd.stop
+    name: Arrêter un service
+    description: Arrête un service systemd. Le service reste arrêté jusqu'à son redémarrage. Validation humaine toujours requise.
+    risk: destructive
+    template: systemctl stop {{service}}
+    params:
+      service:
+        type: service
+        description: Nom de l'unité systemd

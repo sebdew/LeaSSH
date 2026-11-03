@@ -1,0 +1,192 @@
+pack:
+  id: system
+  name: Système Linux
+  version: 1.1.0
+  category: Système
+  description: Diagnostic système de base (charge, mémoire, disques, processus, réseau). Lecture seule.
+
+commands:
+  - id: system.uptime
+    name: Uptime et charge
+    description: Affiche depuis combien de temps le serveur tourne et la charge moyenne (1, 5, 15 min). Premier réflexe pour vérifier qu'un serveur répond et n'est pas surchargé.
+    risk: read
+    template: uptime
+    params: {}
+
+  - id: system.memory
+    name: Mémoire
+    description: Affiche l'utilisation de la RAM et du swap en Mo. Utile si une alarme signale une mémoire saturée ou un usage de swap élevé.
+    risk: read
+    template: free -m
+    params: {}
+
+  - id: system.disk_usage
+    name: Occupation disque
+    description: Affiche l'occupation de chaque système de fichiers monté (hors tmpfs). À utiliser en cas d'alarme d'espace disque.
+    risk: read
+    template: df -h -x tmpfs -x devtmpfs
+    params: {}
+
+  - id: system.disk_inodes
+    name: Occupation des inodes
+    description: Affiche l'utilisation des inodes. À utiliser quand un disque refuse les écritures alors qu'il reste de l'espace.
+    risk: read
+    template: df -i -x tmpfs -x devtmpfs
+    params: {}
+
+  - id: system.dir_sizes
+    name: Taille des sous-dossiers
+    description: Affiche la taille des sous-dossiers directs d'un dossier, sans traverser les autres systèmes de fichiers. Permet de trouver ce qui remplit un disque.
+    risk: read
+    timeout_s: 120
+    template: du -xh --max-depth 1 {{path}}
+    params:
+      path:
+        type: path
+        allowed_prefixes: [/var, /home, /opt, /srv, /tmp, /root]
+        description: Dossier à analyser (sous /var, /home, /opt, /srv, /tmp ou /root)
+
+  - id: system.top_cpu
+    name: Processus les plus gourmands (CPU)
+    description: Liste les processus triés par consommation CPU décroissante (PID, utilisateur, %CPU, %MEM, durée, commande). Sortie tronquée aux premières lignes utiles.
+    risk: read
+    template: ps -eo pid,user,%cpu,%mem,etime,args --sort -%cpu
+    max_output_kb: 16
+    params: {}
+
+  - id: system.top_mem
+    name: Processus les plus gourmands (mémoire)
+    description: Liste les processus triés par consommation mémoire décroissante.
+    risk: read
+    template: ps -eo pid,user,%cpu,%mem,rss,args --sort -%mem
+    max_output_kb: 16
+    params: {}
+
+  - id: system.listening_ports
+    name: Ports en écoute
+    description: Liste les ports TCP et UDP en écoute et les processus associés. Utile pour vérifier qu'un service écoute bien sur son port.
+    risk: read
+    template: ss -tulpn
+    params: {}
+
+  - id: system.journal_errors
+    name: Erreurs récentes du journal système
+    description: Affiche les dernières entrées de niveau erreur ou plus grave du journal systemd, tous services confondus.
+    risk: read
+    template: journalctl -p err -n {{lines}} --no-pager
+    params:
+      lines:
+        type: int
+        min: 1
+        max: 500
+        default: 100
+        description: Nombre de lignes à afficher
+
+  - id: system.os_release
+    name: Version du système
+    description: Affiche la distribution et sa version.
+    risk: read
+    template: cat /etc/os-release
+    params: {}
+
+  - id: system.failed_units
+    name: "Unités systemd en échec"
+    description: "Liste les unités systemd en échec via `systemctl --failed --no-pager`. Lecture seule."
+    risk: read
+    template: "systemctl --failed --no-pager"
+    params: {}
+
+  - id: system.iostat
+    name: "Utilisation et latence des disques (iostat)"
+    description: "Exécute iostat -x avec intervalle et nombre d'échantillons : %util, await et profondeur de file par périphérique. Lecture seule. Nécessite le paquet sysstat (à vérifier sur chaque hôte ; à défaut la commande échouera sans effet)."
+    risk: read
+    template: "iostat -x {{interval}} {{count}}"
+    params:
+      count: {"type": "int", "description": "Nombre d'échantillons", "default": 3, "min": 2, "max": 5}
+      interval: {"type": "int", "description": "Intervalle en secondes", "default": 1, "min": 1, "max": 5}
+
+  - id: system.lvm_volumes
+    name: "Volumes LVM et occupation des thin pools"
+    description: "Liste les volumes logiques (nom, VG, taille, % de données, % de métadonnées, pool) via `lvs`. Lecture seule. Permet de voir l'occupation réelle des thin pools."
+    risk: read
+    template: "lvs -o lv_name,vg_name,lv_size,data_percent,metadata_percent,pool_lv"
+    params: {}
+
+  - id: system.vmstat
+    name: "Statistiques mémoire, swap et I/O (vmstat)"
+    description: "Exécute vmstat avec un intervalle (secondes) et un nombre d'échantillons. Affiche files d'attente, swap in/out, blocs I/O et %CPU dont %wa (attente I/O). Lecture seule. Durée = intervalle x échantillons (bornée)."
+    risk: read
+    template: "vmstat {{interval}} {{count}}"
+    params:
+      count: {"type": "int", "description": "Nombre d'échantillons", "default": 5, "min": 2, "max": 10}
+      interval: {"type": "int", "description": "Intervalle entre échantillons en secondes", "default": 1, "min": 1, "max": 5}
+
+  - id: system.who
+    name: "Sessions utilisateurs ouvertes"
+    description: "Liste les sessions ouvertes (utilisateur, terminal, date, origine) via `who`. Lecture seule."
+    risk: read
+    template: "who"
+    params: {}
+
+  - id: system.block_devices
+    name: "Disques et partitions"
+    description: "Liste les disques et partitions avec taille, type, système de fichiers, point de montage et modèle. Pour savoir ce qui est branché et monté."
+    risk: read
+    template: "lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL"
+    params: {}
+
+  - id: system.smart_health
+    name: "Santé SMART d'un disque"
+    description: "Affiche le verdict SMART global d'un disque (PASSED ou FAILED). Nécessite smartmontools."
+    risk: read
+    template: "smartctl -H {{device}}"
+    params:
+      device: {"type": "path", "allowed_prefixes": ["/dev"], "description": "Périphérique disque (ex. /dev/sda, /dev/nvme0n1)"}
+
+  - id: system.smart_full
+    name: "Détail SMART d'un disque"
+    description: "Affiche tous les attributs SMART d'un disque (secteurs réalloués, température, heures d'utilisation, usure). Nécessite smartmontools."
+    risk: read
+    template: "smartctl -a {{device}}"
+    max_output_kb: 128
+    params:
+      device: {"type": "path", "allowed_prefixes": ["/dev"], "description": "Périphérique disque (ex. /dev/sda, /dev/nvme0n1)"}
+
+  - id: system.dmesg_errors
+    name: "Erreurs du noyau"
+    description: "Affiche les messages du noyau de niveau avertissement ou plus grave (erreurs disque, mémoire, réseau, OOM killer)."
+    risk: read
+    template: "dmesg -T --level=err,crit,alert,emerg"
+    max_output_kb: 128
+    params: {}
+
+  - id: system.net_addresses
+    name: "Adresses réseau"
+    description: "Affiche les interfaces avec leur état et leurs adresses IP, en format compact."
+    risk: read
+    template: "ip -br addr"
+    params: {}
+
+  - id: system.net_routes
+    name: "Table de routage"
+    description: "Affiche la table de routage IPv4."
+    risk: read
+    template: "ip route"
+    params: {}
+
+  - id: system.ping
+    name: "Ping depuis le serveur"
+    description: "Envoie quelques pings depuis le serveur vers une adresse pour tester la connectivité et la latence."
+    risk: read
+    template: "ping -c {{count}} {{host}}"
+    params:
+      count: {"type": "int", "min": 1, "max": 10, "description": "Nombre de paquets", "default": 4}
+      host: {"type": "identifier", "description": "Nom d'hôte ou adresse IPv4", "max_length": 253}
+
+  - id: system.dns_lookup
+    name: "Résolution DNS"
+    description: "Résout un nom avec la configuration du serveur (getent hosts). Distingue une panne DNS d'une panne réseau."
+    risk: read
+    template: "getent hosts {{name}}"
+    params:
+      name: {"type": "identifier", "description": "Nom à résoudre", "max_length": 253}

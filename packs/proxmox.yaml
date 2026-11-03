@@ -1,0 +1,493 @@
+pack:
+  id: proxmox
+  name: "Proxmox VE"
+  version: 1.0.0
+  category: "Virtualisation"
+  description: "Diagnostic et exploitation d'un nœud ou d'un cluster Proxmox VE en SSH: cluster, VM (qm), conteneurs (pct), stockages, sauvegardes, Ceph, ZFS, tâches, services. Les commandes agissent sur le nœud auquel on se connecte. Reprend à l'identique les 6 commandes pve.* déjà validées en production. Ne lit jamais /etc/pve/priv (mots de passe, jetons). Pas de suppression de VM ni de conteneur: à proposer au cas par cas."
+
+commands:
+  - id: pve.cluster_status
+    name: "Statut du cluster Proxmox"
+    description: "Affiche l'état du cluster (quorum, nœuds membres et leur statut) via `pvecm status`. Lecture seule."
+    risk: read
+    template: "pvecm status"
+    params: {}
+
+  - id: pve.guests_qm
+    name: "Liste des VM du nœud"
+    description: "Affiche la liste des VM QEMU du nœud Proxmox local (VMID, nom, statut, RAM, disque, PID) via `qm list`. Lecture seule, aucun effet de bord. À utiliser pour savoir quelles VM tournent sur quel nœud."
+    risk: read
+    template: "qm list"
+    params: {}
+
+  - id: pve.guests_pct
+    name: "Liste des LXC du nœud"
+    description: "Affiche la liste des conteneurs LXC du nœud Proxmox local (VMID, statut, verrou, nom) via `pct list`. Lecture seule, aucun effet de bord."
+    risk: read
+    template: "pct list"
+    params: {}
+
+  - id: pve.storage_status
+    name: "Statut des stockages Proxmox"
+    description: "Affiche les stockages configurés sur le nœud (nom, type, statut actif ou non, taille, utilisé, disponible, %) via `pvesm status`. Lecture seule."
+    risk: read
+    template: "pvesm status"
+    params: {}
+
+  - id: pve.task_list
+    name: "Tâches récentes du nœud Proxmox"
+    description: "Affiche les dernières tâches du nœud (démarrage/arrêt de guests, sauvegardes, migrations, statut final) via `pvenode task list --limit`. Lecture seule."
+    risk: read
+    template: "pvenode task list --limit {{limit}}"
+    params:
+      limit: {"type": "int", "description": "Nombre de tâches à afficher", "default": 30, "min": 1, "max": 100}
+
+  - id: pve.task_log
+    name: "Journal d'une tâche Proxmox"
+    description: "Affiche le journal complet d'une tâche Proxmox du nœud local à partir de son UPID (visible dans pve.task_list), via `pvenode task log`. Lecture seule. Utile pour lire la cause d'une sauvegarde vzdump en ERROR ou WARNINGS."
+    risk: read
+    template: "pvenode task log {{upid}}"
+    params:
+      upid: {"type": "regex", "description": "Identifiant UPID de la tâche, tel qu'affiché par pve.task_list", "max_length": 200, "pattern": "^UPID:[A-Za-z0-9._@!:-]+$"}
+
+  - id: pve.version
+    name: "Versions Proxmox"
+    description: "Affiche la version de Proxmox VE et de tous ses composants (noyau, qemu, lxc, ceph, zfs…). Première commande pour savoir à quoi on a affaire."
+    risk: read
+    template: "pveversion -v"
+    max_output_kb: 32
+    params: {}
+
+  - id: pve.cluster_nodes
+    name: "Nœuds du cluster"
+    description: "Liste les nœuds du cluster avec leur identifiant, leur nom et si c'est le nœud local."
+    risk: read
+    template: "pvecm nodes"
+    params: {}
+
+  - id: pve.cluster_resources
+    name: "Ressources du cluster"
+    description: "Affiche en une fois les VM, conteneurs, nœuds et stockages du cluster avec leur état, CPU et mémoire. Bon point de départ pour une vue d'ensemble."
+    risk: read
+    template: "pvesh get /cluster/resources"
+    max_output_kb: 256
+    params: {}
+
+  - id: pve.cluster_log
+    name: "Journal du cluster"
+    description: "Affiche les derniers événements du cluster (démarrages et arrêts de guests, erreurs, connexions)."
+    risk: read
+    template: "pvesh get /cluster/log"
+    max_output_kb: 128
+    params: {}
+
+  - id: pve.ha_status
+    name: "État de la haute disponibilité"
+    description: "Affiche le gestionnaire HA: quorum, maître, état des nœuds et des ressources protégées. À lire quand un guest ne redémarre pas après une panne."
+    risk: read
+    template: "ha-manager status"
+    params: {}
+
+  - id: pve.firewall_status
+    name: "État du pare-feu Proxmox"
+    description: "Indique si le pare-feu Proxmox est actif et à jour."
+    risk: read
+    template: "pve-firewall status"
+    params: {}
+
+  - id: pve.replication_status
+    name: "État des réplications"
+    description: "Affiche les réplications de stockage (dernière synchro, durée, erreurs). Une réplication en échec ou en retard menace un basculement."
+    risk: read
+    template: "pvesr status"
+    params: {}
+
+  - id: pve.subscription
+    name: "Abonnement Proxmox"
+    description: "Affiche l'état de l'abonnement (clé, niveau, échéance)."
+    risk: read
+    template: "pvesubscription get"
+    params: {}
+
+  - id: pve.cert_info
+    name: "Certificats du nœud"
+    description: "Affiche les certificats du nœud et leur échéance (interface web, API)."
+    risk: read
+    template: "pvenode cert info"
+    params: {}
+
+  - id: pve.node_perf
+    name: "Benchmark rapide du nœud"
+    description: "Mesure rapidement CPU, débit disque, temps de recherche et DNS du nœud. Charge brève mais réelle sur les disques: à éviter en pleine production."
+    risk: read
+    template: "pveperf"
+    timeout_s: 120
+    params: {}
+
+  - id: pve.service_status
+    name: "État d'un service Proxmox"
+    description: "Affiche l'état d'un service Proxmox (actif, erreurs récentes)."
+    risk: read
+    template: "systemctl status {{unit}} --no-pager"
+    params:
+      unit: {"type": "enum", "values": ["pve-cluster", "pvedaemon", "pveproxy", "pvestatd", "pve-firewall", "pvescheduler", "corosync", "pve-ha-lrm", "pve-ha-crm", "spiceproxy", "pvefw-logger"], "description": "Service"}
+
+  - id: pve.service_logs
+    name: "Journal d'un service Proxmox"
+    description: "Affiche les dernières lignes du journal d'un service Proxmox (pveproxy, pvedaemon, corosync…)."
+    risk: read
+    template: "journalctl -u {{unit}} -n {{lines}} --no-pager"
+    max_output_kb: 128
+    params:
+      unit: {"type": "enum", "values": ["pve-cluster", "pvedaemon", "pveproxy", "pvestatd", "pve-firewall", "pvescheduler", "corosync", "pve-ha-lrm", "pve-ha-crm", "spiceproxy", "pvefw-logger"], "description": "Service"}
+      lines: {"type": "int", "min": 1, "max": 1000, "description": "Nombre de lignes à afficher", "default": 100}
+
+  - id: pve.updates_available
+    name: "Mises à jour disponibles"
+    description: "Liste les paquets pouvant être mis à jour (d'après le dernier apt update). Ne modifie rien."
+    risk: read
+    template: "apt list --upgradable"
+    max_output_kb: 128
+    params: {}
+
+  - id: pve.storage_cfg
+    name: "Configuration des stockages"
+    description: "Affiche /etc/pve/storage.cfg: types, chemins, contenus et nœuds de chaque stockage. Les mots de passe ne s'y trouvent pas."
+    risk: read
+    template: "cat /etc/pve/storage.cfg"
+    params: {}
+
+  - id: pve.datacenter_cfg
+    name: "Options du datacenter"
+    description: "Affiche /etc/pve/datacenter.cfg (clavier, console, options de migration, HA)."
+    risk: read
+    template: "cat /etc/pve/datacenter.cfg"
+    params: {}
+
+  - id: pve.corosync_conf
+    name: "Configuration corosync"
+    description: "Affiche /etc/pve/corosync.conf: nœuds, adresses des anneaux, quorum. Utile pour un souci de cluster ou de réseau de cluster."
+    risk: read
+    template: "cat /etc/pve/corosync.conf"
+    params: {}
+
+  - id: pve.network_cfg
+    name: "Configuration réseau du nœud"
+    description: "Affiche /etc/network/interfaces: ponts, bonds, VLAN et adresses du nœud."
+    risk: read
+    template: "cat /etc/network/interfaces"
+    params: {}
+
+  - id: pve.backup_jobs
+    name: "Tâches de sauvegarde planifiées"
+    description: "Affiche les tâches de sauvegarde du cluster (planification, stockage, guests concernés, rétention)."
+    risk: read
+    template: "pvesh get /cluster/backup"
+    max_output_kb: 128
+    params: {}
+
+  - id: pve.storage_content
+    name: "Contenu d'un stockage"
+    description: "Liste le contenu d'un stockage (images disque, ISO, modèles, sauvegardes) avec leur taille."
+    risk: read
+    template: "pvesm list {{storage}}"
+    max_output_kb: 256
+    params:
+      storage: {"type": "identifier", "description": "Identifiant du stockage (ex. local, local-lvm, pbs01)", "max_length": 40}
+
+  - id: pve.backup_list
+    name: "Sauvegardes d'un stockage"
+    description: "Liste les sauvegardes (vzdump ou PBS) d'un stockage, avec VMID, date et taille. Sert à vérifier qu'une sauvegarde récente existe."
+    risk: read
+    template: "pvesm list {{storage}} --content backup"
+    max_output_kb: 256
+    params:
+      storage: {"type": "identifier", "description": "Identifiant du stockage (ex. local, local-lvm, pbs01)", "max_length": 40}
+
+  - id: pve.zfs_pools
+    name: "Pools ZFS"
+    description: "Affiche l'état des pools ZFS: santé, erreurs de lecture/écriture/checksum, scrub en cours ou résilvering."
+    risk: read
+    template: "zpool status"
+    params: {}
+
+  - id: pve.zfs_pool_list
+    name: "Occupation des pools ZFS"
+    description: "Liste les pools ZFS avec taille, occupation, fragmentation et santé."
+    risk: read
+    template: "zpool list"
+    params: {}
+
+  - id: pve.zfs_datasets
+    name: "Datasets ZFS"
+    description: "Liste les datasets et volumes ZFS avec l'espace utilisé et disponible."
+    risk: read
+    template: "zfs list"
+    max_output_kb: 128
+    params: {}
+
+  - id: pve.ceph_status
+    name: "État de Ceph"
+    description: "Affiche l'état du cluster Ceph: santé, monitors, OSD, PG, débit. Nécessite Ceph sur le nœud."
+    risk: read
+    template: "ceph -s"
+    params: {}
+
+  - id: pve.ceph_health
+    name: "Détail de santé Ceph"
+    description: "Détaille les alertes Ceph (OSD hors ligne, PG dégradés, horloge, espace)."
+    risk: read
+    template: "ceph health detail"
+    params: {}
+
+  - id: pve.ceph_osd_tree
+    name: "Arbre des OSD Ceph"
+    description: "Affiche la hiérarchie des OSD par nœud avec leur état (up/down, in/out) et leur poids."
+    risk: read
+    template: "ceph osd tree"
+    params: {}
+
+  - id: pve.ceph_df
+    name: "Espace Ceph"
+    description: "Affiche l'espace brut et par pool de Ceph."
+    risk: read
+    template: "ceph df"
+    params: {}
+
+  - id: pve.vm_status
+    name: "État d'une VM"
+    description: "Affiche l'état d'une VM (en marche, arrêtée, en pause)."
+    risk: read
+    template: "qm status {{vmid}}"
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.vm_config
+    name: "Configuration d'une VM"
+    description: "Affiche la configuration d'une VM (CPU, mémoire, disques, réseau, options). Les mots de passe cloud-init sont masqués par Proxmox."
+    risk: read
+    template: "qm config {{vmid}}"
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.vm_pending
+    name: "Changements en attente d'une VM"
+    description: "Affiche les modifications de configuration d'une VM qui ne s'appliqueront qu'au prochain redémarrage."
+    risk: read
+    template: "qm pending {{vmid}}"
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.vm_snapshots
+    name: "Snapshots d'une VM"
+    description: "Liste les snapshots d'une VM, du plus ancien au plus récent."
+    risk: read
+    template: "qm listsnapshot {{vmid}}"
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.vm_agent_ping
+    name: "Agent invité d'une VM"
+    description: "Teste si l'agent QEMU invité répond dans la VM. Une erreur signifie que l'agent n'est pas installé ou pas démarré."
+    risk: read
+    template: "qm agent {{vmid}} ping"
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.vm_start
+    name: "Démarrer une VM"
+    description: "Démarre une VM arrêtée."
+    risk: write
+    template: "qm start {{vmid}}"
+    timeout_s: 120
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.vm_shutdown
+    name: "Éteindre proprement une VM"
+    description: "Envoie une demande d'arrêt ACPI à la VM et attend jusqu'à 60 s. La VM s'arrête proprement; si elle ne répond pas, elle reste allumée (utiliser pve.vm_stop en dernier recours)."
+    risk: write
+    template: "qm shutdown {{vmid}} --timeout 60"
+    timeout_s: 120
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.vm_reboot
+    name: "Redémarrer proprement une VM"
+    description: "Demande à la VM de redémarrer proprement (ACPI). Coupure du service qu'elle porte pendant le redémarrage."
+    risk: write
+    template: "qm reboot {{vmid}}"
+    timeout_s: 120
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.vm_unlock
+    name: "Déverrouiller une VM"
+    description: "Retire le verrou d'une VM bloquée après une sauvegarde, une migration ou un snapshot interrompu. À utiliser seulement si aucune opération n'est réellement en cours (vérifier pve.task_list)."
+    risk: write
+    template: "qm unlock {{vmid}}"
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.vm_snapshot
+    name: "Créer un snapshot de VM"
+    description: "Crée un snapshot de la VM (sans l'état de la mémoire). Consomme de l'espace disque et peut ralentir les écritures tant qu'il existe: à supprimer ensuite."
+    risk: write
+    template: "qm snapshot {{vmid}} {{name}}"
+    timeout_s: 300
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+      name: {"type": "regex", "pattern": "[A-Za-z][A-Za-z0-9_-]{1,39}", "description": "Nom du snapshot (lettre puis lettres, chiffres, _ ou -)", "max_length": 40}
+
+  - id: pve.vm_stop
+    name: "Arrêter brutalement une VM"
+    description: "Coupe la VM immédiatement, sans arrêt propre: risque de corruption de données et de fichiers. Dernier recours si pve.vm_shutdown échoue. Validation humaine toujours requise."
+    risk: destructive
+    template: "qm stop {{vmid}}"
+    timeout_s: 120
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.vm_reset
+    name: "Réinitialiser brutalement une VM"
+    description: "Réinitialise la VM comme un bouton reset: aucun arrêt propre, risque de corruption. Validation humaine toujours requise."
+    risk: destructive
+    template: "qm reset {{vmid}}"
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.vm_rollback
+    name: "Restaurer un snapshot de VM"
+    description: "Remet la VM dans l'état du snapshot: tout ce qui a été écrit depuis est PERDU. Validation humaine toujours requise."
+    risk: destructive
+    template: "qm rollback {{vmid}} {{name}}"
+    timeout_s: 300
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+      name: {"type": "regex", "pattern": "[A-Za-z][A-Za-z0-9_-]{1,39}", "description": "Nom du snapshot (lettre puis lettres, chiffres, _ ou -)", "max_length": 40}
+
+  - id: pve.vm_delsnapshot
+    name: "Supprimer un snapshot de VM"
+    description: "Supprime définitivement un snapshot de VM (peut prendre du temps et solliciter les disques). Validation humaine toujours requise."
+    risk: destructive
+    template: "qm delsnapshot {{vmid}} {{name}}"
+    timeout_s: 600
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+      name: {"type": "regex", "pattern": "[A-Za-z][A-Za-z0-9_-]{1,39}", "description": "Nom du snapshot (lettre puis lettres, chiffres, _ ou -)", "max_length": 40}
+
+  - id: pve.ct_status
+    name: "État d'un conteneur"
+    description: "Affiche l'état d'un conteneur LXC (en marche ou arrêté)."
+    risk: read
+    template: "pct status {{vmid}}"
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.ct_config
+    name: "Configuration d'un conteneur"
+    description: "Affiche la configuration d'un conteneur LXC (CPU, mémoire, disques, réseau, options)."
+    risk: read
+    template: "pct config {{vmid}}"
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.ct_snapshots
+    name: "Snapshots d'un conteneur"
+    description: "Liste les snapshots d'un conteneur LXC."
+    risk: read
+    template: "pct listsnapshot {{vmid}}"
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.ct_start
+    name: "Démarrer un conteneur"
+    description: "Démarre un conteneur LXC arrêté."
+    risk: write
+    template: "pct start {{vmid}}"
+    timeout_s: 120
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.ct_shutdown
+    name: "Éteindre proprement un conteneur"
+    description: "Demande l'arrêt propre du conteneur et attend jusqu'à 60 s."
+    risk: write
+    template: "pct shutdown {{vmid}} --timeout 60"
+    timeout_s: 120
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.ct_reboot
+    name: "Redémarrer un conteneur"
+    description: "Redémarre le conteneur. Coupure du service qu'il porte pendant le redémarrage."
+    risk: write
+    template: "pct reboot {{vmid}}"
+    timeout_s: 120
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.ct_unlock
+    name: "Déverrouiller un conteneur"
+    description: "Retire le verrou d'un conteneur bloqué après une opération interrompue. À utiliser seulement si aucune opération n'est réellement en cours."
+    risk: write
+    template: "pct unlock {{vmid}}"
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.ct_snapshot
+    name: "Créer un snapshot de conteneur"
+    description: "Crée un snapshot du conteneur. Consomme de l'espace disque tant qu'il existe: à supprimer ensuite."
+    risk: write
+    template: "pct snapshot {{vmid}} {{name}}"
+    timeout_s: 300
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+      name: {"type": "regex", "pattern": "[A-Za-z][A-Za-z0-9_-]{1,39}", "description": "Nom du snapshot (lettre puis lettres, chiffres, _ ou -)", "max_length": 40}
+
+  - id: pve.ct_stop
+    name: "Arrêter brutalement un conteneur"
+    description: "Tue immédiatement les processus du conteneur, sans arrêt propre. Dernier recours si pve.ct_shutdown échoue. Validation humaine toujours requise."
+    risk: destructive
+    template: "pct stop {{vmid}}"
+    timeout_s: 120
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+
+  - id: pve.ct_rollback
+    name: "Restaurer un snapshot de conteneur"
+    description: "Remet le conteneur dans l'état du snapshot: tout ce qui a été écrit depuis est PERDU. Validation humaine toujours requise."
+    risk: destructive
+    template: "pct rollback {{vmid}} {{name}}"
+    timeout_s: 300
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+      name: {"type": "regex", "pattern": "[A-Za-z][A-Za-z0-9_-]{1,39}", "description": "Nom du snapshot (lettre puis lettres, chiffres, _ ou -)", "max_length": 40}
+
+  - id: pve.ct_delsnapshot
+    name: "Supprimer un snapshot de conteneur"
+    description: "Supprime définitivement un snapshot de conteneur. Validation humaine toujours requise."
+    risk: destructive
+    template: "pct delsnapshot {{vmid}} {{name}}"
+    timeout_s: 600
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+      name: {"type": "regex", "pattern": "[A-Za-z][A-Za-z0-9_-]{1,39}", "description": "Nom du snapshot (lettre puis lettres, chiffres, _ ou -)", "max_length": 40}
+
+  - id: pve.vzdump
+    name: "Sauvegarder un guest maintenant"
+    description: "Lance une sauvegarde vzdump (mode snapshot, compression zstd) d'une VM ou d'un conteneur vers un stockage. Sollicite les disques et le réseau pendant plusieurs minutes; suivre avec pve.task_list."
+    risk: write
+    template: "vzdump {{vmid}} --storage {{storage}} --mode snapshot --compress zstd"
+    timeout_s: 600
+    params:
+      vmid: {"type": "int", "min": 100, "max": 999999999, "description": "Identifiant de la VM ou du conteneur (VMID)"}
+      storage: {"type": "identifier", "description": "Identifiant du stockage (ex. local, local-lvm, pbs01)", "max_length": 40}
+
+  - id: pve.apt_update
+    name: "Actualiser la liste des paquets"
+    description: "Met à jour la liste des paquets disponibles (apt-get update), sans rien installer. Nécessite l'accès aux dépôts."
+    risk: write
+    template: "apt-get update"
+    timeout_s: 120
+    params: {}

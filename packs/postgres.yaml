@@ -1,0 +1,59 @@
+pack:
+  id: postgres
+  name: PostgreSQL
+  version: 1.0.0
+  category: Bases de données
+  description: >
+    Diagnostic PostgreSQL. Les commandes s'exécutent en tant qu'utilisateur
+    système postgres via runuser (connexion par socket local, sans mot de passe).
+
+commands:
+  - id: postgres.ready
+    name: Disponibilité du serveur
+    description: Vérifie si PostgreSQL accepte les connexions. Premier réflexe en cas d'alarme de base injoignable.
+    risk: read
+    template: runuser -u postgres -- pg_isready
+    params: {}
+
+  - id: postgres.activity
+    name: Sessions actives
+    description: Liste les sessions non inactives (PID, base, utilisateur, état, durée de la requête, attente, début de la requête), triées par durée. Permet d'identifier une requête longue ou bloquée.
+    risk: read
+    template: runuser -u postgres -- psql -X -A -F " | " -c "SELECT pid, datname, usename, state, now() - query_start AS duration, wait_event_type, left(query, 120) AS query FROM pg_stat_activity WHERE state != 'idle' ORDER BY duration DESC"
+    params: {}
+
+  - id: postgres.locks
+    name: Sessions bloquées
+    description: Liste les sessions bloquées et la session qui les bloque. À utiliser en cas de lenteur ou de requêtes qui n'avancent plus.
+    risk: read
+    template: runuser -u postgres -- psql -X -A -F " | " -c "SELECT pid, pg_blocking_pids(pid) AS blocked_by, now() - query_start AS duration, left(query, 120) AS query FROM pg_stat_activity WHERE cardinality(pg_blocking_pids(pid)) != 0"
+    params: {}
+
+  - id: postgres.databases
+    name: Bases et tailles
+    description: Liste les bases de données avec leur taille.
+    risk: read
+    template: runuser -u postgres -- psql -X -A -F " | " -c "SELECT datname, pg_size_pretty(pg_database_size(datname)) AS size FROM pg_database WHERE NOT datistemplate ORDER BY pg_database_size(datname) DESC"
+    params: {}
+
+  - id: postgres.table_sizes
+    name: Plus grosses tables d'une base
+    description: Affiche les 20 plus grosses tables d'une base (taille totale, index compris).
+    risk: read
+    template: runuser -u postgres -- psql -X -A -F " | " -d {{database}} -c "SELECT relname, pg_size_pretty(pg_total_relation_size(relid)) AS total FROM pg_catalog.pg_statio_user_tables ORDER BY pg_total_relation_size(relid) DESC LIMIT 20"
+    params:
+      database:
+        type: identifier
+        description: Nom de la base
+
+  - id: postgres.replication
+    name: État de la réplication
+    description: Sur un primaire, liste les réplicas connectés et leur retard. Vide si le serveur n'a pas de réplica.
+    risk: read
+    template: runuser -u postgres -- psql -X -A -F " | " -c "SELECT client_addr, state, sync_state, write_lag, flush_lag, replay_lag FROM pg_stat_replication"
+    params: {}
+
+# Note : l'annulation d'une requête (pg_cancel_backend) n'est pas fournie, car elle
+# exige un paramètre à l'intérieur d'une chaîne SQL, ce que le moteur de templates
+# interdit volontairement. Piste : un mode « stdin » où la valeur typée est passée
+# en variable psql (\set) — voir SPEC, évolutions.

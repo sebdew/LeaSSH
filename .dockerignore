@@ -1,0 +1,10 @@
+.git
+bin
+data
+*.db*
+node_modules
+web/node_modules
+web/dist/*
+!web/dist/.gitkeep
+docs
+*.md

@@ -1,0 +1,67 @@
+pack:
+  id: mysql
+  name: MySQL / MariaDB
+  version: 1.0.0
+  category: Bases de données
+  description: >
+    Diagnostic MySQL/MariaDB. Les identifiants sont lus sur le serveur cible
+    (~/.my.cnf ou socket local), jamais transmis par Leash.
+
+commands:
+  - id: mysql.status
+    name: État du serveur MySQL
+    description: Affiche l'uptime, le nombre de connexions, les requêtes par seconde et les requêtes lentes. Premier diagnostic d'une base lente ou injoignable.
+    risk: read
+    template: mysqladmin status
+    params: {}
+
+  - id: mysql.processlist
+    name: Requêtes en cours
+    description: Liste les requêtes et connexions en cours d'exécution, avec leur durée et leur état. Permet d'identifier une requête bloquante ou un verrou.
+    risk: read
+    template: mysql --batch -e "SHOW FULL PROCESSLIST"
+    params: {}
+
+  - id: mysql.replica_status
+    name: État de la réplication
+    description: Affiche l'état de la réplication (threads IO/SQL, retard en secondes, dernière erreur). À utiliser en cas d'alarme de réplication.
+    risk: read
+    template: mysql --batch -e "SHOW REPLICA STATUS\G"
+    params: {}
+
+  - id: mysql.innodb_status
+    name: État InnoDB
+    description: Affiche le moteur InnoDB en détail (derniers interblocages, transactions, buffer pool). Sortie longue, à utiliser pour analyser un deadlock.
+    risk: read
+    template: mysql --batch -e "SHOW ENGINE INNODB STATUS\G"
+    max_output_kb: 128
+    params: {}
+
+  - id: mysql.databases
+    name: Liste des bases
+    description: Liste les bases de données présentes sur le serveur.
+    risk: read
+    template: mysql --batch -e "SHOW DATABASES"
+    params: {}
+
+  - id: mysql.table_status
+    name: Taille et état des tables
+    description: Affiche pour chaque table d'une base son moteur, son nombre de lignes estimé et sa taille. Utile pour trouver ce qui fait grossir une base.
+    risk: read
+    template: mysql --batch {{database}} -e "SHOW TABLE STATUS"
+    params:
+      database:
+        type: identifier
+        description: Nom de la base
+
+  - id: mysql.kill_query
+    name: Interrompre une requête
+    description: Interrompt la requête en cours d'une connexion (la connexion est conservée). Obtenir l'identifiant avec mysql.processlist. Validation humaine toujours requise.
+    risk: destructive
+    template: mysqladmin kill {{connection_id}}
+    params:
+      connection_id:
+        type: int
+        min: 1
+        max: 4294967295
+        description: Identifiant de connexion (colonne Id de mysql.processlist)
