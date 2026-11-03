@@ -149,4 +149,4 @@ make docker  # image Docker
 
 ## Licence
 
-Proposition : **AGPL-3.0** (ou Apache-2.0 si l'objectif est une adoption la plus large possible, y compris dans des produits tiers).
+[Apache License 2.0](LICENSE). Vous pouvez reprendre, modifier et redistribuer ce projet, y compris dans un cadre commercial, à condition de **conserver la licence et le fichier [`NOTICE`](NOTICE)** et de **citer le créateur** (Sébastien Dewarlez) ainsi que les modifications apportées (§4).
