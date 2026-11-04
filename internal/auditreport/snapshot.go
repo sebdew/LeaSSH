@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 const (
@@ -31,7 +31,7 @@ const (
 type Params struct {
 	Now           time.Time
 	From, To      time.Time // jours UTC inclus
-	LeashVersion  string
+	LeasshVersion  string
 	RetentionDays int
 	ApprovalTTL   time.Duration
 	SessionTTL    time.Duration
@@ -245,7 +245,7 @@ type Snapshot struct {
 	Kind          string      `json:"kind"`
 	SchemaVersion int         `json:"schema_version"`
 	GeneratedAt   string      `json:"generated_at"`
-	LeashVersion  string      `json:"leash_version"`
+	LeasshVersion  string      `json:"leash_version"`
 	Period        Period      `json:"period"`
 	Config        ConfigFacts `json:"configuration"`
 	Scope         Scope       `json:"scope"`
@@ -284,7 +284,7 @@ func countBy[T any](items []T, key func(T) string) map[string]int {
 func Build(ctx context.Context, q store.Q, p Params) (Snapshot, error) {
 	now := p.Now.UTC()
 	per := PeriodBounds(p.From, p.To)
-	snap := Snapshot{Kind: Kind, SchemaVersion: SchemaVersion, GeneratedAt: store.FormatTime(now), LeashVersion: p.LeashVersion, Period: per, Limitations: limitations()}
+	snap := Snapshot{Kind: Kind, SchemaVersion: SchemaVersion, GeneratedAt: store.FormatTime(now), LeasshVersion: p.LeasshVersion, Period: per, Limitations: limitations()}
 
 	whEnabled, _ := store.GetSetting(ctx, q, "webhook.enabled")
 	snap.Config = ConfigFacts{RetentionDays: p.RetentionDays, ApprovalTTLMin: int(p.ApprovalTTL.Minutes()), SessionTTLHours: int(p.SessionTTL.Hours()), BaseURL: p.BaseURL,

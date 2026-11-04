@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 type recv struct {
@@ -48,7 +48,7 @@ func newD(t *testing.T) (*Dispatcher, *store.Store) {
 	}
 	t.Cleanup(func() { st.Close() })
 	box, _ := crypto.NewBox(bytes.Repeat([]byte{3}, 32))
-	d := New(st, box, "https://leash.example.com/", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	d := New(st, box, "https://leassh.example.com/", slog.New(slog.NewTextHandler(io.Discard, nil)))
 	d.Backoff = []time.Duration{10 * time.Millisecond, 10 * time.Millisecond}
 	return d, st
 }
@@ -63,10 +63,10 @@ func TestSignatureIsVerifiable(t *testing.T) {
 		t.Fatalf("envoi: %+v", res)
 	}
 	h := rc.hits[0]
-	if got := h.header.Get("X-Leash-Signature"); got != Sign("s3cret", h.body) || !strings.HasPrefix(got, "sha256=") || Sign("autre", h.body) == got {
+	if got := h.header.Get("X-Leassh-Signature"); got != Sign("s3cret", h.body) || !strings.HasPrefix(got, "sha256=") || Sign("autre", h.body) == got {
 		t.Fatalf("signature: %s", got)
 	}
-	if h.header.Get("X-Leash-Event") != "execution.finished" || h.header.Get("Content-Type") != "application/json" {
+	if h.header.Get("X-Leassh-Event") != "execution.finished" || h.header.Get("Content-Type") != "application/json" {
 		t.Fatalf("en-têtes: %v", h.header)
 	}
 	var env map[string]any
@@ -157,7 +157,7 @@ func TestQueueDeliversAndRecordsOutcome(t *testing.T) {
 	var e1, e2 map[string]any
 	json.Unmarshal(rc.hits[0].body, &e1)
 	json.Unmarshal(rc.hits[1].body, &e2)
-	if e1["url"] != "https://leash.example.com/validations" || e2["url"] != "https://leash.example.com/propositions/P1" {
+	if e1["url"] != "https://leassh.example.com/validations" || e2["url"] != "https://leassh.example.com/propositions/P1" {
 		t.Fatalf("liens: %v %v", e1["url"], e2["url"])
 	}
 	time.Sleep(50 * time.Millisecond)

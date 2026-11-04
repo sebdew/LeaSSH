@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/leash-dev/leash/internal/provisioning"
+	"github.com/leassh-dev/leassh/internal/provisioning"
 )
 
 const sample = `[

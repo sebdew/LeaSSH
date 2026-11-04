@@ -30,7 +30,7 @@ describe("App", () => {
     mockFetch({ "GET /setup/status": () => ({ body: { initialized: false } }) });
     wrap();
     expect(await screen.findByRole("heading", { name: /Bienvenue/ })).toBeInTheDocument();
-    expect(screen.getByText(/LEASH_MASTER_KEY/)).toBeInTheDocument();
+    expect(screen.getByText(/LEASSH_MASTER_KEY/)).toBeInTheDocument();
   });
 
   it("bloque la création si les mots de passe diffèrent", async () => {

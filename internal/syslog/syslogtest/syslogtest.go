@@ -26,7 +26,7 @@ type Server struct {
 	Proto string // udp | tcp | tls
 	Host  string
 	Port  int
-	CAPEM string // autorité à donner à Leash (tls)
+	CAPEM string // autorité à donner à Leassh (tls)
 
 	mu    sync.Mutex
 	msgs  []string
@@ -215,7 +215,7 @@ func ClientCert(t testing.TB) (certPEM, keyPEM string, cas *x509.CertPool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tpl := &x509.Certificate{SerialNumber: big.NewInt(2), Subject: pkix.Name{CommonName: "leash-client"}, NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour),
+	tpl := &x509.Certificate{SerialNumber: big.NewInt(2), Subject: pkix.Name{CommonName: "leassh-client"}, NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour),
 		KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}, BasicConstraintsValid: true, IsCA: true}
 	der, err := x509.CreateCertificate(rand.Reader, tpl, tpl, &key.PublicKey, key)
 	if err != nil {

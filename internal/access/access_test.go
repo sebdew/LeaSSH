@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/store"
-	"github.com/leash-dev/leash/internal/testkit"
+	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/leassh-dev/leassh/internal/testkit"
 )
 
 // Une règle couvre l'union de tous ses groupes de serveurs et de commandes.

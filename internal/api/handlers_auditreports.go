@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/auditreport"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/auditreport"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 const (
@@ -80,7 +80,7 @@ func (s *Server) createAuditReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-		snap, err := auditreport.Build(ctx, tx, auditreport.Params{Now: time.Now(), From: from, To: to, LeashVersion: s.version,
+		snap, err := auditreport.Build(ctx, tx, auditreport.Params{Now: time.Now(), From: from, To: to, LeasshVersion: s.version,
 			RetentionDays: s.cfg.LogRetentionDays, ApprovalTTL: s.cfg.ApprovalTTL, SessionTTL: s.cfg.SessionTTL, BaseURL: s.cfg.BaseURL})
 		if err != nil {
 			return outcome{}, err
@@ -90,7 +90,7 @@ func (s *Server) createAuditReport(w http.ResponseWriter, r *http.Request) {
 			return outcome{}, err
 		}
 		h, m, l := auditreport.Counts(snap.Findings)
-		rep := store.AuditReport{CreatedBy: u.ID, CreatedByName: u.Username, PeriodFrom: snap.Period.From, PeriodTo: snap.Period.To, LeashVersion: s.version,
+		rep := store.AuditReport{CreatedBy: u.ID, CreatedByName: u.Username, PeriodFrom: snap.Period.From, PeriodTo: snap.Period.To, LeasshVersion: s.version,
 			SchemaVersion: snap.SchemaVersion, SHA256: auditreport.Digest(raw), Snapshot: string(raw), High: h, Medium: m, Low: l}
 		if rep, err = store.InsertAuditReport(ctx, tx, rep); err != nil {
 			return outcome{}, err

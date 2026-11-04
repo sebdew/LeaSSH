@@ -10,8 +10,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 type fakeConn struct{ ms *[]Machine }

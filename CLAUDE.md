@@ -1,6 +1,6 @@
 # CLAUDE.md — consignes de développement
 
-Projet : **Leash**, serveur MCP open source qui donne à des agents IA un accès SSH limité à un catalogue de commandes validées.
+Projet : **Leassh**, serveur MCP open source qui donne à des agents IA un accès SSH limité à un catalogue de commandes validées.
 Lire d'abord : `README.md`, `docs/SPEC.md` (fonctionnel, référence), `docs/UX.md` (interface).
 
 ## Stack
@@ -10,7 +10,7 @@ Lire d'abord : `README.md`, `docs/SPEC.md` (fonctionnel, référence), `docs/UX.
 - MCP : SDK officiel `github.com/modelcontextprotocol/go-sdk`, transport HTTP streamable sur `/mcp`
 - SSH : `golang.org/x/crypto/ssh`
 - Base : SQLite via `modernc.org/sqlite` (pur Go, pas de CGO), migrations `pressly/goose`, requêtes `sqlc`
-- Chiffrement secrets : AES-256-GCM (`crypto/cipher`), clé maître depuis `LEASH_MASTER_KEY`
+- Chiffrement secrets : AES-256-GCM (`crypto/cipher`), clé maître depuis `LEASSH_MASTER_KEY`
 - Mots de passe : argon2id (`golang.org/x/crypto/argon2`)
 - Logs applicatifs : `log/slog` en JSON
 - IDs : ULID (`oklog/ulid/v2`)
@@ -26,7 +26,7 @@ Lire d'abord : `README.md`, `docs/SPEC.md` (fonctionnel, référence), `docs/UX.
 ## Arborescence cible
 
 ```
-cmd/leash/            point d'entrée (serve, rotate-master-key, version)
+cmd/leassh/            point d'entrée (serve, rotate-master-key, version)
 internal/
   config/             variables d'environnement
   store/              accès base (sqlc), migrations

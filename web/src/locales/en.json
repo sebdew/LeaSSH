@@ -45,14 +45,14 @@
     "noResult": "No results for “{{q}}”."
   },
   "setup": {
-    "title": "Welcome to Leash",
+    "title": "Welcome to Leassh",
     "subtitle": "Create the administrator account to get started.",
     "username": "Username",
     "password": "Password",
     "confirm": "Confirmation",
     "submit": "Create account",
     "mismatch": "Passwords do not match.",
-    "backup": "Keep LEASH_MASTER_KEY safe: it encrypts SSH secrets. Without it they cannot be recovered.",
+    "backup": "Keep LEASSH_MASTER_KEY safe: it encrypts SSH secrets. Without it they cannot be recovered.",
     "strength": {
       "label": "Strength",
       "0": "Too short",
@@ -67,6 +67,7 @@
     "sso": {
       "button": "Sign in with {{name}}",
       "or": "or with a local account",
+      "redirecting": "Redirecting to {{name}}…",
       "localAdminsOnly": "Local passwords are reserved for local administrators (break-glass account).",
       "errors": {
         "generic": "SSO sign-in failed.",
@@ -88,7 +89,7 @@
         "token_nonce": "The token does not match your sign-in request. Please try again.",
         "token_subject": "The token does not contain a user identifier.",
         "userinfo_failed": "Could not read the profile.",
-        "role_not_mapped": "Your account has no role in Leash: ask an administrator to add you to an allowed group.",
+        "role_not_mapped": "Your account has no role in Leassh: ask an administrator to add you to an allowed group.",
         "not_provisioned": "Your account is not allowed: automatic account creation is disabled.",
         "account_disabled": "This account is disabled.",
         "internal": "Internal error during SSO sign-in."
@@ -136,7 +137,7 @@
     "proposals": "Pending proposals",
     "reviewProposals": "Review",
     "recent": "Recent activity",
-    "noActivity": "No executions yet. They will appear here as soon as an agent uses Leash.",
+    "noActivity": "No executions yet. They will appear here as soon as an agent uses Leassh.",
     "openJournal": "Open the full log"
   },
   "soon": {
@@ -314,7 +315,7 @@
   },
   "identities": {
     "title": "SSH identities",
-    "subtitle": "The SSH accounts Leash uses to connect to servers.",
+    "subtitle": "The SSH accounts Leassh uses to connect to servers.",
     "add": "New identity",
     "empty": "No SSH identities. Generate an ed25519 key to get started.",
     "type": {
@@ -491,7 +492,7 @@
       "action": "action",
       "actor_type": "actor"
     },
-    "empty": "No executions yet. They will appear here as soon as an agent uses Leash.",
+    "empty": "No executions yet. They will appear here as soon as an agent uses Leassh.",
     "emptyFiltered": "No results for these filters.",
     "emptyAudit": "No administration events.",
     "col": {
@@ -723,7 +724,7 @@
     "retention": "Retention",
     "retentionUnlimited": "Unlimited retention",
     "retentionDays": "{{count}} days",
-    "retentionHelp": "Set by LEASH_LOG_RETENTION_DAYS. Only the automatic purge deletes log rows.",
+    "retentionHelp": "Set by LEASSH_LOG_RETENTION_DAYS. Only the automatic purge deletes log rows.",
     "integrity": "Log integrity",
     "integrityHelp": "Checks the hash chains of executions and administration to detect any tampering with the database.",
     "verify": "Verify integrity",
@@ -783,7 +784,7 @@
       "invalid": "invalid"
     },
     "installedVersion": "installed version: {{version}}",
-    "untrusted": "This file does not come from Leash: review each command, your agents will be able to run them.",
+    "untrusted": "This file does not come from Leassh: review each command, your agents will be able to run them.",
     "overridesManual": "Replaces a command created by hand or coming from another pack.",
     "nothingToDo": "Nothing to import: the catalog is already up to date.",
     "createGroup": "Create (or complete) the command group “{{name}}”",
@@ -853,7 +854,7 @@
     "dropped": "Dropped (queue full)",
     "lastSuccess": "Last successful send",
     "lastError": "Last error",
-    "queueHelp": "The queue is in memory (10,000 messages): if the server goes down, sending resumes automatically; restarting Leash empties the queue (the administration log resumes where it left off).",
+    "queueHelp": "The queue is in memory (10,000 messages): if the server goes down, sending resumes automatically; restarting Leassh empties the queue (the administration log resumes where it left off).",
     "protocol": "Protocol",
     "host": "Server",
     "port": "Port",
@@ -913,7 +914,7 @@
     "secret": "Signing secret",
     "secretKept": "•••• (leave empty to keep)",
     "events": "Events sent",
-    "signatureHelp": "X-Leash-Signature header: sha256=<HMAC of the body with the secret>. Three attempts with increasing delay.",
+    "signatureHelp": "X-Leassh-Signature header: sha256=<HMAC of the body with the secret>. Three attempts with increasing delay.",
     "test": "Test delivery",
     "testOk": "Delivered (HTTP {{status}})",
     "testFailed": "Failed: {{error}}",
@@ -1080,7 +1081,7 @@
     "roleClaim": "Roles claim",
     "roleClaimHelp": "Name of the claim that holds groups or roles (e.g. groups, roles, realm_access.roles). Read from the ID token, otherwise from userinfo. Empty: everyone gets the default role.",
     "mapTo": "Values → {{role}}",
-    "mapHelp": "One value per line (e.g. /leash-admins). The highest matching role wins; the role is recomputed at each sign-in.",
+    "mapHelp": "One value per line (e.g. /leassh-admins). The highest matching role wins; the role is recomputed at each sign-in.",
     "defaultRole": "When nothing matches",
     "refuse": "Refuse the sign-in",
     "accounts": "Accounts",
@@ -1090,6 +1091,8 @@
     "localOnly": "Reserve the local password for local administrators",
     "localOnlyHelp": "When SSO is active, non-administrator local accounts can no longer sign in with a password. Local administrators keep the fallback access.",
     "endSession": "Also end the session at the provider on sign-out",
+    "autoRedirect": "Redirect automatically to the provider (skip the sign-in page)",
+    "autoRedirectHelp": "To still reach the local sign-in form (break-glass account), open {{url}}. The form is also shown after an SSO failure.",
     "saveFirst": "The test uses the issuer you typed; save to apply changes.",
     "test": "Test discovery",
     "testOk_one": "Discovery succeeded ({{count}} signing key published).",

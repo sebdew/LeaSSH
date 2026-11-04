@@ -1,4 +1,4 @@
-// Package packsdata embarque les packs de commandes fournis avec Leash.
+// Package packsdata embarque les packs de commandes fournis avec Leassh.
 package packsdata
 
 import "embed"

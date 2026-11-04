@@ -1,8 +1,8 @@
-# Leash — Guide UX / UI
+# Leassh — Guide UX / UI
 
 ## 1. Intention
 
-Leash manipule un sujet anxiogène (des IA qui agissent sur des serveurs). L'interface doit **rassurer par la clarté** :
+Leassh manipule un sujet anxiogène (des IA qui agissent sur des serveurs). L'interface doit **rassurer par la clarté** :
 - on comprend en un coup d'œil ce que chaque agent peut faire ;
 - on voit immédiatement ce qui s'est passé, et ce qui attend une décision ;
 - rien n'est caché derrière trois clics.
@@ -27,7 +27,7 @@ Résultat visé : un outil d'administration **calme, dense quand il le faut (jou
 
 ```
 ┌───────────────┬──────────────────────────────────────────────────────────┐
-│  ◆ Leash      │  ⌘K Rechercher…                      ◐ thème   👤 admin ▾ │
+│  ◆ Leassh      │  ⌘K Rechercher…                      ◐ thème   👤 admin ▾ │
 │               ├──────────────────────────────────────────────────────────┤
 │  Tableau de   │                                                          │
 │  bord         │   Titre de page                         [Action primaire] │
@@ -103,7 +103,7 @@ Thème : suit le système par défaut, choix mémorisé par utilisateur (côté 
 ## 5. Écrans
 
 ### 5.1 Initialisation
-Écran centré, une seule carte : nom d'utilisateur, mot de passe (indicateur de robustesse), confirmation. Rappel de sauvegarder `LEASH_MASTER_KEY`.
+Écran centré, une seule carte : nom d'utilisateur, mot de passe (indicateur de robustesse), confirmation. Rappel de sauvegarder `LEASSH_MASTER_KEY`.
 
 ### 5.2 Tableau de bord
 - **Checklist d'accueil** tant qu'elle n'est pas terminée (6 étapes, cases cochées automatiquement, chaque étape est un lien).

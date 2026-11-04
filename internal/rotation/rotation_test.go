@@ -6,9 +6,9 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/leash-dev/leash/internal/auditreport"
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/auditreport"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 func TestRotate(t *testing.T) {

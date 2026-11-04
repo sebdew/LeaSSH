@@ -14,10 +14,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/catalog"
-	"github.com/leash-dev/leash/internal/store"
-	packsdata "github.com/leash-dev/leash/packs"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/catalog"
+	"github.com/leassh-dev/leassh/internal/store"
+	packsdata "github.com/leassh-dev/leassh/packs"
 	"gopkg.in/yaml.v3"
 )
 

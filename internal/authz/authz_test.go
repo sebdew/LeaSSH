@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/catalog"
+	"github.com/leassh-dev/leassh/internal/catalog"
 )
 
 var now = time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)

@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 // Status: état de l'export, affiché dans l'interface.
@@ -335,7 +335,7 @@ func (f *Forwarder) SendTest(ctx context.Context) error {
 		return errors.New("connexion: " + err.Error())
 	}
 	defer c.Close()
-	ev := Event{Time: time.Now(), Type: "syslog.test", Severity: sevInfo, Fields: []Field{{"message", "Message de test envoyé depuis Leash"}}}
+	ev := Event{Time: time.Now(), Type: "syslog.test", Severity: sevInfo, Fields: []Field{{"message", "Message de test envoyé depuis Leassh"}}}
 	if err := c.send(rt.Render(ev)); err != nil {
 		return errors.New("envoi: " + err.Error())
 	}

@@ -6,14 +6,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/leassh-dev/leassh/internal/config"
 	"os"
 	"strings"
 
 	"golang.org/x/term"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 const minPassword = 10
@@ -22,9 +23,9 @@ const minPassword = 10
 // Le mot de passe est saisi au terminal (ou lu sur l'entrée standard), jamais passé en argument.
 func resetPassword(args []string) error {
 	if len(args) != 1 {
-		return errors.New("usage: leash reset-password <identifiant>")
+		return errors.New("usage: leassh reset-password <identifiant>")
 	}
-	dir := os.Getenv("LEASH_DATA_DIR")
+	dir := config.Getenv("LEASSH_DATA_DIR")
 	if dir == "" {
 		dir = "/data"
 	}

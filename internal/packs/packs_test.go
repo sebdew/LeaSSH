@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 func setup(t *testing.T) (*Service, *store.Store, store.User) {

@@ -32,7 +32,7 @@ footer{margin-top:40px;padding-top:12px;border-top:1px solid var(--line);color:v
 <main>
 <section class="cover">
 <h1>Rapport d'audit — accès SSH des agents</h1>
-<p class="muted">LeaSSH {{.Snapshot.LeashVersion}} · aide à l'audit pour un auditeur sécurité (ISO 27001, HDS)</p>
+<p class="muted">LeaSSH {{.Snapshot.LeasshVersion}} · aide à l'audit pour un auditeur sécurité (ISO 27001, HDS)</p>
 <dl>
 <dt>Période auditée</dt><dd>{{day .Snapshot.Period.From}} au {{day .Snapshot.Period.To}} inclus ({{.Snapshot.Period.Days}} jour(s), UTC)</dd>
 <dt>Généré le</dt><dd>{{ts .Snapshot.GeneratedAt}}{{if .Report.CreatedByName}} par {{.Report.CreatedByName}}{{end}}</dd>
@@ -191,7 +191,7 @@ footer{margin-top:40px;padding-top:12px;border-top:1px solid var(--line);color:v
 <p><b>Vérifier l'intégrité de ce rapport.</b> Récupérer le fichier JSON signé depuis LeaSSH, puis comparer l'empreinte au pied de ce document : <code>jq -cj .snapshot rapport.json | sha256sum</code>. L'écran Audit de LeaSSH permet en outre de vérifier qu'un fichier a bien été émis par cette instance.</p>
 
 <footer>
-Rapport {{.Report.ID}} · LeaSSH {{.Snapshot.LeashVersion}} · empreinte SHA-256 des faits : <span class="mono">{{.Report.SHA256}}</span>
+Rapport {{.Report.ID}} · LeaSSH {{.Snapshot.LeasshVersion}} · empreinte SHA-256 des faits : <span class="mono">{{.Report.SHA256}}</span>
 </footer>
 </main>
 </body>

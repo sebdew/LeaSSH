@@ -127,7 +127,7 @@ func dial(ctx context.Context, addr string, cfg *ssh.ClientConfig) (*ssh.Client,
 // ScanHostKey récupère l'empreinte présentée par l'hôte sans s'authentifier ni envoyer de secret.
 func ScanHostKey(ctx context.Context, host string, port int) (fingerprint, keyType string, err error) {
 	cfg := &ssh.ClientConfig{
-		User: "leash-scan",
+		User: "leassh-scan",
 		Auth: []ssh.AuthMethod{ssh.Password("")},
 		HostKeyCallback: func(_ string, _ net.Addr, k ssh.PublicKey) error {
 			fingerprint, keyType = ssh.FingerprintSHA256(k), k.Type()

@@ -238,7 +238,7 @@ function WebhookForm({ config, events, onSaved, onTested }: { config: WebhookCon
     <Card className="flex flex-col gap-3">
       <h2 className="text-[15px] font-semibold">{t("settings.webhook")}</h2>
       <p className="text-muted">{t("webhook.help")}</p>
-      <Field id="wh-url" label={t("webhook.url")} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://ntfy.example.com/leash" />
+      <Field id="wh-url" label={t("webhook.url")} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://ntfy.example.com/leassh" />
       <Field id="wh-secret" type="password" autoComplete="new-password" label={t("webhook.secret")} value={secret} onChange={(e) => setSecret(e.target.value)}
         placeholder={config.has_secret ? t("webhook.secretKept") : ""} />
       <Check2 id="wh-enabled" label={t("common.enabled")} checked={enabled} onChange={setEnabled} />

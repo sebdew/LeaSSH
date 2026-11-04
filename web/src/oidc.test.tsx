@@ -9,9 +9,9 @@ afterEach(() => { vi.unstubAllGlobals(); window.history.replaceState(null, "", "
 
 const admin = { id: "u1", username: "sd", display_name: "SD", role: "admin", theme: "system", csrf_token: "t" };
 const config = {
-  enabled: true, name: "Keycloak", issuer: "https://sso.example.com/realms/leash", client_id: "leash", has_client_secret: true, scopes: "openid profile email",
-  role_claim: "groups", role_map: { admin: ["/leash-admins"], approver: [], viewer: ["/leash-readers"] }, default_role: "viewer", jit: true,
-  local_password_admins_only: false, end_session: true, redirect_url: "http://192.168.6.167:8080/api/v1/auth/oidc/callback",
+  enabled: true, name: "Keycloak", issuer: "https://sso.example.com/realms/leassh", client_id: "leassh", has_client_secret: true, scopes: "openid profile email",
+  role_claim: "groups", role_map: { admin: ["/leassh-admins"], approver: [], viewer: ["/leassh-readers"] }, default_role: "viewer", jit: true,
+  local_password_admins_only: false, end_session: true, auto_redirect: false, redirect_url: "http://192.168.6.167:8080/api/v1/auth/oidc/callback",
 };
 
 describe("connexion SSO", () => {
@@ -22,6 +22,25 @@ describe("connexion SSO", () => {
     expect(link).toHaveAttribute("href", "/api/v1/auth/oidc/start");
     expect(screen.getByLabelText("Nom d'utilisateur")).toBeInTheDocument();
     expect(screen.getByText(/réservé aux administrateurs locaux/)).toBeInTheDocument();
+  });
+
+  it("redirige automatiquement vers le fournisseur, sauf avec ?login", async () => {
+    const replace = vi.fn();
+    const orig = window.location;
+    Object.defineProperty(window, "location", { configurable: true, value: { ...orig, search: "", pathname: "/", replace } });
+    try {
+      mockApi({ "GET /auth/providers": () => ({ body: { oidc: { name: "Keycloak", start_url: "/api/v1/auth/oidc/start" }, local_password_admins_only: false, auto_redirect: true } }) });
+      const { unmount } = renderApp(<LoginPage onDone={() => {}} />);
+      await waitFor(() => expect(replace).toHaveBeenCalledWith("/api/v1/auth/oidc/start"));
+      unmount();
+      replace.mockClear();
+      Object.defineProperty(window, "location", { configurable: true, value: { ...orig, search: "?login", pathname: "/", replace } });
+      renderApp(<LoginPage onDone={() => {}} />);
+      expect(await screen.findByLabelText("Nom d'utilisateur")).toBeInTheDocument();
+      expect(replace).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(window, "location", { configurable: true, value: orig });
+    }
   });
 
   it("sans SSO, aucun bouton fournisseur", async () => {
@@ -35,7 +54,7 @@ describe("connexion SSO", () => {
     window.history.replaceState(null, "", "/?sso_error=role_not_mapped");
     mockApi({ "GET /auth/providers": () => ({ body: { oidc: { name: "Keycloak", start_url: "/x" }, local_password_admins_only: false } }) });
     renderApp(<LoginPage onDone={() => {}} />);
-    expect(await screen.findByRole("alert")).toHaveTextContent(/aucun rôle dans Leash/);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/aucun rôle dans Leassh/);
     await waitFor(() => expect(window.location.search).toBe(""));
   });
 
@@ -69,36 +88,36 @@ describe("réglages SSO", () => {
     expect(screen.getByRole("button", { name: "Enregistrer" })).toBeDisabled();
 
     // mapping: une valeur par ligne
-    expect(screen.getByLabelText("Valeurs → Administrateur")).toHaveValue("/leash-admins");
-    await u.type(screen.getByLabelText("Valeurs → Validateur"), "/leash-ops");
+    expect(screen.getByLabelText("Valeurs → Administrateur")).toHaveValue("/leassh-admins");
+    await u.type(screen.getByLabelText("Valeurs → Validateur"), "/leassh-ops");
     await u.type(screen.getByLabelText("Secret client"), "nouveau-secret");
     await u.selectOptions(screen.getByLabelText("Sans correspondance"), "");
     await u.click(screen.getByLabelText("Réserver le mot de passe local aux administrateurs locaux"));
     await u.click(screen.getByRole("button", { name: "Enregistrer" }));
     await waitFor(() => expect(saved).toBeDefined());
     expect(saved).toMatchObject({ client_secret: "nouveau-secret", clear_client_secret: false, default_role: "", local_password_admins_only: true, role_claim: "groups",
-      role_map: { admin: ["/leash-admins"], approver: ["/leash-ops"], viewer: ["/leash-readers"] } });
+      role_map: { admin: ["/leassh-admins"], approver: ["/leassh-ops"], viewer: ["/leassh-readers"] } });
     expect(saved).not.toHaveProperty("has_client_secret");
     expect(saved).not.toHaveProperty("redirect_url");
   });
 
   it("avertit d'un issuer HTTP et affiche le résultat du test de découverte", async () => {
     const calls = setup({
-      "POST /settings/oidc/test": () => ({ body: { ok: true, issuer: "http://kc.lan/realms/leash", authorization_endpoint: "http://kc.lan/auth", token_endpoint: "http://kc.lan/token", jwks_uri: "http://kc.lan/certs", jwks_keys: 2, warnings: ["issuer_http", "no_end_session"] } }),
+      "POST /settings/oidc/test": () => ({ body: { ok: true, issuer: "http://kc.lan/realms/leassh", authorization_endpoint: "http://kc.lan/auth", token_endpoint: "http://kc.lan/token", jwks_uri: "http://kc.lan/certs", jwks_keys: 2, warnings: ["issuer_http", "no_end_session"] } }),
     });
     renderApp(<SettingsPage />);
     const u = userEvent.setup();
     await u.click(await screen.findByRole("tab", { name: "SSO" }));
     const issuer = await screen.findByLabelText("Issuer (URL du fournisseur)");
     await u.clear(issuer);
-    await u.type(issuer, "http://kc.lan/realms/leash");
+    await u.type(issuer, "http://kc.lan/realms/leassh");
     expect(screen.getByText(/Issuer en HTTP/)).toBeInTheDocument();
     await u.click(screen.getByRole("button", { name: "Tester la découverte" }));
     expect(await screen.findByText(/Découverte réussie/)).toBeInTheDocument();
     expect(screen.getByText("http://kc.lan/token")).toBeInTheDocument();
     expect(screen.getByText("L'issuer est en HTTP, sans chiffrement.")).toBeInTheDocument();
     expect(screen.getByText(/Pas de déconnexion fournisseur/)).toBeInTheDocument();
-    expect(calls.find((c) => c.key === "POST /settings/oidc/test")?.body).toEqual({ issuer: "http://kc.lan/realms/leash" });
+    expect(calls.find((c) => c.key === "POST /settings/oidc/test")?.body).toEqual({ issuer: "http://kc.lan/realms/leassh" });
   });
 
   it("affiche l'échec de la découverte", async () => {

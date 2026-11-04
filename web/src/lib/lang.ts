@@ -1,7 +1,7 @@
 import i18n from "../i18n";
 
 export type Lang = "fr" | "en";
-const KEY = "leash-lang";
+const KEY = "leassh-lang";
 
 export const LANGS: { id: Lang; label: string }[] = [{ id: "fr", label: "Français" }, { id: "en", label: "English" }];
 

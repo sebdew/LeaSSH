@@ -11,9 +11,9 @@ import type { McpKey, Rule } from "../lib/types";
 export function configSnippets(token: string, origin: string) {
   const url = `${origin}/mcp`;
   return {
-    claude: `claude mcp add --transport http leash ${url} --header "Authorization: Bearer ${token}"`,
-    litellm: `mcp_servers:\n  leash:\n    url: "${url}"\n    transport: "http"\n    auth_type: "bearer_token"\n    auth_value: "${token}"`,
-    json: JSON.stringify({ mcpServers: { leash: { type: "http", url, headers: { Authorization: `Bearer ${token}` } } } }, null, 2),
+    claude: `claude mcp add --transport http leassh ${url} --header "Authorization: Bearer ${token}"`,
+    litellm: `mcp_servers:\n  leassh:\n    url: "${url}"\n    transport: "http"\n    auth_type: "bearer_token"\n    auth_value: "${token}"`,
+    json: JSON.stringify({ mcpServers: { leassh: { type: "http", url, headers: { Authorization: `Bearer ${token}` } } } }, null, 2),
   };
 }
 

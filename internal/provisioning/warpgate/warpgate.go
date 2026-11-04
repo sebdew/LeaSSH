@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leash-dev/leash/internal/provisioning"
+	"github.com/leassh-dev/leassh/internal/provisioning"
 )
 
 const maxBody = 4 << 20
@@ -47,7 +47,7 @@ func Type() provisioning.Type {
 		Label: "Warpgate",
 		Fields: []provisioning.Field{
 			{Key: "url", Kind: provisioning.FieldText, Label: "URL de Warpgate", Help: "Interface web, ex. https://warpgate.exemple.fr:8888", Required: true},
-			{Key: "token", Kind: provisioning.FieldPassword, Label: "Jeton d'API de l'utilisateur", Help: "Jeton personnel du compte Warpgate utilisé par Leash (il n'a pas besoin d'être administrateur).", Required: true},
+			{Key: "token", Kind: provisioning.FieldPassword, Label: "Jeton d'API de l'utilisateur", Help: "Jeton personnel du compte Warpgate utilisé par Leassh (il n'a pas besoin d'être administrateur).", Required: true},
 			{Key: "ssh_host", Kind: provisioning.FieldText, Label: "Hôte SSH du bastion", Required: true},
 			{Key: "ssh_port", Kind: provisioning.FieldNumber, Label: "Port SSH du bastion", Default: 2222},
 			{Key: "tls_insecure", Kind: provisioning.FieldBool, Label: "Ne pas vérifier le certificat HTTPS", Help: "À éviter: n'utilisez cette option que pour un certificat auto-signé sur un réseau de confiance."},
@@ -118,7 +118,7 @@ func (c *connector) Discover(ctx context.Context) ([]provisioning.Machine, error
 	}
 	out := make([]provisioning.Machine, 0, len(ts))
 	for _, t := range ts {
-		if t.Kind != "Ssh" || t.ID == "" || strings.TrimSpace(t.Name) == "" { // seules les cibles SSH concernent Leash
+		if t.Kind != "Ssh" || t.ID == "" || strings.TrimSpace(t.Name) == "" { // seules les cibles SSH concernent Leassh
 			continue
 		}
 		m := provisioning.Machine{

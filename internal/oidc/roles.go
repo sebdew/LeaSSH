@@ -1,6 +1,6 @@
 package oidc
 
-// RoleMap: valeurs de revendication associées à chaque rôle Leash.
+// RoleMap: valeurs de revendication associées à chaque rôle Leassh.
 type RoleMap struct {
 	Admin    []string `json:"admin"`
 	Approver []string `json:"approver"`

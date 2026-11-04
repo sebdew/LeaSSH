@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/config"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/config"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 func newTest(t *testing.T) (*httptest.Server, *store.Store) {

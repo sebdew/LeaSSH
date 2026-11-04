@@ -96,7 +96,7 @@ function History({ reports, loading, aiOn }: { reports: AuditReportMeta[]; loadi
             <tbody>
               {reports.map((r) => (
                 <tr key={r.id} className="border-b border-border align-top last:border-0">
-                  <td className="whitespace-nowrap px-4 py-2 tabular-nums">{when(r.created_at)}<div className="text-muted">v{r.leash_version}</div></td>
+                  <td className="whitespace-nowrap px-4 py-2 tabular-nums">{when(r.created_at)}<div className="text-muted">v{r.leassh_version}</div></td>
                   <td className="whitespace-nowrap px-4 py-2">{day(r.period_from)} → {day(r.period_to)}</td>
                   <td className="px-4 py-2">{r.created_by_name || "—"}</td>
                   <td className="px-4 py-2">

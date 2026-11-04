@@ -3,12 +3,12 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"github.com/leash-dev/leash/internal/catalog"
+	"github.com/leassh-dev/leassh/internal/catalog"
 	"net/http"
 
-	"github.com/leash-dev/leash/internal/executions"
-	"github.com/leash-dev/leash/internal/proposals"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/executions"
+	"github.com/leassh-dev/leassh/internal/proposals"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 func (s *Server) getExecution(w http.ResponseWriter, r *http.Request) {

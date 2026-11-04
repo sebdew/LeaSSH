@@ -26,7 +26,7 @@ type Pool struct {
 	stop      chan struct{}
 	cool      map[string]time.Time // serveur → fin de la pause après un échec d'authentification
 	// AuthCooldown: pause avant toute nouvelle tentative sur un serveur dont l'authentification a échoué.
-	// Évite de faire bloquer l'IP de Leash par un bastion (Warpgate…) ou un fail2ban à force de réessais.
+	// Évite de faire bloquer l'IP de Leassh par un bastion (Warpgate…) ou un fail2ban à force de réessais.
 	AuthCooldown time.Duration
 }
 
@@ -34,7 +34,7 @@ type Pool struct {
 type CooldownError struct{ Until time.Time }
 
 func (e *CooldownError) Error() string {
-	return fmt.Sprintf("pause de %d s après un échec d'authentification (évite de faire bloquer l'IP de Leash)", int(time.Until(e.Until).Seconds())+1)
+	return fmt.Sprintf("pause de %d s après un échec d'authentification (évite de faire bloquer l'IP de Leassh)", int(time.Until(e.Until).Seconds())+1)
 }
 
 // IsAuthFailure reconnaît l'échec d'authentification renvoyé par x/crypto/ssh.

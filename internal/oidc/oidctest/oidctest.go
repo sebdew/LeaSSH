@@ -66,7 +66,7 @@ func New(t *testing.T) *Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := &Server{t: t, ClientID: "leash", ClientSecret: "s3cret-factice", Key: key, Kid: "k1", Now: time.Now, grants: map[string]*grant{},
+	s := &Server{t: t, ClientID: "leassh", ClientSecret: "s3cret-factice", Key: key, Kid: "k1", Now: time.Now, grants: map[string]*grant{},
 		Who: Identity{Sub: "sub-1", Username: "alice", Name: "Alice Martin", Email: "alice@example.test"}, Groups: "groups"}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/.well-known/openid-configuration", s.discovery)

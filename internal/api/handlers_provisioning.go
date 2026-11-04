@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/provisioning"
-	"github.com/leash-dev/leash/internal/sshexec"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/provisioning"
+	"github.com/leassh-dev/leassh/internal/sshexec"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 type provisionerInput struct {

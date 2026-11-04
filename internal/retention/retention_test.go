@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 func TestPurgeIsAuditedAndKeepsPending(t *testing.T) {

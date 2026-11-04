@@ -94,7 +94,7 @@ describe("packs", () => {
     await u.click(screen.getByRole("button", { name: "Aperçu des changements" }));
     const dlg = await screen.findByRole("dialog");
     const confirm = await within(dlg).findByRole("button", { name: "Importer" });
-    expect(within(dlg).getByText(/ne vient pas de Leash/)).toBeInTheDocument();
+    expect(within(dlg).getByText(/ne vient pas de Leassh/)).toBeInTheDocument();
     expect(confirm).toBeDisabled();
     await u.click(within(dlg).getByLabelText(/J'ai examiné les 2 avertissement/));
     expect(confirm).toBeEnabled();
@@ -216,7 +216,7 @@ describe("webhook", () => {
     let saved: unknown;
     mockApi({
       "GET /auth/me": () => ({ body: admin }), "GET /users": () => ({ body: { items: [] } }),
-      "GET /settings/webhook": () => ({ body: { config: { url: "https://ntfy.example.com/leash", enabled: true, has_secret: true }, events: ["execution.finished", "proposal.created"] } }),
+      "GET /settings/webhook": () => ({ body: { config: { url: "https://ntfy.example.com/leassh", enabled: true, has_secret: true }, events: ["execution.finished", "proposal.created"] } }),
       "GET /settings/webhook/deliveries": () => ({ body: { items: [
         { id: "d1", ts: "2026-10-18T10:00:00.000Z", event: "execution.finished", ok: true, attempts: 1, http_status: 200, error: "", url: "" },
         { id: "d2", ts: "2026-10-18T10:05:00.000Z", event: "proposal.created", ok: false, attempts: 3, http_status: 500, error: "réponse HTTP 500", url: "" }] } }),
@@ -226,7 +226,7 @@ describe("webhook", () => {
     renderApp(<SettingsPage />);
     const u = userEvent.setup();
     await u.click(await screen.findByRole("tab", { name: "Webhook" }));
-    expect(await screen.findByLabelText("URL")).toHaveValue("https://ntfy.example.com/leash");
+    expect(await screen.findByLabelText("URL")).toHaveValue("https://ntfy.example.com/leassh");
     const secret = screen.getByLabelText("Secret de signature");
     expect(secret).toHaveValue("");
     expect(secret).toHaveAttribute("placeholder", expect.stringContaining("conserver"));
@@ -236,6 +236,6 @@ describe("webhook", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Échec : connexion refusée");
     await u.type(secret, "nouveau");
     await u.click(screen.getByRole("button", { name: "Enregistrer" }));
-    await waitFor(() => expect(saved).toEqual({ url: "https://ntfy.example.com/leash", secret: "nouveau", enabled: true }));
+    await waitFor(() => expect(saved).toEqual({ url: "https://ntfy.example.com/leassh", secret: "nouveau", enabled: true }));
   });
 });

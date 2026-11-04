@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 // Config est la vue de la configuration exposée par l'API (jamais la clé privée TLS).
@@ -65,7 +65,7 @@ func (c *Config) normalize() error {
 	def(&c.MessageFormat, "text")
 	def(&c.Framing, "lf")
 	def(&c.Facility, "local0")
-	def(&c.AppName, "leash")
+	def(&c.AppName, "leassh")
 	def(&c.MinSeverity, "info")
 	c.Host = strings.TrimSpace(c.Host)
 	c.Hostname = strings.TrimSpace(c.Hostname)

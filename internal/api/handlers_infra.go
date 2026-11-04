@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/sshexec"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/sshexec"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 type identityInput struct {
@@ -43,7 +43,7 @@ func (s *Server) createIdentity(w http.ResponseWriter, r *http.Request) {
 	var secret []byte
 	switch in.Mode {
 	case "", "generate":
-		pemKey, pub, err := sshexec.GenerateKey("leash:" + in.Name)
+		pemKey, pub, err := sshexec.GenerateKey("leassh:" + in.Name)
 		if err != nil {
 			s.fail(w, err)
 			return

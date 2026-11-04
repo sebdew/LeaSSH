@@ -99,10 +99,10 @@ describe("validations", () => {
 
 describe("clés MCP", () => {
   it("insère le jeton dans les exemples de configuration", async () => {
-    const snip = configSnippets("lsh_abc", "https://leash.example.com");
-    expect(snip.claude).toContain("claude mcp add --transport http leash https://leash.example.com/mcp");
+    const snip = configSnippets("lsh_abc", "https://leassh.example.com");
+    expect(snip.claude).toContain("claude mcp add --transport http leassh https://leassh.example.com/mcp");
     expect(snip.claude).toContain("Bearer lsh_abc");
-    expect(JSON.parse(snip.json).mcpServers.leash.headers.Authorization).toBe("Bearer lsh_abc");
+    expect(JSON.parse(snip.json).mcpServers.leassh.headers.Authorization).toBe("Bearer lsh_abc");
     expect(snip.litellm).toContain('auth_value: "lsh_abc"');
     renderApp(<RevealDialog token="lsh_abc" onClose={() => undefined} />);
     expect(await screen.findByText(/ne sera plus jamais affiché/)).toBeInTheDocument();

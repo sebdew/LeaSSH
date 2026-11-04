@@ -117,26 +117,26 @@ func (r *Registry) Render(w io.Writer, gauges []Gauge) {
 	buckets, sum, count := append([]uint64(nil), r.buckets...), r.sum, r.count
 	r.mu.Unlock()
 
-	fmt.Fprintln(w, "# HELP leash_executions_total Transitions d'exécutions vers un statut (depuis le démarrage).")
-	fmt.Fprintln(w, "# TYPE leash_executions_total counter")
+	fmt.Fprintln(w, "# HELP leassh_executions_total Transitions d'exécutions vers un statut (depuis le démarrage).")
+	fmt.Fprintln(w, "# TYPE leassh_executions_total counter")
 	for _, k := range sortedKeys(execs) {
-		fmt.Fprintf(w, "leash_executions_total{status=\"%s\"} %d\n", esc(k), execs[k])
+		fmt.Fprintf(w, "leassh_executions_total{status=\"%s\"} %d\n", esc(k), execs[k])
 	}
-	fmt.Fprintln(w, "# HELP leash_execution_duration_seconds Durée des exécutions SSH terminées.")
-	fmt.Fprintln(w, "# TYPE leash_execution_duration_seconds histogram")
+	fmt.Fprintln(w, "# HELP leassh_execution_duration_seconds Durée des exécutions SSH terminées.")
+	fmt.Fprintln(w, "# TYPE leassh_execution_duration_seconds histogram")
 	var cum uint64
 	for i, le := range durationBuckets {
 		cum += buckets[i]
-		fmt.Fprintf(w, "leash_execution_duration_seconds_bucket{le=\"%g\"} %d\n", le, cum)
+		fmt.Fprintf(w, "leassh_execution_duration_seconds_bucket{le=\"%g\"} %d\n", le, cum)
 	}
 	cum += buckets[len(durationBuckets)]
-	fmt.Fprintf(w, "leash_execution_duration_seconds_bucket{le=\"+Inf\"} %d\n", cum)
-	fmt.Fprintf(w, "leash_execution_duration_seconds_sum %g\n", sum)
-	fmt.Fprintf(w, "leash_execution_duration_seconds_count %d\n", count)
-	fmt.Fprintln(w, "# HELP leash_ssh_errors_total Erreurs SSH par nature.")
-	fmt.Fprintln(w, "# TYPE leash_ssh_errors_total counter")
+	fmt.Fprintf(w, "leassh_execution_duration_seconds_bucket{le=\"+Inf\"} %d\n", cum)
+	fmt.Fprintf(w, "leassh_execution_duration_seconds_sum %g\n", sum)
+	fmt.Fprintf(w, "leassh_execution_duration_seconds_count %d\n", count)
+	fmt.Fprintln(w, "# HELP leassh_ssh_errors_total Erreurs SSH par nature.")
+	fmt.Fprintln(w, "# TYPE leassh_ssh_errors_total counter")
 	for _, k := range sortedKeys(ssh) {
-		fmt.Fprintf(w, "leash_ssh_errors_total{kind=\"%s\"} %d\n", esc(k), ssh[k])
+		fmt.Fprintf(w, "leassh_ssh_errors_total{kind=\"%s\"} %d\n", esc(k), ssh[k])
 	}
 	for _, g := range gauges {
 		fmt.Fprintf(w, "# HELP %s %s\n# TYPE %s gauge\n", g.Name, g.Help, g.Name)

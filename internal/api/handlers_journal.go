@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 var (
@@ -144,7 +144,7 @@ func csvSafe(v string) string {
 }
 
 func exportHeaders(w http.ResponseWriter, kind, format string) bool {
-	name := fmt.Sprintf("leash-%s-%s", kind, time.Now().UTC().Format("20060102-150405"))
+	name := fmt.Sprintf("leassh-%s-%s", kind, time.Now().UTC().Format("20060102-150405"))
 	switch format {
 	case "csv":
 		w.Header().Set("Content-Type", "text/csv; charset=utf-8")

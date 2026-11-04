@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 func (e *env) insertExec(x store.Execution) store.Execution {

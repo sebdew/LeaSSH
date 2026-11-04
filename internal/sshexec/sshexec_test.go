@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/sshtest"
+	"github.com/leassh-dev/leassh/internal/sshtest"
 )
 
 func target(fs *sshtest.Server) Target {
@@ -135,7 +135,7 @@ func TestPublicKeyOfExplainsPasteMistakes(t *testing.T) {
 	}
 }
 
-// Après un échec d'authentification, on n'insiste pas: un bastion (Warpgate…) bloquerait l'IP de Leash.
+// Après un échec d'authentification, on n'insiste pas: un bastion (Warpgate…) bloquerait l'IP de Leassh.
 func TestAuthFailureCooldown(t *testing.T) {
 	fs := newFakeServer(t)
 	p := NewPool(time.Minute, 2)

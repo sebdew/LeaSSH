@@ -37,7 +37,7 @@ export function Layout({ user, onLogout }: { user: User; onLogout: () => void })
   // première visite sur ce navigateur: reprendre le thème mémorisé côté serveur
   useEffect(() => {
     let local: string | null = null;
-    try { local = localStorage.getItem("leash-theme"); } catch { /* stockage indisponible */ }
+    try { local = localStorage.getItem("leassh-theme"); } catch { /* stockage indisponible */ }
     if (!local && (user.theme === "light" || user.theme === "dark")) { applyTheme(user.theme); setTheme(user.theme); }
   }, [user.theme]);
 

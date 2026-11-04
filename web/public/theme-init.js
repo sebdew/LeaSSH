@@ -1,4 +1,4 @@
 try {
-  var t = localStorage.getItem("leash-theme");
+  var t = localStorage.getItem("leassh-theme");
   if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
 } catch (e) {}

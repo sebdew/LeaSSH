@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 type sqlRows = sql.Rows

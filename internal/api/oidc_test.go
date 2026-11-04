@@ -1,23 +1,27 @@
 package api
 
 import (
+	"encoding/json"
+	"github.com/leassh-dev/leassh/internal/config"
 	"net/http"
+	"net/http/httptest"
+	"net/netip"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/oidc/oidctest"
+	"github.com/leassh-dev/leassh/internal/oidc/oidctest"
 )
 
-// ssoEnv: instance Leash + fournisseur OIDC factice en mémoire (aucun vrai identifiant).
+// ssoEnv: instance Leassh + fournisseur OIDC factice en mémoire (aucun vrai identifiant).
 func ssoEnv(t *testing.T, mod func(cfg map[string]any)) (*env, *oidctest.Server) {
 	t.Helper()
 	e := newEnv(t)
 	idp := oidctest.New(t)
 	cfg := map[string]any{"enabled": true, "name": "Keycloak", "issuer": idp.URL, "client_id": idp.ClientID, "client_secret": idp.ClientSecret,
 		"scopes": "openid profile email", "role_claim": "groups", "default_role": "viewer", "jit": true, "end_session": true,
-		"role_map": map[string]any{"admin": []string{"leash-admins"}, "approver": []string{"ops"}, "viewer": []string{"readers"}}}
+		"role_map": map[string]any{"admin": []string{"leassh-admins"}, "approver": []string{"ops"}, "viewer": []string{"readers"}}}
 	if mod != nil {
 		mod(cfg)
 	}
@@ -125,7 +129,7 @@ func TestSSOLoginJITAndRoleMapping(t *testing.T) {
 	}
 
 	// le plus haut rôle gagne, et le compte est retrouvé par (issuer, sub) même si nom/e-mail changent
-	idp.Who.Groups = []string{"readers", "leash-admins"}
+	idp.Who.Groups = []string{"readers", "leassh-admins"}
 	idp.Who.Username, idp.Who.Email, idp.Who.Name = "alice.renamed", "autre@example.test", "Alice R."
 	_, c2 := ssoLogin(t, e, nil)
 	_, u2 := me(t, c2, e)
@@ -231,7 +235,7 @@ func TestSSOTokenValidation(t *testing.T) {
 	}{
 		{name: "expiré", want: "token_expired", mutate: func(p map[string]any) { p["exp"] = time.Now().Add(-10 * time.Minute).Unix() }},
 		{name: "mauvais aud", want: "token_audience", mutate: func(p map[string]any) { p["aud"] = "un-autre-client" }},
-		{name: "aud multiple sans azp", want: "token_audience", mutate: func(p map[string]any) { p["aud"] = []string{"leash", "autre"}; delete(p, "azp") }},
+		{name: "aud multiple sans azp", want: "token_audience", mutate: func(p map[string]any) { p["aud"] = []string{"leassh", "autre"}; delete(p, "azp") }},
 		{name: "mauvais azp", want: "token_audience", mutate: func(p map[string]any) { p["azp"] = "autre" }},
 		{name: "mauvais iss", want: "token_issuer", mutate: func(p map[string]any) { p["iss"] = "https://evil.example.test" }},
 		{name: "sans exp", want: "token_malformed", mutate: func(p map[string]any) { delete(p, "exp") }},
@@ -275,7 +279,7 @@ func TestSSORoleClaimPathAndUserinfo(t *testing.T) {
 	}
 	// revendication absente de l'ID token: lue dans userinfo (avec sub concordant)
 	e, idp = ssoEnv(t, nil)
-	idp.Groups, idp.Who.Groups = "userinfo", []string{"leash-admins"}
+	idp.Groups, idp.Who.Groups = "userinfo", []string{"leassh-admins"}
 	_, c = ssoLogin(t, e, nil)
 	if _, u := me(t, c, e); u["role"] != "admin" {
 		t.Fatalf("userinfo: %v", u)
@@ -358,7 +362,7 @@ func TestSSOLogoutEndSession(t *testing.T) {
 	_, u := me(t, c, e)
 	r, out := do(t, c, "POST", e.ts.URL+"/api/v1/auth/logout", nil, map[string]string{"X-CSRF-Token": str(u, "csrf_token")})
 	end := str(out, "end_session_url")
-	if r.StatusCode != 200 || !strings.HasPrefix(end, idp.URL+"/logout") || !strings.Contains(end, "client_id=leash") || !strings.Contains(end, "post_logout_redirect_uri=") {
+	if r.StatusCode != 200 || !strings.HasPrefix(end, idp.URL+"/logout") || !strings.Contains(end, "client_id=leassh") || !strings.Contains(end, "post_logout_redirect_uri=") {
 		t.Fatalf("déconnexion SSO: %d %v", r.StatusCode, out)
 	}
 	if code, _ := me(t, c, e); code != 401 {
@@ -391,7 +395,7 @@ func TestSSOSettings(t *testing.T) {
 	e.must("PUT", "/settings/oidc", map[string]any{"issuer": idp.URL, "scopes": "profile email"}, 400) // pas de openid
 	e.must("PUT", "/settings/oidc", map[string]any{"issuer": idp.URL, "default_role": "admin"}, 400)   // rôle par défaut interdit
 	e.must("PUT", "/settings/oidc", map[string]any{"issuer": idp.URL + "?x=1"}, 400)                   // paramètres
-	in := map[string]any{"enabled": true, "name": "Keycloak", "issuer": idp.URL, "client_id": "leash", "client_secret": "secret-très-confidentiel", "default_role": "viewer", "jit": true,
+	in := map[string]any{"enabled": true, "name": "Keycloak", "issuer": idp.URL, "client_id": "leassh", "client_secret": "secret-très-confidentiel", "default_role": "viewer", "jit": true,
 		"role_map": map[string]any{"admin": []string{" g-admin ", ""}}}
 	out := e.must("PUT", "/settings/oidc", in, 200)
 	if out["has_client_secret"] != true || strings.Contains(toJSON(out), "confidentiel") || strings.Contains(toJSON(e.must("GET", "/settings/oidc", nil, 200)), "confidentiel") {
@@ -461,10 +465,59 @@ func TestSSOLocalOnlyRestrictionNeedsLocalAdmin(t *testing.T) {
 	e := newEnv(t)
 	idp := oidctest.New(t)
 	// l'unique admin local est désactivé impossible (garde-fou existant) → on vérifie le cas par le store
-	in := map[string]any{"enabled": true, "issuer": idp.URL, "client_id": "leash", "local_password_admins_only": true, "default_role": "viewer"}
+	in := map[string]any{"enabled": true, "issuer": idp.URL, "client_id": "leassh", "local_password_admins_only": true, "default_role": "viewer"}
 	e.must("PUT", "/settings/oidc", in, 200) // admin local présent: accepté
 	if _, err := e.st.DB.Exec(`UPDATE users SET auth_provider='oidc' WHERE username='admin'`); err != nil {
 		t.Fatal(err)
 	}
 	e.must("PUT", "/settings/oidc", in, 400)
+}
+
+func TestBaseURLDerivation(t *testing.T) {
+	mk := func(base, proxies string) *Server {
+		s := &Server{cfg: &config.Config{BaseURL: base}}
+		for _, p := range strings.Fields(proxies) {
+			s.proxies = append(s.proxies, netip.MustParsePrefix(p))
+		}
+		return s
+	}
+	req := func(remote string, h map[string]string) *http.Request {
+		r := httptest.NewRequest("GET", "http://192.168.6.167:8080/x", nil)
+		r.RemoteAddr = remote
+		for k, v := range h {
+			r.Header.Set(k, v)
+		}
+		return r
+	}
+	fwd := map[string]string{"X-Forwarded-Host": "leassh.example.com", "X-Forwarded-Proto": "https"}
+	cases := []struct {
+		name string
+		s    *Server
+		r    *http.Request
+		want string
+	}{
+		{"URL fixe prioritaire", mk("https://fixe.example.com/", "10.0.0.0/8"), req("10.0.0.5:1234", fwd), "https://fixe.example.com"},
+		{"proxy de confiance", mk("", "10.0.0.0/8"), req("10.0.0.5:1234", fwd), "https://leassh.example.com"},
+		{"en-têtes ignorés hors proxy de confiance", mk("", "10.0.0.0/8"), req("203.0.113.9:1234", fwd), "http://192.168.6.167:8080"},
+		{"hôte transféré invalide ignoré", mk("", "10.0.0.0/8"), req("10.0.0.5:1234", map[string]string{"X-Forwarded-Host": "evil.com/\r\n x", "X-Forwarded-Proto": "https"}), "https://192.168.6.167:8080"},
+		{"sans proxy configuré", mk("", ""), req("10.0.0.5:1234", fwd), "http://192.168.6.167:8080"},
+	}
+	for _, c := range cases {
+		if got := c.s.baseURL(c.r); got != c.want {
+			t.Errorf("%s: %q, attendu %q", c.name, got, c.want)
+		}
+	}
+}
+
+func TestAuthProvidersAutoRedirect(t *testing.T) {
+	e, _ := ssoEnv(t, func(cfg map[string]any) { cfg["auto_redirect"] = true })
+	res, err := client().Get(e.ts.URL + "/api/v1/auth/providers")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	var body map[string]any
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil || body["auto_redirect"] != true {
+		t.Fatalf("auto_redirect attendu: %v %v", body, err)
+	}
 }

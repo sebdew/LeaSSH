@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/catalog"
-	"github.com/leash-dev/leash/internal/proposals"
-	"github.com/leash-dev/leash/internal/store"
-	"github.com/leash-dev/leash/internal/webhook"
+	"github.com/leassh-dev/leassh/internal/catalog"
+	"github.com/leassh-dev/leassh/internal/proposals"
+	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/leassh-dev/leassh/internal/webhook"
 )
 
 const pipedPack = `
@@ -96,7 +96,7 @@ func (h *hookRecv) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.hits = append(h.hits, struct {
 		body []byte
 		sig  string
-	}{b, r.Header.Get("X-Leash-Signature")})
+	}{b, r.Header.Get("X-Leassh-Signature")})
 	h.mu.Unlock()
 	w.WriteHeader(200)
 }
@@ -151,7 +151,7 @@ func TestWebhookSettingsAndEvents(t *testing.T) {
 	}
 	var env map[string]any
 	json.Unmarshal(rc.hits[1].body, &env)
-	if env["event"] != "proposal.created" || env["url"] != "https://leash.example.com/propositions/"+env["data"].(map[string]any)["id"].(string) {
+	if env["event"] != "proposal.created" || env["url"] != "https://leassh.example.com/propositions/"+env["data"].(map[string]any)["id"].(string) {
 		t.Fatalf("enveloppe: %s", rc.hits[1].body)
 	}
 	if d := e.must("GET", "/settings/webhook/deliveries", nil, 200)["items"].([]any); len(d) < 2 {

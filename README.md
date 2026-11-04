@@ -1,21 +1,21 @@
-# Leash
+# Leassh
 
 > **Donnez à vos agents IA un accès SSH… en laisse.**
 > Un catalogue de commandes validées, des droits clairs, et un journal de tout ce qui a été lancé, par qui et où.
 
-Leash est un serveur **MCP** (Model Context Protocol) open source qui permet à des agents IA d'agir sur vos serveurs **sans jamais leur donner de shell**. L'agent ne tape pas de commandes : il **choisit** dans un catalogue que vous avez écrit ou approuvé, avec des paramètres typés et validés. Chaque demande — autorisée, refusée ou en attente de validation — est journalisée.
+Leassh est un serveur **MCP** (Model Context Protocol) open source qui permet à des agents IA d'agir sur vos serveurs **sans jamais leur donner de shell**. L'agent ne tape pas de commandes : il **choisit** dans un catalogue que vous avez écrit ou approuvé, avec des paramètres typés et validés. Chaque demande — autorisée, refusée ou en attente de validation — est journalisée.
 
-> ⚠️ *Leash* (interface : *LeaSSH*) est un nom de travail. Les jalons M1 à M8 sont implémentés, suivis du provisioning, de l'export syslog, du SSO et de l'interface bilingue ; voir [`CLAUDE.md`](CLAUDE.md) pour les consignes de développement.
+> ⚠️ *Leassh* (interface : *LeaSSH*) est un nom de travail. Les jalons M1 à M8 sont implémentés, suivis du provisioning, de l'export syslog, du SSO et de l'interface bilingue ; voir [`CLAUDE.md`](CLAUDE.md) pour les consignes de développement.
 
 ---
 
-## Pourquoi Leash ?
+## Pourquoi Leassh ?
 
 Donner un accès SSH à un agent IA, c'est lui donner un shell. Filtrer les commandes après coup (listes noires, regex sur la ligne de commande) est contournable : `rm` bloqué, mais `find -delete`, `python -c`, `truncate` ou `$( )` passent.
 
-Leash inverse la logique :
+Leassh inverse la logique :
 
-| Approche classique | Leash |
+| Approche classique | Leassh |
 |---|---|
 | L'agent écrit une commande, on essaie de la filtrer | L'agent choisit une commande dans un catalogue |
 | Liste noire (tout ce qui n'est pas interdit passe) | Liste blanche (rien ne passe s'il n'est pas prévu) |
@@ -43,11 +43,11 @@ Leash inverse la logique :
 ## Démarrage rapide
 
 ```bash
-docker run -d --name leash \
+docker run -d --name leassh \
   -p 8080:8080 \
-  -v leash-data:/data \
-  -e LEASH_MASTER_KEY="$(openssl rand -base64 32)" \
-  ghcr.io/<org>/leash:latest
+  -v leassh-data:/data \
+  -e LEASSH_MASTER_KEY="$(openssl rand -base64 32)" \
+  ghcr.io/<org>/leassh:latest
 ```
 
 Ouvrez `http://localhost:8080`, créez le compte administrateur, puis suivez la checklist d'accueil :
@@ -59,20 +59,20 @@ Ouvrez `http://localhost:8080`, créez le compte administrateur, puis suivez la 
 5. Créer une **clé MCP** et l'associer à la règle.
 6. Copier la configuration MCP dans votre agent.
 
-> **Conservez `LEASH_MASTER_KEY`** : elle chiffre les secrets SSH. Sans elle, ils sont irrécupérables.
+> **Conservez `LEASSH_MASTER_KEY`** : elle chiffre les secrets SSH. Sans elle, ils sont irrécupérables.
 >
 > Installation complète (binaire, systemd, reverse proxy TLS, sauvegarde, métriques) : [`docs/INSTALL.md`](docs/INSTALL.md).
 
 ## Connecter un agent
 
-Leash expose un endpoint MCP en HTTP streamable : `https://leash.example.com/mcp`, authentifié par `Authorization: Bearer <clé MCP>`.
+Leassh expose un endpoint MCP en HTTP streamable : `https://leassh.example.com/mcp`, authentifié par `Authorization: Bearer <clé MCP>`.
 
 ```json
 {
   "mcpServers": {
-    "leash": {
+    "leassh": {
       "type": "http",
-      "url": "https://leash.example.com/mcp",
+      "url": "https://leassh.example.com/mcp",
       "headers": { "Authorization": "Bearer lsh_xxxxxxxxxxxxxxxx" }
     }
   }
@@ -135,7 +135,7 @@ Go ≥ 1.23, Node ≥ 20.
 make dev     # backend avec rechargement + Vite (proxy API)
 make test    # tests Go (dont corpus d'injection) + tests Vitest
 make lint    # go vet, gofmt, tsc --noEmit
-make build   # build du frontend puis binaire unique (bin/leash)
+make build   # build du frontend puis binaire unique (bin/leassh)
 make docker  # image Docker
 ```
 

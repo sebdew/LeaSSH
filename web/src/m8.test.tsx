@@ -31,7 +31,7 @@ describe("tableau de bord", () => {
     renderApp(<Dashboard />);
     await screen.findByText("Exécutions sur 24 h");
     expect(screen.queryByText("Premiers pas")).toBeNull();
-    expect(screen.getByText("Aucune exécution pour l'instant. Elles apparaîtront ici dès qu'un agent utilisera Leash.")).toBeInTheDocument();
+    expect(screen.getByText("Aucune exécution pour l'instant. Elles apparaîtront ici dès qu'un agent utilisera Leassh.")).toBeInTheDocument();
   });
 
   it("bandeau de validations, chiffres, anomalies et activité récente", async () => {

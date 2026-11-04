@@ -8,7 +8,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 const admin = { id: "u1", username: "sd", display_name: "SD", role: "admin", theme: "system", csrf_token: "t" };
 const config = {
-  enabled: true, protocol: "udp", host: "wazuh.example.com", port: 514, message_format: "json", framing: "lf", facility: "local0", app_name: "leash", hostname: "",
+  enabled: true, protocol: "udp", host: "wazuh.example.com", port: 514, message_format: "json", framing: "lf", facility: "local0", app_name: "leassh", hostname: "",
   min_severity: "info", types: ["execution", "proposal", "audit"], tls_ca_pem: "", tls_server_name: "", tls_skip_verify: false, tls_client_cert_pem: "", has_tls_client_key: true,
 };
 const options = { facilities: ["local0", "local1"], severities: ["warning", "info"], types: ["execution", "proposal", "audit"] };

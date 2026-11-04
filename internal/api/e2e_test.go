@@ -12,21 +12,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/access"
-	"github.com/leash-dev/leash/internal/config"
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/executions"
-	"github.com/leash-dev/leash/internal/mcpserver"
-	"github.com/leash-dev/leash/internal/metrics"
-	"github.com/leash-dev/leash/internal/packs"
-	"github.com/leash-dev/leash/internal/proposals"
-	"github.com/leash-dev/leash/internal/provisioning"
-	"github.com/leash-dev/leash/internal/provisioning/warpgate"
-	"github.com/leash-dev/leash/internal/sshexec"
-	"github.com/leash-dev/leash/internal/sshtest"
-	"github.com/leash-dev/leash/internal/store"
-	"github.com/leash-dev/leash/internal/syslog"
-	"github.com/leash-dev/leash/internal/webhook"
+	"github.com/leassh-dev/leassh/internal/access"
+	"github.com/leassh-dev/leassh/internal/config"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/executions"
+	"github.com/leassh-dev/leassh/internal/mcpserver"
+	"github.com/leassh-dev/leassh/internal/metrics"
+	"github.com/leassh-dev/leassh/internal/packs"
+	"github.com/leassh-dev/leassh/internal/proposals"
+	"github.com/leassh-dev/leassh/internal/provisioning"
+	"github.com/leassh-dev/leassh/internal/provisioning/warpgate"
+	"github.com/leassh-dev/leassh/internal/sshexec"
+	"github.com/leassh-dev/leassh/internal/sshtest"
+	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/leassh-dev/leassh/internal/syslog"
+	"github.com/leassh-dev/leassh/internal/webhook"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -62,7 +62,7 @@ func newEnv(t *testing.T) *env {
 	t.Cleanup(ex.Wait)
 	props := proposals.New(st)
 	pk := packs.New(st)
-	hook := webhook.New(st, box, "https://leash.example.com", log)
+	hook := webhook.New(st, box, "https://leassh.example.com", log)
 	hook.Backoff = []time.Duration{10 * time.Millisecond, 10 * time.Millisecond}
 	reg := metrics.New()
 	ex.Metrics = reg

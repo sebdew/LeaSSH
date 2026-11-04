@@ -6,7 +6,7 @@ import { mockApi, renderApp } from "./test-utils";
 
 afterEach(() => vi.unstubAllGlobals());
 
-const report = (over = {}) => ({ id: "01R1", created_at: "2026-11-03T10:00:00.000Z", created_by: "u1", created_by_name: "alice", period_from: "2026-10-01", period_to: "2026-10-31", leash_version: "1.5.0",
+const report = (over = {}) => ({ id: "01R1", created_at: "2026-11-03T10:00:00.000Z", created_by: "u1", created_by_name: "alice", period_from: "2026-10-01", period_to: "2026-10-31", leassh_version: "1.5.0",
   schema_version: 1, sha256: "a".repeat(64), findings_high: 1, findings_medium: 2, findings_low: 3, summary_model: "", summary_at: "", has_summary: false, ...over });
 const aiCfg = (over = {}) => ({ enabled: false, url: "", model: "", has_key: false, ...over });
 const routes = (reports = [report()], ai = aiCfg()) => ({
@@ -82,10 +82,10 @@ describe("écran Audit", () => {
     renderApp(<AuditPage />);
     const u = userEvent.setup();
     const input = await screen.findByLabelText("Choisir un fichier JSON", { selector: "input" });
-    await u.upload(input, new File(['{"format":"leash-audit-report/1"}'], "rapport.json", { type: "application/json" }));
+    await u.upload(input, new File(['{"format":"leassh-audit-report/1"}'], "rapport.json", { type: "application/json" }));
     expect(await screen.findByText(/Rapport authentique et intact/)).toBeInTheDocument();
     verdict = { digest_ok: false, tag_ok: false, message: "Le contenu a été modifié: son empreinte ne correspond pas à celle du rapport d'origine." };
-    await u.upload(input, new File(['{"format":"leash-audit-report/1","x":1}'], "modifie.json", { type: "application/json" }));
+    await u.upload(input, new File(['{"format":"leassh-audit-report/1","x":1}'], "modifie.json", { type: "application/json" }));
     expect(await screen.findByText(/Le contenu a été modifié/)).toBeInTheDocument();
   });
 });

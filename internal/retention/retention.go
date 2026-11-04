@@ -1,4 +1,4 @@
-// Package retention: purge automatique des journaux (LEASH_LOG_RETENTION_DAYS). Seul moyen de supprimer des lignes de journal.
+// Package retention: purge automatique des journaux (LEASSH_LOG_RETENTION_DAYS). Seul moyen de supprimer des lignes de journal.
 package retention
 
 import (
@@ -8,8 +8,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 // Purge supprime les lignes plus vieilles que `days` jours; l'opération est elle-même journalisée.

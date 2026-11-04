@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/store"
-	"github.com/leash-dev/leash/internal/testkit"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/leassh-dev/leassh/internal/testkit"
 )
 
 var now = time.Now().UTC().Truncate(time.Second)
@@ -24,8 +24,8 @@ func at(d, h int) string {
 }
 
 func params(retention int) Params {
-	return Params{Now: now, From: now.AddDate(0, 0, -30), To: now, LeashVersion: "9.9.9",
-		RetentionDays: retention, ApprovalTTL: 30 * time.Minute, SessionTTL: 12 * time.Hour, BaseURL: "https://leash.example.com"}
+	return Params{Now: now, From: now.AddDate(0, 0, -30), To: now, LeasshVersion: "9.9.9",
+		RetentionDays: retention, ApprovalTTL: 30 * time.Minute, SessionTTL: 12 * time.Hour, BaseURL: "https://leassh.example.com"}
 }
 
 // seed ajoute de l'activité réaliste à l'instance de test et renvoie le noyau.
@@ -232,7 +232,7 @@ func TestSignatureAndVerification(t *testing.T) {
 	s, _ := Build(k.Ctx, k.St.DB, params(365))
 	raw, _ := Marshal(s)
 	bx := box(t, 7)
-	rep := store.AuditReport{ID: "R1", CreatedAt: s.GeneratedAt, LeashVersion: "9.9.9", SHA256: Digest(raw), Snapshot: string(raw)}
+	rep := store.AuditReport{ID: "R1", CreatedAt: s.GeneratedAt, LeasshVersion: "9.9.9", SHA256: Digest(raw), Snapshot: string(raw)}
 	rep.HMAC = Tag(bx.Derive("audit-report"), rep.SHA256, rep.ID, rep.CreatedAt)
 	file, _ := json.MarshalIndent(NewEnvelope(rep), "", "  ") // même indenté, le contenu se re-compacte à l'identique
 
@@ -289,7 +289,7 @@ func TestAIInputContainsNoNamesOrOutput(t *testing.T) {
 	s, _ := Build(k.Ctx, k.St.DB, params(90))
 	b, _ := json.Marshal(BuildAIInput(s))
 	sent := string(b)
-	for _, secret := range []string{"web-01", "Agent N1", "alice", "bob-admin", "t.read", "t.destroy", "incident #42", "pfctl", "Règle secrète", k.Key.Prefix, "127.0.0.1", "leash.example.com", "Frontal"} {
+	for _, secret := range []string{"web-01", "Agent N1", "alice", "bob-admin", "t.read", "t.destroy", "incident #42", "pfctl", "Règle secrète", k.Key.Prefix, "127.0.0.1", "leassh.example.com", "Frontal"} {
 		if strings.Contains(sent, secret) {
 			t.Errorf("la donnée %q ne doit pas être envoyée à l'IA: %s", secret, sent)
 		}

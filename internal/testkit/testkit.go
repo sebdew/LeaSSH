@@ -11,14 +11,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/access"
-	"github.com/leash-dev/leash/internal/catalog"
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/executions"
-	"github.com/leash-dev/leash/internal/proposals"
-	"github.com/leash-dev/leash/internal/sshexec"
-	"github.com/leash-dev/leash/internal/sshtest"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/access"
+	"github.com/leassh-dev/leassh/internal/catalog"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/executions"
+	"github.com/leassh-dev/leassh/internal/proposals"
+	"github.com/leassh-dev/leassh/internal/sshexec"
+	"github.com/leassh-dev/leassh/internal/sshtest"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 type Kit struct {

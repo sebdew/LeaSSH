@@ -14,15 +14,15 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/oidc"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/oidc"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 // ---- SSO OpenID Connect (SPEC §9bis) ----
 
 const (
-	oidcCookie   = "leash_oidc"
+	oidcCookie   = "leassh_oidc"
 	oidcCbPath   = "/api/v1/auth/oidc/callback"
 	oidcFlowTTL  = 10 * time.Minute
 	maxUsernames = 64
@@ -42,6 +42,7 @@ type oidcView struct {
 	JIT                     bool         `json:"jit"`
 	LocalPasswordAdminsOnly bool         `json:"local_password_admins_only"`
 	EndSession              bool         `json:"end_session"`
+	AutoRedirect            bool         `json:"auto_redirect"`
 	RedirectURL             string       `json:"redirect_url"`
 }
 
@@ -53,7 +54,7 @@ type oidcInput struct {
 
 func viewOf(c store.OIDCConfig) oidcView {
 	v := oidcView{Enabled: c.Enabled, Name: c.Name, Issuer: c.Issuer, ClientID: c.ClientID, HasClientSecret: len(c.ClientSecretEnc) > 0, Scopes: c.Scopes,
-		RoleClaim: c.RoleClaim, DefaultRole: c.DefaultRole, JIT: c.JIT, LocalPasswordAdminsOnly: c.LocalPasswordAdminsOnly, EndSession: c.EndSession}
+		RoleClaim: c.RoleClaim, DefaultRole: c.DefaultRole, JIT: c.JIT, LocalPasswordAdminsOnly: c.LocalPasswordAdminsOnly, EndSession: c.EndSession, AutoRedirect: c.AutoRedirect}
 	_ = json.Unmarshal([]byte(c.RoleMap), &v.RoleMap)
 	return v
 }
@@ -62,9 +63,13 @@ func viewOf(c store.OIDCConfig) oidcView {
 func (v oidcView) auditView() map[string]any {
 	return map[string]any{"enabled": v.Enabled, "name": v.Name, "issuer": v.Issuer, "client_id": v.ClientID, "has_client_secret": v.HasClientSecret,
 		"scopes": v.Scopes, "role_claim": v.RoleClaim, "role_map": v.RoleMap, "default_role": v.DefaultRole, "jit": v.JIT,
-		"local_password_admins_only": v.LocalPasswordAdminsOnly, "end_session": v.EndSession}
+		"local_password_admins_only": v.LocalPasswordAdminsOnly, "end_session": v.EndSession, "auto_redirect": v.AutoRedirect}
 }
 
+// baseURL: URL publique de l'application, par ordre de priorité:
+//  1. LEASSH_BASE_URL (fixe, recommandé: aucune dépendance aux en-têtes de la requête);
+//  2. X-Forwarded-Host / X-Forwarded-Proto, uniquement si la requête vient d'un proxy de confiance (LEASSH_TRUSTED_PROXIES);
+//  3. l'hôte de la requête.
 func (s *Server) baseURL(r *http.Request) string {
 	if b := strings.TrimRight(s.cfg.BaseURL, "/"); b != "" {
 		return b
@@ -73,8 +78,18 @@ func (s *Server) baseURL(r *http.Request) string {
 	if s.isHTTPS(r) {
 		scheme = "https"
 	}
-	return scheme + "://" + r.Host
+	host := r.Host
+	if s.fromTrustedProxy(r) {
+		if h := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-Host"), ",")[0]); validHost(h) {
+			host = h
+		}
+	}
+	return scheme + "://" + host
 }
+
+var hostRe = regexp.MustCompile(`^[A-Za-z0-9.\-]+(:[0-9]{1,5})?$|^\[[0-9A-Fa-f:.]+\](:[0-9]{1,5})?$`)
+
+func validHost(h string) bool { return h != "" && len(h) <= 255 && hostRe.MatchString(h) }
 
 func (s *Server) redirectURL(r *http.Request) string { return s.baseURL(r) + oidcCbPath }
 
@@ -180,7 +195,7 @@ func (s *Server) putOIDC(w http.ResponseWriter, r *http.Request) {
 		}
 		rm, _ := json.Marshal(in.RoleMap)
 		c := store.OIDCConfig{Enabled: in.Enabled, Name: in.Name, Issuer: in.Issuer, ClientID: in.ClientID, ClientSecretEnc: secret, Scopes: in.Scopes,
-			RoleClaim: in.RoleClaim, RoleMap: string(rm), DefaultRole: in.DefaultRole, JIT: in.JIT, LocalPasswordAdminsOnly: in.LocalPasswordAdminsOnly, EndSession: in.EndSession}
+			RoleClaim: in.RoleClaim, RoleMap: string(rm), DefaultRole: in.DefaultRole, JIT: in.JIT, LocalPasswordAdminsOnly: in.LocalPasswordAdminsOnly, EndSession: in.EndSession, AutoRedirect: in.AutoRedirect}
 		if err := store.SaveOIDCConfig(r.Context(), tx, c); err != nil {
 			return err
 		}
@@ -259,10 +274,11 @@ func (s *Server) authProviders(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	body := map[string]any{"oidc": nil, "local_password_admins_only": false}
+	body := map[string]any{"oidc": nil, "local_password_admins_only": false, "auto_redirect": false}
 	if c.Enabled {
 		body["oidc"] = map[string]any{"name": c.Name, "start_url": "/api/v1/auth/oidc/start"}
 		body["local_password_admins_only"] = c.LocalPasswordAdminsOnly
+		body["auto_redirect"] = c.AutoRedirect
 	}
 	writeJSON(w, 200, body)
 }

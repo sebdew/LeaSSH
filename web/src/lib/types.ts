@@ -67,13 +67,13 @@ export interface UserAccount {
 export interface OidcRoleMap { admin: string[]; approver: string[]; viewer: string[] }
 export interface OidcConfig {
   enabled: boolean; name: string; issuer: string; client_id: string; has_client_secret: boolean; scopes: string; role_claim: string;
-  role_map: OidcRoleMap; default_role: "" | "viewer"; jit: boolean; local_password_admins_only: boolean; end_session: boolean; redirect_url: string;
+  role_map: OidcRoleMap; default_role: "" | "viewer"; jit: boolean; local_password_admins_only: boolean; end_session: boolean; auto_redirect: boolean; redirect_url: string;
 }
 export interface OidcTestResult {
   ok: boolean; error?: string; issuer: string; authorization_endpoint?: string; token_endpoint?: string; jwks_uri?: string; jwks_keys?: number;
   userinfo_endpoint?: string; end_session_endpoint?: string; warnings?: string[];
 }
-export interface AuthProviders { oidc: { name: string; start_url: string } | null; local_password_admins_only: boolean }
+export interface AuthProviders { oidc: { name: string; start_url: string } | null; local_password_admins_only: boolean; auto_redirect?: boolean }
 
 export interface ChainResult { checked: number; ok: boolean; bad_seq?: number; bad_id?: string; reason?: string }
 
@@ -139,7 +139,7 @@ export interface Insights {
 
 export interface AuditReportMeta {
   id: string; created_at: string; created_by: string; created_by_name: string; period_from: string; period_to: string;
-  leash_version: string; schema_version: number; sha256: string; findings_high: number; findings_medium: number; findings_low: number;
+  leassh_version: string; schema_version: number; sha256: string; findings_high: number; findings_medium: number; findings_low: number;
   summary_model: string; summary_at: string; has_summary: boolean;
 }
 export interface AuditAIConfig { enabled: boolean; url: string; model: string; has_key: boolean }

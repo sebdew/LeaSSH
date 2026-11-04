@@ -1,4 +1,4 @@
-// Commande leash: serveur MCP donnant aux agents IA un accès SSH limité à un catalogue de commandes.
+// Commande leassh: serveur MCP donnant aux agents IA un accès SSH limité à un catalogue de commandes.
 package main
 
 import (
@@ -16,30 +16,30 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/leash-dev/leash/internal/access"
-	"github.com/leash-dev/leash/internal/api"
-	"github.com/leash-dev/leash/internal/config"
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/executions"
-	"github.com/leash-dev/leash/internal/mcpserver"
-	"github.com/leash-dev/leash/internal/metrics"
-	"github.com/leash-dev/leash/internal/packs"
-	"github.com/leash-dev/leash/internal/proposals"
-	"github.com/leash-dev/leash/internal/provisioning"
-	"github.com/leash-dev/leash/internal/provisioning/warpgate"
-	"github.com/leash-dev/leash/internal/retention"
-	"github.com/leash-dev/leash/internal/rotation"
-	"github.com/leash-dev/leash/internal/sshexec"
-	"github.com/leash-dev/leash/internal/store"
-	"github.com/leash-dev/leash/internal/syslog"
-	"github.com/leash-dev/leash/internal/webhook"
+	"github.com/leassh-dev/leassh/internal/access"
+	"github.com/leassh-dev/leassh/internal/api"
+	"github.com/leassh-dev/leassh/internal/config"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/executions"
+	"github.com/leassh-dev/leassh/internal/mcpserver"
+	"github.com/leassh-dev/leassh/internal/metrics"
+	"github.com/leassh-dev/leassh/internal/packs"
+	"github.com/leassh-dev/leassh/internal/proposals"
+	"github.com/leassh-dev/leassh/internal/provisioning"
+	"github.com/leassh-dev/leassh/internal/provisioning/warpgate"
+	"github.com/leassh-dev/leassh/internal/retention"
+	"github.com/leassh-dev/leassh/internal/rotation"
+	"github.com/leassh-dev/leassh/internal/sshexec"
+	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/leassh-dev/leassh/internal/syslog"
+	"github.com/leassh-dev/leassh/internal/webhook"
 )
 
 var version = "dev"
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "leash:", err)
+		fmt.Fprintln(os.Stderr, "leassh:", err)
 		os.Exit(1)
 	}
 }
@@ -57,16 +57,16 @@ func run(args []string) error {
 		return healthcheck()
 	case "backup":
 		if len(args) != 2 {
-			return errors.New("usage: leash backup <fichier-de-destination>")
+			return errors.New("usage: leassh backup <fichier-de-destination>")
 		}
-		dir := os.Getenv("LEASH_DATA_DIR")
+		dir := config.Getenv("LEASSH_DATA_DIR")
 		if dir == "" {
 			dir = "/data"
 		}
 		if err := store.Backup(context.Background(), dir, args[1]); err != nil {
 			return err
 		}
-		fmt.Println("sauvegarde écrite dans", args[1], "— conservez aussi LEASH_MASTER_KEY, sans elle les secrets sont irrécupérables")
+		fmt.Println("sauvegarde écrite dans", args[1], "— conservez aussi LEASSH_MASTER_KEY, sans elle les secrets sont irrécupérables")
 		return nil
 	case "rotate-master-key":
 		return rotateMasterKey()
@@ -135,7 +135,7 @@ func serve(cfg *config.Config, st *store.Store, log *slog.Logger) error {
 		BaseContext: func(net.Listener) context.Context { return baseCtx }}
 	errc := make(chan error, 1)
 	go func() { errc <- hs.ListenAndServe() }()
-	log.Info("leash démarré", "listen", cfg.Listen, "version", version)
+	log.Info("leassh démarré", "listen", cfg.Listen, "version", version)
 	select {
 	case err := <-errc:
 		return err
@@ -151,7 +151,7 @@ func serve(cfg *config.Config, st *store.Store, log *slog.Logger) error {
 
 // healthcheck interroge /healthz en local (l'image distroless n'a ni shell ni curl).
 func healthcheck() error {
-	addr := os.Getenv("LEASH_LISTEN")
+	addr := config.Getenv("LEASSH_LISTEN")
 	if addr == "" {
 		addr = ":8080"
 	}
@@ -170,16 +170,16 @@ func healthcheck() error {
 	return nil
 }
 
-// rotateMasterKey: LEASH_MASTER_KEY = ancienne clé, LEASH_NEW_MASTER_KEY = nouvelle clé. À lancer serveur arrêté, après sauvegarde.
+// rotateMasterKey: LEASSH_MASTER_KEY = ancienne clé, LEASSH_NEW_MASTER_KEY = nouvelle clé. À lancer serveur arrêté, après sauvegarde.
 func rotateMasterKey() error {
 	cfg, err := config.LoadEnv()
 	if err != nil {
 		return err
 	}
-	raw := os.Getenv("LEASH_NEW_MASTER_KEY")
+	raw := config.Getenv("LEASSH_NEW_MASTER_KEY")
 	newKey, err := base64.StdEncoding.DecodeString(raw)
 	if raw == "" || err != nil || len(newKey) != 32 {
-		return errors.New("LEASH_NEW_MASTER_KEY doit contenir la nouvelle clé (32 octets en base64, ex. `openssl rand -base64 32`)")
+		return errors.New("LEASSH_NEW_MASTER_KEY doit contenir la nouvelle clé (32 octets en base64, ex. `openssl rand -base64 32`)")
 	}
 	if bytes.Equal(newKey, cfg.MasterKey) {
 		return errors.New("la nouvelle clé est identique à l'ancienne")
@@ -202,6 +202,6 @@ func rotateMasterKey() error {
 	if err != nil {
 		return fmt.Errorf("rotation annulée, rien n'a été modifié: %w", err)
 	}
-	fmt.Printf("%d secret(s) rechiffré(s). Remplacez LEASH_MASTER_KEY par la nouvelle clé avant de redémarrer Leash.\n", n)
+	fmt.Printf("%d secret(s) rechiffré(s). Remplacez LEASSH_MASTER_KEY par la nouvelle clé avant de redémarrer Leassh.\n", n)
 	return nil
 }

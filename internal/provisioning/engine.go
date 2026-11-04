@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 // ErrBlocked: la synchro retirerait trop de machines d'un coup; elle demande une confirmation explicite.
@@ -230,7 +230,7 @@ func apply(ctx context.Context, tx *sql.Tx, p store.Provisioner, machines []Mach
 			wantGroups[m.GroupID] = m.GroupName
 		}
 	}
-	groupID := map[string]string{} // id source -> id Leash
+	groupID := map[string]string{} // id source -> id Leassh
 	for ext, name := range wantGroups {
 		if g, ok := myGroups[ext]; ok {
 			groupID[ext] = g.ID

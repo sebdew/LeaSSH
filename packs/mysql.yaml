@@ -5,7 +5,7 @@ pack:
   category: Bases de données
   description: >
     Diagnostic MySQL/MariaDB. Les identifiants sont lus sur le serveur cible
-    (~/.my.cnf ou socket local), jamais transmis par Leash.
+    (~/.my.cnf ou socket local), jamais transmis par Leassh.
 
 commands:
   - id: mysql.status

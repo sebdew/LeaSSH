@@ -20,20 +20,21 @@ type OIDCConfig struct {
 	JIT                     bool
 	LocalPasswordAdminsOnly bool
 	EndSession              bool
+	AutoRedirect            bool
 }
 
 func GetOIDCConfig(ctx context.Context, q Q) (OIDCConfig, error) {
 	var c OIDCConfig
-	err := q.QueryRowContext(ctx, `SELECT enabled,name,issuer,client_id,client_secret_enc,scopes,role_claim,role_map,default_role,jit,local_password_admins_only,end_session
+	err := q.QueryRowContext(ctx, `SELECT enabled,name,issuer,client_id,client_secret_enc,scopes,role_claim,role_map,default_role,jit,local_password_admins_only,end_session,auto_redirect
 		FROM oidc_config WHERE id=1`).
-		Scan(&c.Enabled, &c.Name, &c.Issuer, &c.ClientID, &c.ClientSecretEnc, &c.Scopes, &c.RoleClaim, &c.RoleMap, &c.DefaultRole, &c.JIT, &c.LocalPasswordAdminsOnly, &c.EndSession)
+		Scan(&c.Enabled, &c.Name, &c.Issuer, &c.ClientID, &c.ClientSecretEnc, &c.Scopes, &c.RoleClaim, &c.RoleMap, &c.DefaultRole, &c.JIT, &c.LocalPasswordAdminsOnly, &c.EndSession, &c.AutoRedirect)
 	return c, wrapErr("configuration SSO", err)
 }
 
 func SaveOIDCConfig(ctx context.Context, q Q, c OIDCConfig) error {
 	_, err := q.ExecContext(ctx, `UPDATE oidc_config SET enabled=?,name=?,issuer=?,client_id=?,client_secret_enc=?,scopes=?,role_claim=?,role_map=?,default_role=?,jit=?,
-		local_password_admins_only=?,end_session=? WHERE id=1`,
-		c.Enabled, c.Name, c.Issuer, c.ClientID, c.ClientSecretEnc, c.Scopes, c.RoleClaim, c.RoleMap, c.DefaultRole, c.JIT, c.LocalPasswordAdminsOnly, c.EndSession)
+		local_password_admins_only=?,end_session=?,auto_redirect=? WHERE id=1`,
+		c.Enabled, c.Name, c.Issuer, c.ClientID, c.ClientSecretEnc, c.Scopes, c.RoleClaim, c.RoleMap, c.DefaultRole, c.JIT, c.LocalPasswordAdminsOnly, c.EndSession, c.AutoRedirect)
 	return wrapErr("configuration SSO", err)
 }
 

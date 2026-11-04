@@ -1,5 +1,5 @@
 export type ThemeChoice = "system" | "light" | "dark";
-const KEY = "leash-theme";
+const KEY = "leassh-theme";
 
 export function getTheme(): ThemeChoice {
   try {

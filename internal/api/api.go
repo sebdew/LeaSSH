@@ -19,24 +19,24 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/leash-dev/leash/internal/access"
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/config"
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/executions"
-	"github.com/leash-dev/leash/internal/metrics"
-	"github.com/leash-dev/leash/internal/oidc"
-	"github.com/leash-dev/leash/internal/packs"
-	"github.com/leash-dev/leash/internal/proposals"
-	"github.com/leash-dev/leash/internal/provisioning"
-	"github.com/leash-dev/leash/internal/sshexec"
-	"github.com/leash-dev/leash/internal/store"
-	"github.com/leash-dev/leash/internal/syslog"
-	"github.com/leash-dev/leash/internal/webhook"
+	"github.com/leassh-dev/leassh/internal/access"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/config"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/executions"
+	"github.com/leassh-dev/leassh/internal/metrics"
+	"github.com/leassh-dev/leassh/internal/oidc"
+	"github.com/leassh-dev/leassh/internal/packs"
+	"github.com/leassh-dev/leassh/internal/proposals"
+	"github.com/leassh-dev/leassh/internal/provisioning"
+	"github.com/leassh-dev/leassh/internal/sshexec"
+	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/leassh-dev/leassh/internal/syslog"
+	"github.com/leassh-dev/leassh/internal/webhook"
 )
 
 const (
-	cookieName  = "leash_session"
+	cookieName  = "leassh_session"
 	minPassword = 10
 	maxFailures = 5
 	failWindow  = 15 * time.Minute
@@ -113,7 +113,7 @@ func parsePrefix(p string) (netip.Prefix, error) {
 	}
 	a, err := netip.ParseAddr(p)
 	if err != nil {
-		return netip.Prefix{}, errors.New("LEASH_TRUSTED_PROXIES invalide: " + p)
+		return netip.Prefix{}, errors.New("LEASSH_TRUSTED_PROXIES invalide: " + p)
 	}
 	return netip.PrefixFrom(a, a.BitLen()), nil
 }
@@ -240,11 +240,17 @@ func (s *Server) isHTTPS(r *http.Request) bool {
 	if strings.HasPrefix(s.cfg.BaseURL, "https://") {
 		return true
 	}
-	host, _, _ := net.SplitHostPort(r.RemoteAddr)
-	if a, err := netip.ParseAddr(host); err == nil && s.trusted(a) {
+	if s.fromTrustedProxy(r) {
 		return r.Header.Get("X-Forwarded-Proto") == "https"
 	}
 	return false
+}
+
+// fromTrustedProxy: la connexion TCP directe vient d'un proxy déclaré dans LEASSH_TRUSTED_PROXIES.
+func (s *Server) fromTrustedProxy(r *http.Request) bool {
+	host, _, _ := net.SplitHostPort(r.RemoteAddr)
+	a, err := netip.ParseAddr(host)
+	return err == nil && s.trusted(a)
 }
 
 func randToken() (string, error) {

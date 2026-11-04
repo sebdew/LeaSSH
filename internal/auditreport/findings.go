@@ -171,7 +171,7 @@ func Evaluate(s Snapshot) []Finding {
 	}
 	if s.Config.RetentionDays < 365 {
 		add(Finding{Code: "retention_short", Severity: Medium, Title: "Rétention des journaux inférieure à 365 jours", Count: 1,
-			Detail: fmt.Sprintf("La rétention configurée est de %d jours (LEASH_LOG_RETENTION_DAYS). Repère indicatif: 12 mois; HDS et certaines politiques exigent davantage.", s.Config.RetentionDays), Controls: []string{"ISO 5.33", "ISO 8.15", "HDS traçabilité", "HDS conservation"}})
+			Detail: fmt.Sprintf("La rétention configurée est de %d jours (LEASSH_LOG_RETENTION_DAYS). Repère indicatif: 12 mois; HDS et certaines politiques exigent davantage.", s.Config.RetentionDays), Controls: []string{"ISO 5.33", "ISO 8.15", "HDS traçabilité", "HDS conservation"}})
 	}
 	if s.Integrity.PurgeEvents > 0 {
 		add(Finding{Code: "logs_purged", Severity: Info, Title: "Purges de journaux pendant la période", Count: s.Integrity.PurgeEvents,

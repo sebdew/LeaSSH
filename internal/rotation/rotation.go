@@ -1,4 +1,4 @@
-// Package rotation: changement de la clé maître (`leash rotate-master-key`).
+// Package rotation: changement de la clé maître (`leassh rotate-master-key`).
 package rotation
 
 import (
@@ -7,10 +7,10 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/auditreport"
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/auditreport"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 func reseal(oldBox, newBox *crypto.Box, blob []byte) ([]byte, error) {

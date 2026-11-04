@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/executions"
-	"github.com/leash-dev/leash/internal/store"
-	"github.com/leash-dev/leash/internal/syslog/syslogtest"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/executions"
+	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/leassh-dev/leassh/internal/syslog/syslogtest"
 )
 
 func TestSyslogSettingsAdminOnly(t *testing.T) {
@@ -48,7 +48,7 @@ func TestSyslogSettingsAndForwarding(t *testing.T) {
 	e.must("PUT", "/settings/syslog", map[string]any{"enabled": true}, 400)
 	e.must("PUT", "/settings/syslog", map[string]any{"host": "x", "protocol": "smtp"}, 400)
 
-	cfg := map[string]any{"enabled": true, "protocol": "tls", "host": srv.Host, "port": srv.Port, "message_format": "json", "facility": "local4", "app_name": "leash",
+	cfg := map[string]any{"enabled": true, "protocol": "tls", "host": srv.Host, "port": srv.Port, "message_format": "json", "facility": "local4", "app_name": "leassh",
 		"min_severity": "info", "types": []string{"execution", "audit"}, "tls_ca_pem": srv.CAPEM, "tls_client_cert_pem": crt, "tls_client_key_pem": key}
 	out := e.must("PUT", "/settings/syslog", cfg, 200)
 	if c := out["config"].(map[string]any); c["has_tls_client_key"] != true || strings.Contains(toJSON(out), "PRIVATE KEY") {

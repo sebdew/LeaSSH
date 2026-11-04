@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/leash-dev/leash/internal/catalog"
+	"github.com/leassh-dev/leassh/internal/catalog"
 )
 
 func openT(t *testing.T) *Store {

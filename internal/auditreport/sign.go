@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 const EnvelopeFormat = "leash-audit-report/1"
@@ -25,7 +25,7 @@ type Signature struct {
 	Digest       string `json:"digest"`
 	ReportID     string `json:"report_id"`
 	GeneratedAt  string `json:"generated_at"`
-	LeashVersion string `json:"leash_version"`
+	LeasshVersion string `json:"leash_version"`
 	TagAlgorithm string `json:"tag_algorithm"`
 	Tag          string `json:"tag"`
 	HowToVerify  string `json:"how_to_verify"`
@@ -47,7 +47,7 @@ func Tag(key []byte, digest, reportID, createdAt string) string {
 // NewEnvelope assemble le fichier exportable d'un rapport enregistré.
 func NewEnvelope(r store.AuditReport) Envelope {
 	return Envelope{Format: EnvelopeFormat, Snapshot: json.RawMessage(r.Snapshot), Signature: Signature{
-		Algorithm: "sha256", Digest: r.SHA256, ReportID: r.ID, GeneratedAt: r.CreatedAt, LeashVersion: r.LeashVersion, TagAlgorithm: "hmac-sha256", Tag: r.HMAC,
+		Algorithm: "sha256", Digest: r.SHA256, ReportID: r.ID, GeneratedAt: r.CreatedAt, LeasshVersion: r.LeasshVersion, TagAlgorithm: "hmac-sha256", Tag: r.HMAC,
 		HowToVerify: "Digest: jq -cj .snapshot rapport.json | sha256sum. Authenticité: POST /api/v1/audit-reports/verify sur l'instance émettrice (le tag dépend de sa clé maître).",
 	}}
 }

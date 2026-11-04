@@ -71,7 +71,7 @@ type Type struct {
 
 var registry = map[string]Type{}
 
-// Register inscrit un type de connecteur (appelé au démarrage par cmd/leash).
+// Register inscrit un type de connecteur (appelé au démarrage par cmd/leassh).
 func Register(t Type) { registry[t.ID] = t }
 
 func Lookup(id string) (Type, error) {

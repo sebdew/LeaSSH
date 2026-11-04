@@ -45,14 +45,14 @@
     "noResult": "Aucun résultat pour « {{q}} »."
   },
   "setup": {
-    "title": "Bienvenue dans Leash",
+    "title": "Bienvenue dans Leassh",
     "subtitle": "Créez le compte administrateur pour commencer.",
     "username": "Nom d'utilisateur",
     "password": "Mot de passe",
     "confirm": "Confirmation",
     "submit": "Créer le compte",
     "mismatch": "Les mots de passe ne correspondent pas.",
-    "backup": "Conservez LEASH_MASTER_KEY : elle chiffre les secrets SSH. Sans elle, ils sont irrécupérables.",
+    "backup": "Conservez LEASSH_MASTER_KEY : elle chiffre les secrets SSH. Sans elle, ils sont irrécupérables.",
     "strength": {
       "label": "Robustesse",
       "0": "Trop court",
@@ -67,6 +67,7 @@
     "sso": {
       "button": "Se connecter avec {{name}}",
       "or": "ou avec un compte local",
+      "redirecting": "Redirection vers {{name}}…",
       "localAdminsOnly": "Le mot de passe local est réservé aux administrateurs locaux (compte de secours).",
       "errors": {
         "generic": "La connexion SSO a échoué.",
@@ -88,7 +89,7 @@
         "token_nonce": "Le jeton ne correspond pas à votre demande de connexion. Recommencez.",
         "token_subject": "Le jeton ne contient pas d'identifiant d'utilisateur.",
         "userinfo_failed": "Lecture du profil impossible.",
-        "role_not_mapped": "Votre compte n'a aucun rôle dans Leash : demandez à un administrateur de vous ajouter à un groupe autorisé.",
+        "role_not_mapped": "Votre compte n'a aucun rôle dans Leassh : demandez à un administrateur de vous ajouter à un groupe autorisé.",
         "not_provisioned": "Votre compte n'est pas autorisé : la création automatique est désactivée.",
         "account_disabled": "Ce compte est désactivé.",
         "internal": "Erreur interne pendant la connexion SSO."
@@ -136,7 +137,7 @@
     "proposals": "Propositions en attente",
     "reviewProposals": "Examiner",
     "recent": "Activité récente",
-    "noActivity": "Aucune exécution pour l'instant. Elles apparaîtront ici dès qu'un agent utilisera Leash.",
+    "noActivity": "Aucune exécution pour l'instant. Elles apparaîtront ici dès qu'un agent utilisera Leassh.",
     "openJournal": "Ouvrir le journal complet"
   },
   "soon": {
@@ -314,7 +315,7 @@
   },
   "identities": {
     "title": "Identités SSH",
-    "subtitle": "Les comptes SSH utilisés par Leash pour se connecter aux serveurs.",
+    "subtitle": "Les comptes SSH utilisés par Leassh pour se connecter aux serveurs.",
     "add": "Nouvelle identité",
     "empty": "Aucune identité SSH. Générez une clé ed25519 pour commencer.",
     "type": {
@@ -491,7 +492,7 @@
       "action": "action",
       "actor_type": "acteur"
     },
-    "empty": "Aucune exécution pour l'instant. Elles apparaîtront ici dès qu'un agent utilisera Leash.",
+    "empty": "Aucune exécution pour l'instant. Elles apparaîtront ici dès qu'un agent utilisera Leassh.",
     "emptyFiltered": "Aucun résultat pour ces filtres.",
     "emptyAudit": "Aucun événement d'administration.",
     "col": {
@@ -723,7 +724,7 @@
     "retention": "Rétention",
     "retentionUnlimited": "Conservation illimitée",
     "retentionDays": "{{count}} jours",
-    "retentionHelp": "Réglée par LEASH_LOG_RETENTION_DAYS. Seule la purge automatique supprime des lignes du journal.",
+    "retentionHelp": "Réglée par LEASSH_LOG_RETENTION_DAYS. Seule la purge automatique supprime des lignes du journal.",
     "integrity": "Intégrité du journal",
     "integrityHelp": "Contrôle les chaînes de hash des exécutions et de l'administration pour détecter toute altération de la base.",
     "verify": "Vérifier l'intégrité",
@@ -783,7 +784,7 @@
       "invalid": "invalide(s)"
     },
     "installedVersion": "version installée : {{version}}",
-    "untrusted": "Ce fichier ne vient pas de Leash : examinez chaque commande, elles pourront être lancées par vos agents.",
+    "untrusted": "Ce fichier ne vient pas de Leassh : examinez chaque commande, elles pourront être lancées par vos agents.",
     "overridesManual": "Remplace une commande créée à la main ou issue d'un autre pack.",
     "nothingToDo": "Rien à importer : le catalogue est déjà à jour.",
     "createGroup": "Créer (ou compléter) le groupe de commandes « {{name}} »",
@@ -853,7 +854,7 @@
     "dropped": "Abandonnés (file pleine)",
     "lastSuccess": "Dernier envoi réussi",
     "lastError": "Dernière erreur",
-    "queueHelp": "La file est en mémoire (10 000 messages) : en cas de panne du serveur, l'envoi reprend automatiquement ; un redémarrage de Leash vide la file (le journal d'administration reprend là où il s'était arrêté).",
+    "queueHelp": "La file est en mémoire (10 000 messages) : en cas de panne du serveur, l'envoi reprend automatiquement ; un redémarrage de Leassh vide la file (le journal d'administration reprend là où il s'était arrêté).",
     "protocol": "Protocole",
     "host": "Serveur",
     "port": "Port",
@@ -913,7 +914,7 @@
     "secret": "Secret de signature",
     "secretKept": "•••• (laisser vide pour conserver)",
     "events": "Événements envoyés",
-    "signatureHelp": "En-tête X-Leash-Signature : sha256=<HMAC du corps avec le secret>. Trois tentatives avec délai croissant.",
+    "signatureHelp": "En-tête X-Leassh-Signature : sha256=<HMAC du corps avec le secret>. Trois tentatives avec délai croissant.",
     "test": "Tester l'envoi",
     "testOk": "Livré (HTTP {{status}})",
     "testFailed": "Échec : {{error}}",
@@ -1080,7 +1081,7 @@
     "roleClaim": "Revendication des rôles",
     "roleClaimHelp": "Nom de la revendication qui contient les groupes ou rôles (ex. groups, roles, realm_access.roles). Lue dans l'ID token, sinon dans userinfo. Vide : tout le monde reçoit le rôle par défaut.",
     "mapTo": "Valeurs → {{role}}",
-    "mapHelp": "Une valeur par ligne (ex. /leash-admins). Le rôle le plus élevé correspondant l'emporte ; le rôle est recalculé à chaque connexion.",
+    "mapHelp": "Une valeur par ligne (ex. /leassh-admins). Le rôle le plus élevé correspondant l'emporte ; le rôle est recalculé à chaque connexion.",
     "defaultRole": "Sans correspondance",
     "refuse": "Refuser la connexion",
     "accounts": "Comptes",
@@ -1090,6 +1091,8 @@
     "localOnly": "Réserver le mot de passe local aux administrateurs locaux",
     "localOnlyHelp": "Quand le SSO est actif, les comptes locaux non administrateurs ne peuvent plus se connecter par mot de passe. Les administrateurs locaux gardent l'accès de secours.",
     "endSession": "Fermer aussi la session chez le fournisseur à la déconnexion",
+    "autoRedirect": "Rediriger automatiquement vers le fournisseur (sans afficher la page de connexion)",
+    "autoRedirectHelp": "Pour accéder quand même au formulaire local (compte de secours), ouvrez {{url}}. En cas d'échec SSO, le formulaire s'affiche aussi.",
     "saveFirst": "Le test utilise l'issuer saisi ; enregistrez pour appliquer les modifications.",
     "test": "Tester la découverte",
     "testOk_one": "Découverte réussie ({{count}} clé de signature publiée).",

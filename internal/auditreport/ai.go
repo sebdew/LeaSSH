@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 // Réglages de la synthèse IA (désactivée par défaut). Compatible avec toute API « chat completions » de type OpenAI

@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/executions"
-	"github.com/leash-dev/leash/internal/store"
-	"github.com/leash-dev/leash/internal/testkit"
+	"github.com/leassh-dev/leassh/internal/executions"
+	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/leassh-dev/leassh/internal/testkit"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

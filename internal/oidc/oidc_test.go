@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/oidc"
-	"github.com/leash-dev/leash/internal/oidc/oidctest"
+	"github.com/leassh-dev/leassh/internal/oidc"
+	"github.com/leassh-dev/leassh/internal/oidc/oidctest"
 )
 
 func payload(idp *oidctest.Server, over map[string]any) map[string]any {
@@ -61,7 +61,7 @@ func TestVerifyAcceptsValidAndRejectsForged(t *testing.T) {
 	// signature altérée
 	good := oidctest.Sign(t, payload(idp, nil), idp.Key, idp.Kid)
 	parts := strings.Split(good, ".")
-	forged := parts[0] + "." + base64.RawURLEncoding.EncodeToString([]byte(`{"iss":"`+idp.URL+`","sub":"admin","aud":"leash","exp":9999999999,"nonce":"n1"}`)) + "." + parts[2]
+	forged := parts[0] + "." + base64.RawURLEncoding.EncodeToString([]byte(`{"iss":"`+idp.URL+`","sub":"admin","aud":"leassh","exp":9999999999,"nonce":"n1"}`)) + "." + parts[2]
 	_, err = c.VerifyIDToken(ctx, cfg, forged, "n1")
 	reason(t, err, oidc.ReasonSignature)
 	for _, bad := range []string{"", "a.b", "a.b.c", good + ".x"} {
@@ -131,9 +131,9 @@ func TestVerifyECAndEdDSA(t *testing.T) {
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
 	issuer = ts.URL
-	cfg := oidc.Config{Issuer: issuer, ClientID: "leash"}
+	cfg := oidc.Config{Issuer: issuer, ClientID: "leassh"}
 	c := oidc.New()
-	pl := map[string]any{"iss": issuer, "sub": "s", "aud": "leash", "exp": time.Now().Add(time.Minute).Unix(), "nonce": "n"}
+	pl := map[string]any{"iss": issuer, "sub": "s", "aud": "leassh", "exp": time.Now().Add(time.Minute).Unix(), "nonce": "n"}
 
 	es := oidctest.SignRaw(t, map[string]any{"alg": "ES256", "kid": "ec"}, pl, func(in []byte) []byte {
 		h := sha256.Sum256(in)
@@ -175,7 +175,7 @@ func TestExchangeRequiresPKCEAndSecret(t *testing.T) {
 	idp := oidctest.New(t)
 	c, ctx, cfg := oidc.New(), context.Background(), cfgOf(idp)
 	verifier, _ := oidc.RandomString(48)
-	loc, err := c.AuthURL(ctx, cfg, "http://leash.test/cb", "st", "no", verifier)
+	loc, err := c.AuthURL(ctx, cfg, "http://leassh.test/cb", "st", "no", verifier)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +183,7 @@ func TestExchangeRequiresPKCEAndSecret(t *testing.T) {
 	cb := res.Header.Get("Location")
 	code := cb[strings.Index(cb, "code=")+5 : strings.Index(cb, "&state")]
 	// mauvais verifier → refus; mauvais secret → refus
-	if _, err := c.Exchange(ctx, cfg, "http://leash.test/cb", code, "autre-verifier"); err == nil {
+	if _, err := c.Exchange(ctx, cfg, "http://leassh.test/cb", code, "autre-verifier"); err == nil {
 		t.Fatal("PKCE ignoré")
 	}
 	res, _ = (&http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}).Get(loc)
@@ -191,12 +191,12 @@ func TestExchangeRequiresPKCEAndSecret(t *testing.T) {
 	code = cb[strings.Index(cb, "code=")+5 : strings.Index(cb, "&state")]
 	bad := cfg
 	bad.ClientSecret = "faux"
-	_, err = c.Exchange(ctx, bad, "http://leash.test/cb", code, verifier)
+	_, err = c.Exchange(ctx, bad, "http://leassh.test/cb", code, verifier)
 	reason(t, err, oidc.ReasonExchange)
-	if tk, err := c.Exchange(ctx, cfg, "http://leash.test/cb", code, verifier); err != nil || tk.IDToken == "" {
+	if tk, err := c.Exchange(ctx, cfg, "http://leassh.test/cb", code, verifier); err != nil || tk.IDToken == "" {
 		t.Fatalf("échange: %v", err)
 	}
-	if _, err := c.Exchange(ctx, cfg, "http://leash.test/cb", code, verifier); err == nil {
+	if _, err := c.Exchange(ctx, cfg, "http://leassh.test/cb", code, verifier); err == nil {
 		t.Fatal("code rejoué accepté")
 	}
 }

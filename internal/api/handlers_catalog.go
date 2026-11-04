@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/catalog"
-	"github.com/leash-dev/leash/internal/executions"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/catalog"
+	"github.com/leassh-dev/leassh/internal/executions"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 type commandInput struct {

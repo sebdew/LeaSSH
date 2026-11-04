@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leash-dev/leash/internal/metrics"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/metrics"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 type checklistItem struct {
@@ -64,12 +64,12 @@ func (s *Server) insights(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, in)
 }
 
-// metricsHandler: format Prometheus. Protégé par LEASH_METRICS_TOKEN s'il est défini.
+// metricsHandler: format Prometheus. Protégé par LEASSH_METRICS_TOKEN s'il est défini.
 func (s *Server) metricsHandler(w http.ResponseWriter, r *http.Request) {
 	if tok := s.cfg.MetricsToken; tok != "" {
 		got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if subtle.ConstantTimeCompare([]byte(got), []byte(tok)) != 1 {
-			w.Header().Set("WWW-Authenticate", `Bearer realm="leash-metrics"`)
+			w.Header().Set("WWW-Authenticate", `Bearer realm="leassh-metrics"`)
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -95,11 +95,11 @@ func (s *Server) metricsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		gauges = append(gauges, g)
 	}
-	add("leash_pending_approvals", "Exécutions en attente de validation humaine.", "", `SELECT count(*) FROM executions WHERE status='pending_approval'`)
-	add("leash_pending_proposals", "Propositions de commandes en attente de revue.", "", `SELECT count(*) FROM proposals WHERE status='pending'`)
-	add("leash_servers", "Serveurs par état de clé d'hôte.", "host_key_status", `SELECT host_key_status,count(*) FROM servers GROUP BY host_key_status`)
-	add("leash_mcp_keys", "Clés MCP par état.", "state", `SELECT CASE WHEN disabled=1 THEN 'disabled' WHEN expires_at IS NOT NULL AND expires_at<strftime('%Y-%m-%dT%H:%M:%fZ','now') THEN 'expired' ELSE 'active' END,count(*) FROM mcp_keys GROUP BY 1`)
-	gauges = append(gauges, metrics.Gauge{Name: "leash_build_info", Help: "Version de Leash.", Samples: []metrics.Sample{{Labels: map[string]string{"version": s.version}, Value: 1}}})
+	add("leassh_pending_approvals", "Exécutions en attente de validation humaine.", "", `SELECT count(*) FROM executions WHERE status='pending_approval'`)
+	add("leassh_pending_proposals", "Propositions de commandes en attente de revue.", "", `SELECT count(*) FROM proposals WHERE status='pending'`)
+	add("leassh_servers", "Serveurs par état de clé d'hôte.", "host_key_status", `SELECT host_key_status,count(*) FROM servers GROUP BY host_key_status`)
+	add("leassh_mcp_keys", "Clés MCP par état.", "state", `SELECT CASE WHEN disabled=1 THEN 'disabled' WHEN expires_at IS NOT NULL AND expires_at<strftime('%Y-%m-%dT%H:%M:%fZ','now') THEN 'expired' ELSE 'active' END,count(*) FROM mcp_keys GROUP BY 1`)
+	gauges = append(gauges, metrics.Gauge{Name: "leassh_build_info", Help: "Version de Leassh.", Samples: []metrics.Sample{{Labels: map[string]string{"version": s.version}, Value: 1}}})
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 	s.metrics.Render(w, gauges)
 }

@@ -8,10 +8,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/packs"
-	"github.com/leash-dev/leash/internal/store"
-	"github.com/leash-dev/leash/internal/webhook"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/packs"
+	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/leassh-dev/leassh/internal/webhook"
 )
 
 type bundledInfo struct {
@@ -143,7 +143,7 @@ func (s *Server) exportPack(w http.ResponseWriter, r *http.Request) {
 		meta.ID = "export"
 	}
 	if meta.Name == "" {
-		meta.Name = "Export Leash"
+		meta.Name = "Export Leassh"
 	}
 	if meta.Version == "" {
 		meta.Version = "1.0.0"
@@ -221,7 +221,7 @@ func (s *Server) testWebhook(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, bad("not_configured", "renseignez une URL et un secret avant de tester"))
 		return
 	}
-	res := s.hook.Send(r.Context(), cfg.URL, secret, "webhook.test", map[string]any{"message": "Test d'envoi depuis Leash"}, s.hook.Link("/reglages"), 1)
+	res := s.hook.Send(r.Context(), cfg.URL, secret, "webhook.test", map[string]any{"message": "Test d'envoi depuis Leassh"}, s.hook.Link("/reglages"), 1)
 	_ = store.InsertDelivery(r.Context(), s.st.DB, store.WebhookDelivery{Event: "webhook.test", OK: res.OK, Attempts: res.Attempts, HTTPStatus: res.Status, Error: res.Error, URL: cfg.URL})
 	writeJSON(w, 200, res)
 }

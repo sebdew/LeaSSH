@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/store"
 	"net/http"
 	"strings"
 	"testing"
@@ -93,8 +93,8 @@ func TestMetricsEndpoint(t *testing.T) {
 	if resp.StatusCode != 200 || !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/plain") {
 		t.Fatalf("/metrics: %d %v", resp.StatusCode, resp.Header)
 	}
-	for _, want := range []string{`leash_executions_total{status="succeeded"} 1`, `leash_executions_total{status="denied"} 1`, `leash_execution_duration_seconds_count 1`,
-		`leash_servers{host_key_status="pinned"} 1`, `leash_build_info{version="test"} 1`, "leash_pending_approvals 0", "# TYPE leash_ssh_errors_total counter"} {
+	for _, want := range []string{`leassh_executions_total{status="succeeded"} 1`, `leassh_executions_total{status="denied"} 1`, `leassh_execution_duration_seconds_count 1`,
+		`leassh_servers{host_key_status="pinned"} 1`, `leassh_build_info{version="test"} 1`, "leassh_pending_approvals 0", "# TYPE leassh_ssh_errors_total counter"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("manque %q dans:\n%s", want, body)
 		}

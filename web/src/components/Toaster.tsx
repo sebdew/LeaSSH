@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const EVT = "leash-toast";
+const EVT = "leassh-toast";
 export const toast = (message: string) => window.dispatchEvent(new CustomEvent(EVT, { detail: message }));
 
 // Confirmations seulement: les erreurs importantes restent affichées dans la page (docs/UX.md §4.4).

@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/store"
-	"github.com/leash-dev/leash/internal/syslog"
-	"github.com/leash-dev/leash/internal/syslog/syslogtest"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/leassh-dev/leassh/internal/syslog"
+	"github.com/leassh-dev/leassh/internal/syslog/syslogtest"
 )
 
 type rig struct {
@@ -80,7 +80,7 @@ func TestTransportsAndRFC5424(t *testing.T) {
 			srv := syslogtest.New(t, proto)
 			r := newRig(t)
 			c := cfgFor(srv)
-			c.Facility, c.AppName = "local3", "leash-prod"
+			c.Facility, c.AppName = "local3", "leassh-prod"
 			r.save(syslog.Input{Config: c})
 			r.f.OnExecution("execution.finished", exec("succeeded"))
 			m := header.FindStringSubmatch(srv.WaitFor(1)[0])
@@ -90,7 +90,7 @@ func TestTransportsAndRFC5424(t *testing.T) {
 			if m[1] != "158" { // local3 (19) * 8 + info (6)
 				t.Fatalf("PRI = %s, attendu 158", m[1])
 			}
-			if m[3] != "leash-prod" || m[4] != "execution.finished" {
+			if m[3] != "leassh-prod" || m[4] != "execution.finished" {
 				t.Fatalf("app-name/msgid: %v", m)
 			}
 			for _, want := range []string{"id=E1", `agent="Agent N1"`, "server=web-01", "command=svc.status", "exit_code=0", "stdout_bytes=17", `rendered="systemctl status nginx"`} {
@@ -131,7 +131,7 @@ func TestJSONAndCEF(t *testing.T) {
 	if err := json.Unmarshal([]byte(m[5]), &j); err != nil {
 		t.Fatalf("JSON invalide: %v: %s", err, m[5])
 	}
-	if j["event"] != "execution.denied" || j["category"] != "execution" || j["severity"] != "warning" || j["server"] != "web-01" || j["exit_code"] != float64(0) || j["app"] != "leash" {
+	if j["event"] != "execution.denied" || j["category"] != "execution" || j["severity"] != "warning" || j["server"] != "web-01" || j["exit_code"] != float64(0) || j["app"] != "leassh" {
 		t.Fatalf("JSON: %v", j)
 	}
 	if m[1] != "132" { // local0 * 8 + warning (4)
@@ -142,7 +142,7 @@ func TestJSONAndCEF(t *testing.T) {
 	r.save(syslog.Input{Config: c})
 	r.f.OnExecution("execution.finished", exec("failed"))
 	cef := header.FindStringSubmatch(srv.WaitFor(2)[1])[5]
-	if !strings.HasPrefix(cef, "CEF:0|Leash|Leash|1.2.3|execution.finished|execution.finished|5|") || !strings.Contains(cef, "suser=Agent N1") ||
+	if !strings.HasPrefix(cef, "CEF:0|Leassh|Leassh|1.2.3|execution.finished|execution.finished|5|") || !strings.Contains(cef, "suser=Agent N1") ||
 		!strings.Contains(cef, "dvchost=web-01") || !strings.Contains(cef, "act=svc.status") || !strings.Contains(cef, "outcome=failed") || strings.Contains(cef, "\n") {
 		t.Fatalf("CEF: %s", cef)
 	}

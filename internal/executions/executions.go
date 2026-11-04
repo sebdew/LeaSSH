@@ -12,13 +12,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/leash-dev/leash/internal/access"
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/catalog"
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/metrics"
-	"github.com/leash-dev/leash/internal/sshexec"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/access"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/catalog"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/metrics"
+	"github.com/leassh-dev/leassh/internal/sshexec"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 // Statuts d'exécution (SPEC §4.9).
@@ -256,7 +256,7 @@ func (s *Service) execute(ctx context.Context, e store.Execution, srv store.Serv
 		}
 		e.Stdout, e.Stderr, e.Truncated = res.Stdout, res.Stderr, res.Truncated
 		if errMsg != "" {
-			e.Stderr = strings.TrimSpace(e.Stderr + "\nleash: " + errMsg)
+			e.Stderr = strings.TrimSpace(e.Stderr + "\nleassh: " + errMsg)
 		}
 		if err := store.SaveExecutionState(context.WithoutCancel(ctx), s.st.DB, e); err != nil {
 			s.log.Error("sauvegarde de l'exécution", "id", e.ID, "err", err)
@@ -408,7 +408,7 @@ func (s *Service) Decide(ctx context.Context, id string, approver store.User, ap
 	srv, cmd, why := s.revalidate(ctx, e)
 	if why != "" {
 		e.Status, e.DenialReason, e.FinishedAt = StError, "revalidation_failed:"+why, store.Now()
-		e.Stderr = "leash: " + why
+		e.Stderr = "leassh: " + why
 		_ = store.SaveExecutionState(ctx, s.st.DB, e)
 		s.notify("execution.finished", e)
 		return e, nil

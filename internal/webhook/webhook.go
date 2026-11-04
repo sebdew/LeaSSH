@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leash-dev/leash/internal/crypto"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/crypto"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 const (
@@ -47,7 +47,7 @@ func ValidateURL(raw string) error {
 	return nil
 }
 
-// Sign renvoie la valeur de l'en-tête X-Leash-Signature.
+// Sign renvoie la valeur de l'en-tête X-Leassh-Signature.
 func Sign(secret string, body []byte) string {
 	m := hmac.New(sha256.New, []byte(secret))
 	m.Write(body)
@@ -81,7 +81,7 @@ func New(st *store.Store, box *crypto.Box, baseURL string, log *slog.Logger) *Di
 	}
 }
 
-// Link construit l'URL absolue d'un écran de l'interface (vide si LEASH_BASE_URL n'est pas définie).
+// Link construit l'URL absolue d'un écran de l'interface (vide si LEASSH_BASE_URL n'est pas définie).
 func (d *Dispatcher) Link(path string) string {
 	if d.baseURL == "" {
 		return ""
@@ -213,9 +213,9 @@ func (d *Dispatcher) once(ctx context.Context, target, secret, event string, bod
 		return 0, err.Error()
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "leash-webhook")
-	req.Header.Set("X-Leash-Event", event)
-	req.Header.Set("X-Leash-Signature", Sign(secret, body))
+	req.Header.Set("User-Agent", "leassh-webhook")
+	req.Header.Set("X-Leassh-Event", event)
+	req.Header.Set("X-Leassh-Signature", Sign(secret, body))
 	resp, err := d.client.Do(req)
 	if err != nil {
 		return 0, truncate(err.Error())

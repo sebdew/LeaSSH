@@ -5,8 +5,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/syslog"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/syslog"
 )
 
 // ---- export syslog (SPEC §11bis) ----

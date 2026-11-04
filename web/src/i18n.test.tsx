@@ -57,11 +57,11 @@ describe("choix de la langue", () => {
     await u.selectOptions(screen.getByLabelText("Langue"), "en");
     expect(await screen.findByRole("tab", { name: "Appearance" })).toBeInTheDocument();
     expect(screen.getByLabelText("Language")).toHaveValue("en");
-    expect(localStorage.getItem("leash-lang")).toBe("en");
+    expect(localStorage.getItem("leassh-lang")).toBe("en");
     expect(document.documentElement.lang).toBe("en");
     await u.selectOptions(screen.getByLabelText("Language"), "fr");
     await waitFor(() => expect(screen.getByRole("tab", { name: "Apparence" })).toBeInTheDocument());
-    expect(localStorage.getItem("leash-lang")).toBe("fr");
+    expect(localStorage.getItem("leassh-lang")).toBe("fr");
   });
 });
 

@@ -1,22 +1,22 @@
 # Exemple de déploiement. Créez un fichier .env à côté (voir docs/INSTALL.md) :
-#   LEASH_MASTER_KEY=<openssl rand -base64 32>
-#   LEASH_BASE_URL=https://leash.example.com
+#   LEASSH_MASTER_KEY=<openssl rand -base64 32>
+#   LEASSH_BASE_URL=https://leassh.example.com
 services:
-  leash:
-    image: ghcr.io/<org>/leash:latest   # ou : build: .
+  leassh:
+    image: ghcr.io/<org>/leassh:latest   # ou : build: .
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:8080"           # exposez via un reverse proxy TLS, pas directement
     volumes:
-      - leash-data:/data
+      - leassh-data:/data
     environment:
-      LEASH_MASTER_KEY: ${LEASH_MASTER_KEY:?définissez LEASH_MASTER_KEY dans .env}
-      LEASH_BASE_URL: ${LEASH_BASE_URL:-}
-      # LEASH_TRUSTED_PROXIES: 172.16.0.0/12      # réseau du reverse proxy (IP réelle des clients)
-      # LEASH_METRICS_TOKEN: change-me            # protège /metrics
-      # LEASH_LOG_RETENTION_DAYS: 365
+      LEASSH_MASTER_KEY: ${LEASSH_MASTER_KEY:?définissez LEASSH_MASTER_KEY dans .env}
+      LEASSH_BASE_URL: ${LEASSH_BASE_URL:-}
+      # LEASSH_TRUSTED_PROXIES: 172.16.0.0/12      # réseau du reverse proxy (IP réelle des clients)
+      # LEASSH_METRICS_TOKEN: change-me            # protège /metrics
+      # LEASSH_LOG_RETENTION_DAYS: 365
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
 volumes:
-  leash-data:
+  leassh-data:

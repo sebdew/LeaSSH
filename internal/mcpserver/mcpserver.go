@@ -14,12 +14,12 @@ import (
 	"time"
 
 	"github.com/google/jsonschema-go/jsonschema"
-	"github.com/leash-dev/leash/internal/access"
-	"github.com/leash-dev/leash/internal/audit"
-	"github.com/leash-dev/leash/internal/catalog"
-	"github.com/leash-dev/leash/internal/executions"
-	"github.com/leash-dev/leash/internal/proposals"
-	"github.com/leash-dev/leash/internal/store"
+	"github.com/leassh-dev/leassh/internal/access"
+	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/catalog"
+	"github.com/leassh-dev/leassh/internal/executions"
+	"github.com/leassh-dev/leassh/internal/proposals"
+	"github.com/leassh-dev/leassh/internal/store"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -94,7 +94,7 @@ func (s *Server) Handler() http.Handler {
 }
 
 func unauthorized(w http.ResponseWriter) {
-	w.Header().Set("WWW-Authenticate", `Bearer realm="leash"`)
+	w.Header().Set("WWW-Authenticate", `Bearer realm="leassh"`)
 	http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 }
 
@@ -239,8 +239,8 @@ func text(s string) *mcp.CallToolResult {
 }
 
 func (s *Server) newMCPServer(cc callCtx) *mcp.Server {
-	srv := mcp.NewServer(&mcp.Implementation{Name: "leash", Version: s.cfg.Version}, &mcp.ServerOptions{
-		Instructions: "Leash donne un accès contrôlé à des serveurs. Tu ne tapes jamais de commande: tu choisis dans un catalogue. " +
+	srv := mcp.NewServer(&mcp.Implementation{Name: "leassh", Version: s.cfg.Version}, &mcp.ServerOptions{
+		Instructions: "Leassh donne un accès contrôlé à des serveurs. Tu ne tapes jamais de commande: tu choisis dans un catalogue. " +
 			"Flux: list_servers → list_commands(server) → run_command(server, command, params, reason). " +
 			"Si requires_approval est vrai, run_command renvoie pending_approval: un humain doit valider; suis l'état avec get_execution (wait_seconds).",
 	})

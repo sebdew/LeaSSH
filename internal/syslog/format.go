@@ -242,5 +242,5 @@ func renderCEF(version string, e Event) string {
 	if len(over) > 0 {
 		ext = append(ext, "msg="+cefExt(strings.Join(over, " ")))
 	}
-	return fmt.Sprintf("CEF:0|Leash|Leash|%s|%s|%s|%d|%s", cefHeader(version), cefHeader(e.Type), cefHeader(e.Type), cefSeverity(e.Severity), strings.Join(ext, " "))
+	return fmt.Sprintf("CEF:0|Leassh|Leassh|%s|%s|%s|%d|%s", cefHeader(version), cefHeader(e.Type), cefHeader(e.Type), cefSeverity(e.Severity), strings.Join(ext, " "))
 }

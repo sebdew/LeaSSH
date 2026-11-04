@@ -1,4 +1,4 @@
-module github.com/leash-dev/leash
+module github.com/leassh-dev/leassh
 
 go 1.26.0
 

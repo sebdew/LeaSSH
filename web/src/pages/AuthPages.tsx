@@ -52,10 +52,17 @@ export function LoginPage({ onDone }: { onDone: (u: User) => void }) {
   const providers = useQuery({ queryKey: ["auth-providers"], retry: false, queryFn: () => api<AuthProviders>("/auth/providers") });
   const ssoError = useSsoError();
   const sso = providers.data?.oidc ?? null;
+  // Redirection automatique vers le fournisseur, sauf en cas d'erreur SSO ou avec « ?login » (accès local de secours).
+  const bypass = new URLSearchParams(window.location.search).has("login");
+  const autoRedirect = !!sso && !!providers.data?.auto_redirect && !ssoError && !bypass;
+  useEffect(() => {
+    if (autoRedirect && sso) window.location.replace(sso.start_url);
+  }, [autoRedirect, sso]);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const { error, busy, submit } = useSubmit("/auth/login", onDone);
   const onSubmit = (e: FormEvent) => { e.preventDefault(); void submit({ username, password }); };
+  if (autoRedirect) return <Shell title={t("login.title")}><p role="status" className="text-muted">{t("login.sso.redirecting", { name: sso?.name })}</p></Shell>;
   return (
     <Shell title={t("login.title")}>
       {ssoError && <div className="mb-3"><ErrorBox message={t(`login.sso.errors.${ssoError}`, { defaultValue: t("login.sso.errors.generic") })} detail={ssoError} title={t("errors.details")} /></div>}

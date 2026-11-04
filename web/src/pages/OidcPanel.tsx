@@ -48,7 +48,7 @@ function OidcForm({ config, onChanged }: { config: OidcConfig; onChanged: () => 
         <Check2 id="oidc-enabled" label={t("oidc.enable")} checked={c.enabled} onChange={(v) => set("enabled", v)} />
         <Field id="oidc-name" label={t("oidc.name")} value={c.name} placeholder="Keycloak" onChange={(e) => set("name", e.target.value)} />
         <div className="flex flex-col gap-1.5">
-          <Field id="oidc-issuer" label={t("oidc.issuer")} value={c.issuer} placeholder="https://sso.example.com/realms/leash" autoComplete="off" onChange={(e) => set("issuer", e.target.value)} />
+          <Field id="oidc-issuer" label={t("oidc.issuer")} value={c.issuer} placeholder="https://sso.example.com/realms/leassh" autoComplete="off" onChange={(e) => set("issuer", e.target.value)} />
           <p className="text-muted">{t("oidc.issuerHelp")}</p>
           {c.issuer.startsWith("http://") && <p role="alert" className="text-write">{t("oidc.httpWarn")}</p>}
         </div>
@@ -83,6 +83,8 @@ function OidcForm({ config, onChanged }: { config: OidcConfig; onChanged: () => 
           <Check2 id="oidc-localonly" label={t("oidc.localOnly")} checked={c.local_password_admins_only} onChange={(v) => set("local_password_admins_only", v)} />
           <p className="text-muted">{t("oidc.localOnlyHelp")}</p>
           <Check2 id="oidc-endsession" label={t("oidc.endSession")} checked={c.end_session} onChange={(v) => set("end_session", v)} />
+          <Check2 id="oidc-autoredirect" label={t("oidc.autoRedirect")} checked={c.auto_redirect} onChange={(v) => set("auto_redirect", v)} />
+          <p className="text-muted">{t("oidc.autoRedirectHelp", { url: logoutUrl ? `${logoutUrl}?login` : "/?login" })}</p>
         </fieldset>
 
         {dirty && <p className="text-muted">{t("oidc.saveFirst")}</p>}
