@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import { Button, ErrorBox, Field } from "../components/ui";
-import { Badge, Check2, CodeBlock, ConfirmDialog, Empty, Modal, MultiPick, PageHeader, Select, ShowInactiveToggle, Tabs, when } from "../components/kit";
+import { Badge, Check2, CodeBlock, ConfirmDialog, Empty, ListSearch, Modal, MultiPick, PageHeader, Select, ShowInactiveToggle, SortTh, Tabs, when } from "../components/kit";
 import { toast } from "../components/Toaster";
 import { errorMessage, useApiMutation, useList } from "../lib/queries";
 import { keyActive, ruleActive } from "../lib/active";
+import { useListView } from "../lib/listview";
 import type { McpKey, Rule } from "../lib/types";
 
 export function configSnippets(token: string, origin: string) {
@@ -33,18 +34,26 @@ export function KeysPage() {
     const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
     return m < 1 ? t("keys.justNow") : m < 60 ? t("keys.minutesAgo", { count: m }) : m < 1440 ? t("keys.hoursAgo", { count: Math.round(m / 60) }) : t("keys.daysAgo", { count: Math.round(m / 1440) });
   };
+  const visible = (keys.data ?? []).filter((k) => showInactive || keyActive(k));
+  const view = useListView(visible, {
+    text: (k) => `${k.name} ${k.description} ${k.prefix} ${k.rule_ids.map(ruleName).join(" ")} ${t(`keys.state.${state(k)}`)}`,
+    sorts: { name: (k) => k.name, prefix: (k) => k.prefix, rules: (k) => k.rule_ids.length, lastUsed: (k) => k.last_used_at ? new Date(k.last_used_at).getTime() : 0, expires: (k) => k.expires_at ? new Date(k.expires_at).getTime() : Number.MAX_SAFE_INTEGER, status: (k) => state(k) },
+  });
   return (
     <>
       <PageHeader title={t("keys.title")} subtitle={t("keys.subtitle")} action={<Button onClick={() => setOpen(true)}><Plus aria-hidden size={16} />{t("keys.add")}</Button>} />
       <ShowInactiveToggle count={(keys.data ?? []).filter((k) => !keyActive(k)).length} checked={showInactive} onChange={setShowInactive} />
       {keys.data?.length === 0 ? <Empty text={t("keys.empty")} action={<Button onClick={() => setOpen(true)}>{t("keys.add")}</Button>} /> : (
+        <>
+        <ListSearch value={view.query} onChange={view.setQuery} label={t("keys.search")} count={view.rows.length} total={visible.length} />
         <div className="overflow-x-auto rounded-card border border-border bg-surface">
           <table className="w-full text-left text-[13px]">
             <thead className="border-b border-border text-muted"><tr>
-              {["name", "prefix", "rules", "lastUsed", "expires", "status", ""].map((c, i) => <th key={i} scope="col" className="px-4 py-2 font-medium">{c && t(`keys.col.${c}`)}</th>)}
+              {["name", "prefix", "rules", "lastUsed", "expires", "status", ""].map((c, i) => <SortTh key={i} label={c ? t(`keys.col.${c}`) : ""} sortKey={c || undefined} sort={view.sort} onSort={view.toggle} />)}
             </tr></thead>
             <tbody>
-              {keys.data?.filter((k) => showInactive || keyActive(k)).map((k) => (
+              {view.rows.length === 0 && <tr><td colSpan={7} className="px-4 py-6 text-center text-muted">{t("common.noMatch")}</td></tr>}
+              {view.rows.map((k) => (
                 <tr key={k.id} className="border-b border-border last:border-0">
                   <td className="px-4 py-2"><div className="font-medium">{k.name}</div><div className="text-muted">{k.description}</div></td>
                   <td className="px-4 py-2 font-mono">{k.prefix}…</td>
@@ -58,6 +67,7 @@ export function KeysPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
       <Modal open={open} onClose={() => setOpen(false)} title={t("keys.add")}>
         <KeyForm rules={(rules.data ?? []).filter(ruleActive)} onClose={() => setOpen(false)} onCreated={(tok) => { setOpen(false); setToken(tok); }} />

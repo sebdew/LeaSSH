@@ -240,3 +240,27 @@ export function ShowInactiveToggle({ count, checked, onChange }: { count: number
 }
 
 export const when = (iso: string, lang = currentLocale()) => (iso ? new Date(iso).toLocaleString(lang, { dateStyle: "short", timeStyle: "medium" }) : "—");
+
+// Champ de recherche d'une liste (avec compteur de résultats).
+export function ListSearch({ value, onChange, label, count, total }: { value: string; onChange: (v: string) => void; label: string; count: number; total: number }) {
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-3">
+      <input type="search" value={value} onChange={(e) => onChange(e.target.value)} aria-label={label} placeholder={label}
+        className="h-9 w-full max-w-xs rounded-field border border-border-strong bg-surface px-3 text-fg" />
+      {value.trim() !== "" && <span aria-live="polite" className="text-muted">{count} / {total}</span>}
+    </div>
+  );
+}
+
+// En-tête de colonne triable (clic ou clavier; aria-sort pour les lecteurs d'écran).
+export function SortTh({ label, sortKey, sort, onSort, className = "px-4 py-2 font-medium" }: { label: string; sortKey?: string; sort: { key: string; dir: "asc" | "desc" } | null; onSort: (k: string) => void; className?: string }) {
+  if (!sortKey) return <th scope="col" className={className}>{label}</th>;
+  const active = sort?.key === sortKey;
+  return (
+    <th scope="col" className={className} aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
+      <button type="button" onClick={() => onSort(sortKey)} className="inline-flex items-center gap-1 font-medium hover:text-fg">
+        {label}<span aria-hidden className={active ? "text-fg" : "opacity-40"}>{active ? (sort.dir === "asc" ? "▲" : "▼") : "↕"}</span>
+      </button>
+    </th>
+  );
+}

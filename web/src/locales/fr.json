@@ -177,7 +177,8 @@
     "copyFailed": "Échec : copiez à la main",
     "showInactive_one": "Afficher l'élément désactivé ({{count}})",
     "showInactive_other": "Afficher les éléments désactivés ({{count}})",
-    "loading": "Chargement…"
+    "loading": "Chargement…",
+    "noMatch": "Aucun résultat."
   },
   "risk": {
     "read": "lecture",
@@ -219,7 +220,8 @@
       "manual": "manuelle",
       "pack": "pack",
       "proposal": "proposition"
-    }
+    },
+    "search": "Rechercher une commande (slug, nom, risque…)"
   },
   "groups": {
     "add": "Nouveau groupe",
@@ -311,7 +313,8 @@
     "deleteBody": "« {{name}} » sera supprimé de la configuration.",
     "sshUser": "Utilisateur SSH (facultatif)",
     "sshUserPlaceholder": "ia:resa",
-    "sshUserHelp": "Remplace l'utilisateur de l'identité pour ce serveur. Derrière Warpgate, indiquez « utilisateur:nom exact de la cible », espaces compris (ex. « ia:reservations-dev - LXC ct145 ») : chaque serveur a sa propre cible, même si l'hôte est le même."
+    "sshUserHelp": "Remplace l'utilisateur de l'identité pour ce serveur. Derrière Warpgate, indiquez « utilisateur:nom exact de la cible », espaces compris (ex. « ia:reservations-dev - LXC ct145 ») : chaque serveur a sa propre cible, même si l'hôte est le même.",
+    "search": "Rechercher un serveur (nom, hôte, identité, tag…)"
   },
   "identities": {
     "title": "Identités SSH",
@@ -374,7 +377,8 @@
     "revoke": "Révoquer",
     "revokeTitle": "Révoquer la clé",
     "revokeBody": "« {{name}} » ne pourra plus rien faire, immédiatement.",
-    "revoked": "Clé révoquée"
+    "revoked": "Clé révoquée",
+    "search": "Rechercher une clé (nom, préfixe, règle…)"
   },
   "rules": {
     "title": "Règles d'accès",
@@ -835,7 +839,8 @@
     "approveBody": "La commande sera créée et activée avec le risque « {{risk}} ».",
     "addToGroups": "Ajouter aux groupes de commandes",
     "approvedToast": "Proposition approuvée",
-    "rejectedToast": "Proposition refusée"
+    "rejectedToast": "Proposition refusée",
+    "search": "Rechercher une proposition (agent, slug…)"
   },
   "syslog": {
     "help": "Envoie les exécutions (demandes, refus, validations, résultats), les propositions et le journal d'administration à un serveur syslog (Wazuh, rsyslog, syslog-ng…). Les sorties de commandes et les secrets ne sont jamais envoyés.",

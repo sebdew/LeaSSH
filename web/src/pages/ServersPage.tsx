@@ -3,12 +3,13 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, HelpCircle, Plus, ShieldAlert } from "lucide-react";
 import { Button, ErrorBox, Field } from "../components/ui";
-import { Badge, Check2, CodeBlock, ConfirmDialog, Empty, Modal, PageHeader, Select, ShowInactiveToggle, SyncMark, Tabs } from "../components/kit";
+import { Badge, Check2, ListSearch, SortTh, CodeBlock, ConfirmDialog, Empty, Modal, PageHeader, Select, ShowInactiveToggle, SyncMark, Tabs } from "../components/kit";
 import { GroupsPanel } from "../components/GroupsPanel";
 import { toast } from "../components/Toaster";
 import { api } from "../lib/api";
 import { errorMessage, useApiMutation, useList } from "../lib/queries";
 import { serverActive } from "../lib/active";
+import { useListView } from "../lib/listview";
 import type { Identity, Provisioner, SshServer } from "../lib/types";
 
 export function HostKeyBadge({ status }: { status: SshServer["host_key_status"] }) {
@@ -36,6 +37,11 @@ export function ServersPage() {
   const [showInactive, setShowInactive] = useState(false);
   const del = useApiMutation<{ id: string }>("DELETE", (v) => `/servers/${v.id}`, ["/servers"]);
   const identName = (id: string) => identities.data?.find((i) => i.id === id)?.name ?? "—";
+  const visible = (servers.data ?? []).filter((s) => showInactive || serverActive(s));
+  const view = useListView(visible, {
+    text: (s) => `${s.name} ${s.slug} ${s.host}:${s.port} ${s.ssh_user} ${identName(s.identity_id)} ${s.tags.join(" ")} ${s.host_key_status}`,
+    sorts: { name: (s) => s.name, address: (s) => `${s.host}:${s.port}`, identity: (s) => identName(s.identity_id), hostKey: (s) => s.host_key_status },
+  });
   const blocked = servers.data?.filter((s) => s.host_key_status === "mismatch") ?? [];
 
   return (
@@ -53,13 +59,16 @@ export function ServersPage() {
       {tab === "groups" ? <GroupsPanel kind="server" members={(servers.data ?? []).map((s) => ({ id: s.id, label: s.slug, inactive: !serverActive(s) }))} /> : servers.data?.length === 0 ? (
         <Empty text={t("servers.empty")} action={<Button onClick={() => setEditing("new")}>{t("servers.add")}</Button>} />
       ) : (
+        <>
+        <ListSearch value={view.query} onChange={view.setQuery} label={t("servers.search")} count={view.rows.length} total={visible.length} />
         <div className="overflow-x-auto rounded-card border border-border bg-surface">
           <table className="w-full text-left text-[13px]">
             <thead className="border-b border-border text-muted"><tr>
-              {["name", "address", "identity", "hostKey", ""].map((c, i) => <th key={i} scope="col" className="px-4 py-2 font-medium">{c && t(`servers.col.${c}`)}</th>)}
+              {["name", "address", "identity", "hostKey", ""].map((c, i) => <SortTh key={i} label={c ? t(`servers.col.${c}`) : ""} sortKey={c || undefined} sort={view.sort} onSort={view.toggle} />)}
             </tr></thead>
             <tbody>
-              {servers.data?.filter((s) => showInactive || serverActive(s)).map((s) => (
+              {view.rows.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-muted">{t("common.noMatch")}</td></tr>}
+              {view.rows.map((s) => (
                 <tr key={s.id} className="border-b border-border last:border-0">
                   <td className="px-4 py-2"><div className="font-medium">{s.name} {s.managed_by && <SyncMark source={sourceOf(s)} kind="server" />}</div><code className="font-mono text-muted">{s.slug}</code>{!s.enabled && <> <Badge>{t("common.disabled")}</Badge></>}</td>
                   <td className="px-4 py-2 font-mono">{s.host}:{s.port}{s.ssh_user && <div className="text-muted">{s.ssh_user}@</div>}</td>
@@ -75,6 +84,7 @@ export function ServersPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
       <ServerForm editing={editing} identities={identities.data ?? []} onClose={() => setEditing(null)} />
       <ProbeDialog server={probing} onClose={() => setProbing(null)} />

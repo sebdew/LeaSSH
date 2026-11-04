@@ -3,10 +3,11 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Bot, Check, Pencil, X } from "lucide-react";
 import { Button, Card, ErrorBox } from "../components/ui";
-import { Badge, Empty, MultiPick, Modal, PageHeader, RiskBadge, Textarea, when, type Tone } from "../components/kit";
+import { Badge, Empty, ListSearch, SortTh, MultiPick, Modal, PageHeader, RiskBadge, Textarea, when, type Tone } from "../components/kit";
 import { CommandEditor, Highlighted } from "./CommandEditor";
 import { toast } from "../components/Toaster";
 import { api } from "../lib/api";
+import { useListView } from "../lib/listview";
 import { errorMessage, useApiMutation, useList } from "../lib/queries";
 import type { Group, Proposal } from "../lib/types";
 import { useQuery } from "@tanstack/react-query";
@@ -21,15 +22,22 @@ export const ProposalStatus = ({ s }: { s: Proposal["status"] }) => {
 export function ProposalsPage() {
   const { t } = useTranslation();
   const list = useList<Proposal>("/proposals");
+  const view = useListView(list.data, {
+    text: (p) => `${p.key_name} ${p.payload.slug} ${p.payload.name} ${p.payload.risk} ${t(`proposals.status.${p.status}`)}`,
+    sorts: { agent: (p) => p.key_name, slug: (p) => p.payload.slug, risk: (p) => ({ read: 0, write: 1, destructive: 2 } as Record<string, number>)[p.payload.risk] ?? 9, status: (p) => p.status, date: (p) => new Date(p.created_at).getTime() },
+  });
   return (
     <>
       <PageHeader title={t("proposals.title")} subtitle={t("proposals.subtitle")} />
       {list.data?.length === 0 ? <Empty text={t("proposals.empty")} /> : (
+        <>
+        <ListSearch value={view.query} onChange={view.setQuery} label={t("proposals.search")} count={view.rows.length} total={list.data?.length ?? 0} />
         <div className="overflow-x-auto rounded-card border border-border bg-surface">
           <table className="w-full text-left text-[13px]">
-            <thead className="border-b border-border text-muted"><tr>{["agent", "slug", "risk", "status", "date"].map((c) => <th key={c} scope="col" className="px-4 py-2 font-medium">{t(`proposals.col.${c}`)}</th>)}</tr></thead>
+            <thead className="border-b border-border text-muted"><tr>{["agent", "slug", "risk", "status", "date"].map((c) => <SortTh key={c} label={t(`proposals.col.${c}`)} sortKey={c} sort={view.sort} onSort={view.toggle} />)}</tr></thead>
             <tbody>
-              {list.data?.map((p) => (
+              {view.rows.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-muted">{t("common.noMatch")}</td></tr>}
+              {view.rows.map((p) => (
                 <tr key={p.id} className="border-b border-border last:border-0 hover:bg-surface-2">
                   <td className="px-4 py-2"><span className="inline-flex items-center gap-1.5"><Bot aria-hidden size={14} className="text-muted" />{p.key_name}</span></td>
                   <td className="px-4 py-2"><Link to="/propositions/$id" params={{ id: p.id }} className="font-mono text-primary hover:underline">{p.payload.slug}</Link></td>
@@ -41,6 +49,7 @@ export function ProposalsPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </>
   );

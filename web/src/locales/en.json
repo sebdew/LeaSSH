@@ -177,7 +177,8 @@
     "copyFailed": "Failed: copy it by hand",
     "showInactive_one": "Show the disabled item ({{count}})",
     "showInactive_other": "Show disabled items ({{count}})",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "noMatch": "No results."
   },
   "risk": {
     "read": "read",
@@ -219,7 +220,8 @@
       "manual": "manual",
       "pack": "pack",
       "proposal": "proposal"
-    }
+    },
+    "search": "Search commands (slug, name, risk…)"
   },
   "groups": {
     "add": "New group",
@@ -311,7 +313,8 @@
     "deleteBody": "“{{name}}” will be removed from the configuration.",
     "sshUser": "SSH user (optional)",
     "sshUserPlaceholder": "ia:resa",
-    "sshUserHelp": "Overrides the identity's user for this server. Behind Warpgate, enter “user:exact target name”, spaces included (e.g. “ia:reservations-dev - LXC ct145”): each server has its own target, even if the host is the same."
+    "sshUserHelp": "Overrides the identity's user for this server. Behind Warpgate, enter “user:exact target name”, spaces included (e.g. “ia:reservations-dev - LXC ct145”): each server has its own target, even if the host is the same.",
+    "search": "Search servers (name, host, identity, tag…)"
   },
   "identities": {
     "title": "SSH identities",
@@ -374,7 +377,8 @@
     "revoke": "Revoke",
     "revokeTitle": "Revoke key",
     "revokeBody": "“{{name}}” will immediately be unable to do anything.",
-    "revoked": "Key revoked"
+    "revoked": "Key revoked",
+    "search": "Search keys (name, prefix, rule…)"
   },
   "rules": {
     "title": "Access rules",
@@ -835,7 +839,8 @@
     "approveBody": "The command will be created and enabled with risk “{{risk}}”.",
     "addToGroups": "Add to command groups",
     "approvedToast": "Proposal approved",
-    "rejectedToast": "Proposal rejected"
+    "rejectedToast": "Proposal rejected",
+    "search": "Search proposals (agent, slug…)"
   },
   "syslog": {
     "help": "Sends executions (requests, denials, approvals, results), proposals and the administration log to a syslog server (Wazuh, rsyslog, syslog-ng…). Command outputs and secrets are never sent.",
