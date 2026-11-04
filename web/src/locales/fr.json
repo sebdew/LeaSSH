@@ -696,7 +696,6 @@
     "title": "Réglages",
     "subtitle": "Utilisateurs, journal et préférences.",
     "users": "Utilisateurs",
-    "journal": "Journal",
     "appearance": "Apparence",
     "account": "Mon compte",
     "addUser": "Nouvel utilisateur",
@@ -721,10 +720,6 @@
       "approver": "Validateur",
       "viewer": "Lecteur"
     },
-    "retention": "Rétention",
-    "retentionUnlimited": "Conservation illimitée",
-    "retentionDays": "{{count}} jours",
-    "retentionHelp": "Réglable dans Réglages → Général. Seule la purge automatique supprime des lignes du journal.",
     "integrity": "Intégrité du journal",
     "integrityHelp": "Contrôle les chaînes de hash des exécutions et de l'administration pour détecter toute altération de la base.",
     "verify": "Vérifier l'intégrité",

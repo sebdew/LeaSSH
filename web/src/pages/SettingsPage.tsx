@@ -15,7 +15,7 @@ import { OidcPanel } from "./OidcPanel";
 import { GeneralPanel } from "./GeneralPanel";
 import type { ChainResult, UserAccount, WebhookConfig, WebhookDelivery } from "../lib/types";
 
-type Tab = "users" | "general" | "webhook" | "syslog" | "sso" | "journal" | "appearance" | "account";
+type Tab = "users" | "general" | "webhook" | "syslog" | "sso" | "appearance" | "account";
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -23,7 +23,7 @@ export function SettingsPage() {
   const admin = me.data?.role === "admin";
   const [tab, setTab] = useState<Tab | null>(null); // onglet par défaut selon le rôle, une fois connu
   const tabs: { id: Tab; label: string }[] = [
-    ...(admin ? [{ id: "users" as const, label: t("settings.users") }, { id: "general" as const, label: t("settings.general") }, { id: "webhook" as const, label: t("settings.webhook") }, { id: "syslog" as const, label: t("settings.syslog") }, { id: "sso" as const, label: t("settings.sso") }, { id: "journal" as const, label: t("settings.journal") }] : []),
+    ...(admin ? [{ id: "users" as const, label: t("settings.users") }, { id: "general" as const, label: t("settings.general") }, { id: "webhook" as const, label: t("settings.webhook") }, { id: "syslog" as const, label: t("settings.syslog") }, { id: "sso" as const, label: t("settings.sso") }] : []),
     { id: "appearance", label: t("settings.appearance") }, { id: "account", label: t("settings.account") },
   ];
   const current = tab && tabs.some((x) => x.id === tab) ? tab : tabs[0].id;
@@ -32,11 +32,10 @@ export function SettingsPage() {
       <PageHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
       <Tabs value={current} onChange={setTab} tabs={tabs} />
       {current === "users" && <UsersPanel meId={me.data?.id ?? ""} />}
-      {current === "general" && <GeneralPanel />}
+      {current === "general" && <><GeneralPanel /><div className="mt-4 max-w-3xl"><IntegrityCard /></div></>}
       {current === "webhook" && <WebhookPanel />}
       {current === "syslog" && <SyslogPanel />}
       {current === "sso" && <OidcPanel />}
-      {current === "journal" && <JournalPanel />}
       {current === "appearance" && <AppearancePanel />}
       {current === "account" && <AccountPanel />}
     </>
@@ -127,31 +126,22 @@ function ChainLine({ name, r }: { name: string; r: ChainResult }) {
   );
 }
 
-function JournalPanel() {
+function IntegrityCard() {
   const { t } = useTranslation();
-  const meta = useQuery({ queryKey: ["meta"], queryFn: () => api<{ log_retention_days: number }>("/meta") });
   const verify = useMutation({ mutationFn: () => api<{ ok: boolean; executions: ChainResult; audit: ChainResult }>("/integrity/verify", { method: "POST" }) });
-  const days = meta.data?.log_retention_days;
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <Card className="flex flex-col gap-2">
-        <h2 className="text-[15px] font-semibold">{t("settings.retention")}</h2>
-        <p>{days === undefined ? "…" : days === 0 ? t("settings.retentionUnlimited") : t("settings.retentionDays", { count: days })}</p>
-        <p className="text-muted">{t("settings.retentionHelp")}</p>
-      </Card>
-      <Card className="flex flex-col gap-3">
-        <h2 className="text-[15px] font-semibold">{t("settings.integrity")}</h2>
-        <p className="text-muted">{t("settings.integrityHelp")}</p>
-        <div><Button onClick={() => verify.mutate()} disabled={verify.isPending}>{t("settings.verify")}</Button></div>
-        {verify.error && <ErrorBox message={t("errors.generic")} detail={errorMessage(verify.error)} title={t("errors.details")} />}
-        {verify.data && (
-          <ul className="flex flex-col gap-2" aria-live="polite">
-            <ChainLine name={t("settings.chainExec")} r={verify.data.executions} />
-            <ChainLine name={t("settings.chainAudit")} r={verify.data.audit} />
-          </ul>
-        )}
-      </Card>
-    </div>
+    <Card className="flex flex-col gap-3">
+      <h2 className="text-[15px] font-semibold">{t("settings.integrity")}</h2>
+      <p className="text-muted">{t("settings.integrityHelp")}</p>
+      <div><Button onClick={() => verify.mutate()} disabled={verify.isPending}>{t("settings.verify")}</Button></div>
+      {verify.error && <ErrorBox message={t("errors.generic")} detail={errorMessage(verify.error)} title={t("errors.details")} />}
+      {verify.data && (
+        <ul className="flex flex-col gap-2" aria-live="polite">
+          <ChainLine name={t("settings.chainExec")} r={verify.data.executions} />
+          <ChainLine name={t("settings.chainAudit")} r={verify.data.audit} />
+        </ul>
+      )}
+    </Card>
   );
 }
 

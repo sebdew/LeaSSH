@@ -696,7 +696,6 @@
     "title": "Settings",
     "subtitle": "Users, log and preferences.",
     "users": "Users",
-    "journal": "Log",
     "appearance": "Appearance",
     "account": "My account",
     "addUser": "New user",
@@ -721,10 +720,6 @@
       "approver": "Approver",
       "viewer": "Viewer"
     },
-    "retention": "Retention",
-    "retentionUnlimited": "Unlimited retention",
-    "retentionDays": "{{count}} days",
-    "retentionHelp": "Configurable in Settings → General. Only the automatic purge deletes log rows.",
     "integrity": "Log integrity",
     "integrityHelp": "Checks the hash chains of executions and administration to detect any tampering with the database.",
     "verify": "Verify integrity",

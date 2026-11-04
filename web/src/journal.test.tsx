@@ -179,13 +179,12 @@ describe("réglages", () => {
   const admin = { id: "u1", username: "sd", display_name: "SD", role: "admin", theme: "system", csrf_token: "t" };
   it("vérifie l'intégrité et signale une altération", async () => {
     mockApi({
-      "GET /auth/me": () => ({ body: admin }), "GET /meta": () => ({ body: { log_retention_days: 365, approval_ttl_seconds: 1800 } }), "GET /users": () => ({ body: { items: [] } }),
+      "GET /auth/me": () => ({ body: admin }), "GET /settings/general": () => ({ body: { base_url: "", trusted_proxies: "", session_ttl_hours: 12, approval_ttl_minutes: 30, log_retention_days: 365, log_level: "info", has_metrics_token: false, detected_url: "http://x" } }), "GET /users": () => ({ body: { items: [] } }),
       "POST /integrity/verify": () => ({ body: { ok: false, executions: { ok: true, checked: 120 }, audit: { ok: false, checked: 7, bad_seq: 8, reason: "contenu altéré" } } }),
     });
     renderApp(<SettingsPage />);
     const u = userEvent.setup();
-    await u.click(await screen.findByRole("tab", { name: "Journal" }));
-    expect(await screen.findByText("365 jours")).toBeInTheDocument();
+    await u.click(await screen.findByRole("tab", { name: "Général" }));
     await u.click(screen.getByRole("button", { name: "Vérifier l'intégrité" }));
     expect(await screen.findByText(/intègre \(120 lignes vérifiées\)/)).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("altération détectée à la ligne 8 : contenu altéré");
