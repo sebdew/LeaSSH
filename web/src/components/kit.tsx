@@ -181,7 +181,7 @@ export function CodeBlock({ children, copy }: { children: string; copy?: boolean
 
 export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: T; label: string }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <div role="tablist" className="mb-4 flex gap-1 overflow-x-auto border-b border-border">
+    <div role="tablist" className="mb-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b pb-px border-border">
       {tabs.map((tb) => (
         <button key={tb.id} role="tab" aria-selected={tb.id === value} onClick={() => onChange(tb.id)}
           className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2 ${tb.id === value ? "border-primary font-medium text-fg" : "border-transparent text-muted hover:text-fg"}`}>
