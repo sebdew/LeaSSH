@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/leassh-dev/leassh/internal/access"
-	"github.com/leassh-dev/leassh/internal/config"
 	"github.com/leassh-dev/leassh/internal/crypto"
 	"github.com/leassh-dev/leassh/internal/executions"
 	"github.com/leassh-dev/leassh/internal/mcpserver"
@@ -22,6 +21,7 @@ import (
 	"github.com/leassh-dev/leassh/internal/proposals"
 	"github.com/leassh-dev/leassh/internal/provisioning"
 	"github.com/leassh-dev/leassh/internal/provisioning/warpgate"
+	"github.com/leassh-dev/leassh/internal/settings"
 	"github.com/leassh-dev/leassh/internal/sshexec"
 	"github.com/leassh-dev/leassh/internal/sshtest"
 	"github.com/leassh-dev/leassh/internal/store"
@@ -53,16 +53,19 @@ func newEnv(t *testing.T) *env {
 	}
 	t.Cleanup(func() { st.Close() })
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	cfg := &config.Config{SessionTTL: time.Hour, MasterKey: bytes.Repeat([]byte{2}, 32), ApprovalTTL: time.Hour, MetricsToken: testMetricsToken}
-	box, _ := crypto.NewBox(cfg.MasterKey)
+	set, err := settings.New(ctx, st, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	box, _ := crypto.NewBox(bytes.Repeat([]byte{2}, 32))
 	pool := sshexec.NewPool(time.Minute, 2)
 	t.Cleanup(pool.Close)
 	acc := access.New(st)
-	ex := executions.New(ctx, st, acc, box, pool, log, cfg.ApprovalTTL)
+	ex := executions.New(ctx, st, acc, box, pool, log, func() time.Duration { return time.Hour })
 	t.Cleanup(ex.Wait)
 	props := proposals.New(st)
 	pk := packs.New(st)
-	hook := webhook.New(st, box, "https://leassh.example.com", log)
+	hook := webhook.New(st, box, func() string { return "https://leassh.example.com" }, log)
 	hook.Backoff = []time.Duration{10 * time.Millisecond, 10 * time.Millisecond}
 	reg := metrics.New()
 	ex.Metrics = reg
@@ -72,7 +75,7 @@ func newEnv(t *testing.T) *env {
 	go sl.Run(ctx)
 	ex.Notify, props.Notify = hook.OnExecution, hook.OnProposal
 	go hook.Run(ctx)
-	srv, _ := New(cfg, st, log, nil)
+	srv, _ := New(set, st, log, nil)
 	m := mcpserver.New(mcpserver.Config{Store: st, Access: acc, Executions: ex, Proposals: props, ClientIP: srv.ClientIP, Version: "t"})
 	srv.Attach(Services{Box: box, Pool: pool, Acc: acc, Exec: ex, Props: props, Packs: pk, Hook: hook, Syslog: sl, Prov: provisioning.New(st, box, log), MCP: m.Handler(), Metrics: reg, Version: "test"})
 	ts := httptest.NewServer(srv.Handler())
@@ -280,6 +283,3 @@ func TestRoles(t *testing.T) {
 		}
 	}
 }
-
-// testMetricsToken est positionné par les tests qui vérifient la protection de /metrics.
-var testMetricsToken string

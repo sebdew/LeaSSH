@@ -14,7 +14,7 @@ type AuditReport struct {
 	CreatedByName string `json:"created_by_name"`
 	PeriodFrom    string `json:"period_from"`
 	PeriodTo      string `json:"period_to"`
-	LeasshVersion  string `json:"leash_version"`
+	LeasshVersion string `json:"leassh_version"`
 	SchemaVersion int    `json:"schema_version"`
 	SHA256        string `json:"sha256"`
 	HMAC          string `json:"-"`
@@ -27,7 +27,7 @@ type AuditReport struct {
 	SummaryAt     string `json:"summary_at"`
 }
 
-const reportMeta = `id,created_at,created_by,created_by_name,period_from,period_to,leash_version,schema_version,sha256,hmac,findings_high,findings_medium,findings_low,summary_model,summary_at,summary<>''`
+const reportMeta = `id,created_at,created_by,created_by_name,period_from,period_to,leassh_version,schema_version,sha256,hmac,findings_high,findings_medium,findings_low,summary_model,summary_at,summary<>''`
 
 // AuditReportMeta: ligne d'historique (sans l'instantané).
 type AuditReportMeta struct {
@@ -44,7 +44,7 @@ func scanReportMeta(r scanner) (AuditReportMeta, error) {
 
 func InsertAuditReport(ctx context.Context, tx Q, r AuditReport) (AuditReport, error) {
 	r.ID, r.CreatedAt = NewID(), Now()
-	_, err := tx.ExecContext(ctx, `INSERT INTO audit_reports (id,created_at,created_by,created_by_name,period_from,period_to,leash_version,schema_version,sha256,hmac,snapshot,findings_high,findings_medium,findings_low)
+	_, err := tx.ExecContext(ctx, `INSERT INTO audit_reports (id,created_at,created_by,created_by_name,period_from,period_to,leassh_version,schema_version,sha256,hmac,snapshot,findings_high,findings_medium,findings_low)
 		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		r.ID, r.CreatedAt, r.CreatedBy, r.CreatedByName, r.PeriodFrom, r.PeriodTo, r.LeasshVersion, r.SchemaVersion, r.SHA256, r.HMAC, r.Snapshot, r.High, r.Medium, r.Low)
 	return r, wrapErr("création du rapport d'audit", err)
@@ -60,7 +60,7 @@ func ListAuditReports(ctx context.Context, q Q) ([]AuditReportMeta, error) {
 
 func AuditReportByID(ctx context.Context, q Q, id string) (AuditReport, error) {
 	var r AuditReport
-	err := q.QueryRowContext(ctx, `SELECT id,created_at,created_by,created_by_name,period_from,period_to,leash_version,schema_version,sha256,hmac,snapshot,findings_high,findings_medium,findings_low,summary,summary_model,summary_at
+	err := q.QueryRowContext(ctx, `SELECT id,created_at,created_by,created_by_name,period_from,period_to,leassh_version,schema_version,sha256,hmac,snapshot,findings_high,findings_medium,findings_low,summary,summary_model,summary_at
 		FROM audit_reports WHERE id=?`, id).Scan(&r.ID, &r.CreatedAt, &r.CreatedBy, &r.CreatedByName, &r.PeriodFrom, &r.PeriodTo, &r.LeasshVersion, &r.SchemaVersion, &r.SHA256, &r.HMAC,
 		&r.Snapshot, &r.High, &r.Medium, &r.Low, &r.Summary, &r.SummaryModel, &r.SummaryAt)
 	if errors.Is(err, sql.ErrNoRows) {

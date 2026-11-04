@@ -10,9 +10,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/leassh-dev/leassh/internal/config"
+	"github.com/leassh-dev/leassh/internal/settings"
 	"github.com/leassh-dev/leassh/internal/store"
 )
 
@@ -23,8 +22,11 @@ func newTest(t *testing.T) (*httptest.Server, *store.Store) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { st.Close() })
-	cfg := &config.Config{SessionTTL: time.Hour, MasterKey: make([]byte, 32)}
-	s, err := New(cfg, st, slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
+	set, err := settings.New(context.Background(), st, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := New(set, st, slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,8 +150,7 @@ func TestSecurityHeadersAndErrorFormat(t *testing.T) {
 }
 
 func TestClientIPTrustedProxy(t *testing.T) {
-	s := &Server{}
-	s.proxies = append(s.proxies, mustPrefix("10.0.0.0/8"))
+	s := &Server{set: testSettings(t, "", "10.0.0.0/8")}
 	req := httptest.NewRequest("GET", "/", nil)
 	req.RemoteAddr = "10.0.0.5:1234"
 	req.Header.Set("X-Forwarded-For", "6.6.6.6, 203.0.113.9")
@@ -160,4 +161,22 @@ func TestClientIPTrustedProxy(t *testing.T) {
 	if ip := s.clientIP(req); ip != "198.51.100.1" {
 		t.Fatalf("ip non fiable: %s", ip)
 	}
+}
+
+// testSettings: réglages en mémoire (base temporaire) avec URL publique et proxies de confiance donnés.
+func testSettings(t *testing.T, baseURL, proxies string) *settings.Service {
+	t.Helper()
+	st, err := store.Open(context.Background(), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { st.Close() })
+	set, err := settings.New(context.Background(), st, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := set.Get()
+	v.BaseURL, v.TrustedProxies = baseURL, proxies
+	set.Apply(v)
+	return set
 }

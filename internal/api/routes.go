@@ -126,6 +126,11 @@ func (s *Server) configRoutes(r chi.Router) {
 		r.Put("/", s.putSyslog)
 		r.Post("/test", s.testSyslog)
 	})
+	r.Route("/settings/general", func(r chi.Router) {
+		r.Use(admin)
+		r.Get("/", s.getGeneral)
+		r.Put("/", s.putGeneral)
+	})
 	r.Route("/settings/oidc", func(r chi.Router) {
 		r.Use(admin)
 		r.Get("/", s.getOIDC)

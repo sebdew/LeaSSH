@@ -2,10 +2,8 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/leassh-dev/leassh/internal/config"
 	"net/http"
 	"net/http/httptest"
-	"net/netip"
 	"net/url"
 	"strings"
 	"testing"
@@ -475,11 +473,7 @@ func TestSSOLocalOnlyRestrictionNeedsLocalAdmin(t *testing.T) {
 
 func TestBaseURLDerivation(t *testing.T) {
 	mk := func(base, proxies string) *Server {
-		s := &Server{cfg: &config.Config{BaseURL: base}}
-		for _, p := range strings.Fields(proxies) {
-			s.proxies = append(s.proxies, netip.MustParsePrefix(p))
-		}
-		return s
+		return &Server{set: testSettings(t, base, proxies)}
 	}
 	req := func(remote string, h map[string]string) *http.Request {
 		r := httptest.NewRequest("GET", "http://192.168.6.167:8080/x", nil)

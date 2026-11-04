@@ -48,7 +48,7 @@ func newD(t *testing.T) (*Dispatcher, *store.Store) {
 	}
 	t.Cleanup(func() { st.Close() })
 	box, _ := crypto.NewBox(bytes.Repeat([]byte{3}, 32))
-	d := New(st, box, "https://leassh.example.com/", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	d := New(st, box, func() string { return "https://leassh.example.com/" }, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	d.Backoff = []time.Duration{10 * time.Millisecond, 10 * time.Millisecond}
 	return d, st
 }

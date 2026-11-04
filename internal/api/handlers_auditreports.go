@@ -81,7 +81,7 @@ func (s *Server) createAuditReport(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
 		snap, err := auditreport.Build(ctx, tx, auditreport.Params{Now: time.Now(), From: from, To: to, LeasshVersion: s.version,
-			RetentionDays: s.cfg.LogRetentionDays, ApprovalTTL: s.cfg.ApprovalTTL, SessionTTL: s.cfg.SessionTTL, BaseURL: s.cfg.BaseURL})
+			RetentionDays: s.set.RetentionDays(), ApprovalTTL: s.set.ApprovalTTL(), SessionTTL: s.set.SessionTTL(), BaseURL: s.set.BaseURL()})
 		if err != nil {
 			return outcome{}, err
 		}

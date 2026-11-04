@@ -24,7 +24,7 @@ type Store struct {
 
 // Open ouvre (ou crée) la base dans dir, active WAL et clés étrangères, applique les migrations.
 func Open(ctx context.Context, dir string) (*Store, error) {
-	return OpenPath(ctx, filepath.Join(dir, "leash.db"))
+	return OpenPath(ctx, filepath.Join(dir, "leassh.db"))
 }
 
 func OpenPath(ctx context.Context, file string) (*Store, error) {
@@ -88,7 +88,7 @@ func Backup(ctx context.Context, dataDir, dest string) error {
 	if _, err := os.Stat(dest); err == nil {
 		return fmt.Errorf("%s existe déjà", dest)
 	}
-	src := filepath.Join(dataDir, "leash.db")
+	src := filepath.Join(dataDir, "leassh.db")
 	if _, err := os.Stat(src); err != nil {
 		return fmt.Errorf("base introuvable: %w", err)
 	}

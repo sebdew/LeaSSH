@@ -724,7 +724,7 @@
     "retention": "Retention",
     "retentionUnlimited": "Unlimited retention",
     "retentionDays": "{{count}} days",
-    "retentionHelp": "Set by LEASSH_LOG_RETENTION_DAYS. Only the automatic purge deletes log rows.",
+    "retentionHelp": "Configurable in Settings → General. Only the automatic purge deletes log rows.",
     "integrity": "Log integrity",
     "integrityHelp": "Checks the hash chains of executions and administration to detect any tampering with the database.",
     "verify": "Verify integrity",
@@ -744,7 +744,9 @@
     "sso": "SSO",
     "ssoManaged": "SSO account: the role comes from the provider's group mapping (applied at each sign-in) and there is no local password.",
     "language": "Language",
-    "languageHelp": "Remembered on this browser. French is the default language."
+    "languageHelp": "Remembered on this browser. French is the default language.",
+    "general": "General",
+    "ssoPassword": "This account signs in through SSO: the password is managed at the identity provider, not in Leassh."
   },
   "packs": {
     "title": "Packs",
@@ -1110,5 +1112,24 @@
     "logoutUrl": "Post-logout redirect URL",
     "flowHelp": "The flow uses Authorization Code + PKCE (S256), with state and nonce. The ID token is verified (signature, issuer, audience, expiration, nonce).",
     "breakGlass": "Keep at least one local administrator active: it is your access if the provider is down."
+  },
+  "general": {
+    "network": "Network and access",
+    "baseUrl": "Public URL",
+    "baseUrlHelp": "Address users use to reach Leassh (e.g. https://leassh.example.com). Used for the SSO callback URL and notification links. If empty it is derived from the request; currently seen by the server: {{url}}. A fixed value is safer behind a reverse proxy.",
+    "proxies": "Trusted reverse proxies",
+    "proxiesHelp": "IPs or networks (CIDR), comma-separated. Only these proxies are trusted for the real client IP (X-Forwarded-For) and the original protocol/host.",
+    "behaviour": "Sessions, approvals and logs",
+    "sessionTtl": "Session lifetime (hours)",
+    "approvalTtl": "Approval expiry (minutes)",
+    "retention": "Log retention (days, 0 = unlimited)",
+    "behaviourHelp": "Applies immediately, no restart. A new session lifetime only affects future sign-ins.",
+    "logLevel": "Application log level",
+    "metrics": "Prometheus metrics",
+    "metricsToken": "/metrics token",
+    "metricsKept": "•••• (leave empty to keep)",
+    "metricsOpen": "None: /metrics is open",
+    "metricsHelp": "When a token is set, /metrics requires \"Authorization: Bearer <token>\". Only its hash is stored.",
+    "metricsClear": "Remove the token (open /metrics)"
   }
 }

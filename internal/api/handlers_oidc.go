@@ -67,11 +67,11 @@ func (v oidcView) auditView() map[string]any {
 }
 
 // baseURL: URL publique de l'application, par ordre de priorité:
-//  1. LEASSH_BASE_URL (fixe, recommandé: aucune dépendance aux en-têtes de la requête);
-//  2. X-Forwarded-Host / X-Forwarded-Proto, uniquement si la requête vient d'un proxy de confiance (LEASSH_TRUSTED_PROXIES);
+//  1. l'URL publique réglée dans Réglages → Général (fixe, recommandé: aucune dépendance aux en-têtes de la requête);
+//  2. X-Forwarded-Host / X-Forwarded-Proto, uniquement si la requête vient d'un proxy de confiance (Réglages → Général);
 //  3. l'hôte de la requête.
 func (s *Server) baseURL(r *http.Request) string {
-	if b := strings.TrimRight(s.cfg.BaseURL, "/"); b != "" {
+	if b := s.set.BaseURL(); b != "" {
 		return b
 	}
 	scheme := "http"

@@ -12,7 +12,7 @@ import (
 	"github.com/leassh-dev/leassh/internal/store"
 )
 
-const EnvelopeFormat = "leash-audit-report/1"
+const EnvelopeFormat = "leassh-audit-report/1"
 
 // Signature accompagne l'instantané dans le fichier JSON exporté.
 //
@@ -21,14 +21,14 @@ const EnvelopeFormat = "leash-audit-report/1"
 //   - Tag: HMAC-SHA256 dérivé de la clé maître de l'instance. Seule l'instance émettrice peut le calculer ou le vérifier;
 //     il prouve que ce rapport a été produit par elle (pas fabriqué ensuite avec un digest recalculé).
 type Signature struct {
-	Algorithm    string `json:"algorithm"`
-	Digest       string `json:"digest"`
-	ReportID     string `json:"report_id"`
-	GeneratedAt  string `json:"generated_at"`
-	LeasshVersion string `json:"leash_version"`
-	TagAlgorithm string `json:"tag_algorithm"`
-	Tag          string `json:"tag"`
-	HowToVerify  string `json:"how_to_verify"`
+	Algorithm     string `json:"algorithm"`
+	Digest        string `json:"digest"`
+	ReportID      string `json:"report_id"`
+	GeneratedAt   string `json:"generated_at"`
+	LeasshVersion string `json:"leassh_version"`
+	TagAlgorithm  string `json:"tag_algorithm"`
+	Tag           string `json:"tag"`
+	HowToVerify   string `json:"how_to_verify"`
 }
 
 type Envelope struct {

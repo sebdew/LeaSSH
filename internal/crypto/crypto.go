@@ -43,7 +43,7 @@ func NewBox(key []byte) (*Box, error) {
 // la clé maître elle-même ne sert jamais directement à signer.
 func (b *Box) Derive(label string) []byte {
 	m := hmac.New(sha256.New, b.key)
-	m.Write([]byte("leash/derive/v1/" + label))
+	m.Write([]byte("leassh/derive/v1/" + label))
 	return m.Sum(nil)
 }
 

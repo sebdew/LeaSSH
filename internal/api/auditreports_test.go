@@ -57,7 +57,7 @@ func TestAuditReportLifecycle(t *testing.T) {
 	}
 	full := e.must("GET", "/audit-reports/"+id, nil, 200)
 	snap := full["snapshot"].(map[string]any)
-	if snap["kind"] != "leash-audit-report" || snap["leash_version"] != "test" || snap["controls"] == nil {
+	if snap["kind"] != "leassh-audit-report" || snap["leassh_version"] != "test" || snap["controls"] == nil {
 		t.Fatalf("instantané: %v", snap)
 	}
 

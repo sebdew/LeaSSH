@@ -1,6 +1,6 @@
 # Exemple de déploiement. Créez un fichier .env à côté (voir docs/INSTALL.md) :
 #   LEASSH_MASTER_KEY=<openssl rand -base64 32>
-#   LEASSH_BASE_URL=https://leassh.example.com
+# Le reste (URL publique, reverse proxies de confiance, rétention…) se règle dans l'interface : Réglages → Général.
 services:
   leassh:
     image: ghcr.io/<org>/leassh:latest   # ou : build: .
@@ -11,10 +11,6 @@ services:
       - leassh-data:/data
     environment:
       LEASSH_MASTER_KEY: ${LEASSH_MASTER_KEY:?définissez LEASSH_MASTER_KEY dans .env}
-      LEASSH_BASE_URL: ${LEASSH_BASE_URL:-}
-      # LEASSH_TRUSTED_PROXIES: 172.16.0.0/12      # réseau du reverse proxy (IP réelle des clients)
-      # LEASSH_METRICS_TOKEN: change-me            # protège /metrics
-      # LEASSH_LOG_RETENTION_DAYS: 365
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]

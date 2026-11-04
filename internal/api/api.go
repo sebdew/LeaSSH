@@ -21,7 +21,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/leassh-dev/leassh/internal/access"
 	"github.com/leassh-dev/leassh/internal/audit"
-	"github.com/leassh-dev/leassh/internal/config"
 	"github.com/leassh-dev/leassh/internal/crypto"
 	"github.com/leassh-dev/leassh/internal/executions"
 	"github.com/leassh-dev/leassh/internal/metrics"
@@ -29,6 +28,7 @@ import (
 	"github.com/leassh-dev/leassh/internal/packs"
 	"github.com/leassh-dev/leassh/internal/proposals"
 	"github.com/leassh-dev/leassh/internal/provisioning"
+	"github.com/leassh-dev/leassh/internal/settings"
 	"github.com/leassh-dev/leassh/internal/sshexec"
 	"github.com/leassh-dev/leassh/internal/store"
 	"github.com/leassh-dev/leassh/internal/syslog"
@@ -43,12 +43,11 @@ const (
 )
 
 type Server struct {
-	cfg     *config.Config
-	st      *store.Store
-	log     *slog.Logger
-	proxies []netip.Prefix
-	lim     *limiter
-	static  http.Handler
+	set    *settings.Service
+	st     *store.Store
+	log    *slog.Logger
+	lim    *limiter
+	static http.Handler
 
 	// services attachés par Attach (nécessaires aux routes de configuration et d'exécution)
 	box   *crypto.Box
@@ -95,27 +94,8 @@ func (s *Server) Attach(sv Services) {
 func (s *Server) ClientIP(r *http.Request) string { return s.clientIP(r) }
 
 // New construit le routeur. static sert l'interface (SPA); peut être nil.
-func New(cfg *config.Config, st *store.Store, log *slog.Logger, static http.Handler) (*Server, error) {
-	s := &Server{cfg: cfg, st: st, log: log, lim: newLimiter(maxFailures, failWindow), static: static, oidc: oidc.New()}
-	for _, p := range strings.FieldsFunc(cfg.TrustedProxies, func(r rune) bool { return r == ',' || r == ' ' }) {
-		pf, err := parsePrefix(p)
-		if err != nil {
-			return nil, err
-		}
-		s.proxies = append(s.proxies, pf)
-	}
-	return s, nil
-}
-
-func parsePrefix(p string) (netip.Prefix, error) {
-	if pf, err := netip.ParsePrefix(p); err == nil {
-		return pf, nil
-	}
-	a, err := netip.ParseAddr(p)
-	if err != nil {
-		return netip.Prefix{}, errors.New("LEASSH_TRUSTED_PROXIES invalide: " + p)
-	}
-	return netip.PrefixFrom(a, a.BitLen()), nil
+func New(set *settings.Service, st *store.Store, log *slog.Logger, static http.Handler) (*Server, error) {
+	return &Server{set: set, st: st, log: log, lim: newLimiter(maxFailures, failWindow), static: static, oidc: oidc.New()}, nil
 }
 
 func (s *Server) Handler() http.Handler {
@@ -128,7 +108,7 @@ func (s *Server) Handler() http.Handler {
 		r.Use(s.originCheck)
 		r.Get("/setup/status", s.setupStatus)
 		r.With(s.requireSession).Get("/meta", func(w http.ResponseWriter, _ *http.Request) {
-			writeJSON(w, 200, map[string]any{"approval_ttl_seconds": int(s.cfg.ApprovalTTL.Seconds()), "base_url": s.cfg.BaseURL, "log_retention_days": s.cfg.LogRetentionDays})
+			writeJSON(w, 200, map[string]any{"approval_ttl_seconds": int(s.set.ApprovalTTL().Seconds()), "base_url": s.set.BaseURL(), "log_retention_days": s.set.RetentionDays()})
 		})
 		r.Post("/setup", s.setup)
 		r.Post("/auth/login", s.login)
@@ -224,20 +204,13 @@ func (s *Server) clientIP(r *http.Request) string {
 	return host
 }
 
-func (s *Server) trusted(a netip.Addr) bool {
-	for _, p := range s.proxies {
-		if p.Contains(a) {
-			return true
-		}
-	}
-	return false
-}
+func (s *Server) trusted(a netip.Addr) bool { return s.set.Trusted(a) }
 
 func (s *Server) isHTTPS(r *http.Request) bool {
 	if r.TLS != nil {
 		return true
 	}
-	if strings.HasPrefix(s.cfg.BaseURL, "https://") {
+	if strings.HasPrefix(s.set.BaseURL(), "https://") {
 		return true
 	}
 	if s.fromTrustedProxy(r) {
@@ -246,7 +219,7 @@ func (s *Server) isHTTPS(r *http.Request) bool {
 	return false
 }
 
-// fromTrustedProxy: la connexion TCP directe vient d'un proxy déclaré dans LEASSH_TRUSTED_PROXIES.
+// fromTrustedProxy: la connexion TCP directe vient d'un proxy déclaré dans les réglages généraux.
 func (s *Server) fromTrustedProxy(r *http.Request) bool {
 	host, _, _ := net.SplitHostPort(r.RemoteAddr)
 	a, err := netip.ParseAddr(host)
@@ -328,12 +301,12 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request, u store.Us
 	if err != nil {
 		return "", err
 	}
-	if err := s.st.CreateSession(r.Context(), hashSession(id), u.ID, csrf, s.clientIP(r), s.cfg.SessionTTL); err != nil {
+	if err := s.st.CreateSession(r.Context(), hashSession(id), u.ID, csrf, s.clientIP(r), s.set.SessionTTL()); err != nil {
 		return "", err
 	}
 	http.SetCookie(w, &http.Cookie{
 		Name: cookieName, Value: id, Path: "/", HttpOnly: true, Secure: s.isHTTPS(r),
-		SameSite: http.SameSiteStrictMode, MaxAge: int(s.cfg.SessionTTL.Seconds()),
+		SameSite: http.SameSiteStrictMode, MaxAge: int(s.set.SessionTTL().Seconds()),
 	})
 	return csrf, nil
 }

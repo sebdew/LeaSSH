@@ -56,7 +56,7 @@ func New(t testing.TB, profile string, writeRequiresApproval bool, approvalTTL t
 	t.Cleanup(pool.Close)
 	acc := access.New(st)
 	k := &Kit{Ctx: ctx, St: st, Box: box, SSH: fs, Pool: pool, Acc: acc, Cmds: map[string]store.Command{}}
-	k.Exec = executions.New(ctx, st, acc, box, pool, slog.New(slog.NewTextHandler(io.Discard, nil)), approvalTTL)
+	k.Exec = executions.New(ctx, st, acc, box, pool, slog.New(slog.NewTextHandler(io.Discard, nil)), func() time.Duration { return approvalTTL })
 	t.Cleanup(k.Exec.Wait)
 	k.Props = proposals.New(st)
 	k.Token, _ = crypto.NewToken()

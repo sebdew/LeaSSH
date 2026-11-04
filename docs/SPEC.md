@@ -366,7 +366,7 @@ Disponible uniquement si `can_propose = true`. Limite : 10 propositions en atten
 3. Délai `timeout_s` : à expiration, envoi de signal puis fermeture du canal, statut `timeout`.
 4. Capture stdout/stderr tronquée à `max_output_kb` (indicateur `truncated`).
 5. Pool de connexions avec durée de vie courte (configurable), reconnexion transparente.
-6. Les exécutions en attente expirent après `LEASSH_APPROVAL_TTL` (défaut 30 min) → `expired`.
+6. Les exécutions en attente expirent après le délai réglé (Réglages → Général, défaut 30 min) → `expired`.
 7. Au moment de l'exécution d'une demande validée, on revérifie : clé active, règle toujours valide, hash identique. Sinon → `error` avec raison.
 
 ---
@@ -413,7 +413,7 @@ Authentification de l'**interface d'administration** par un fournisseur OpenID C
 - **Comptes** : liaison par **(issuer, sub)**, jamais par e-mail ni par nom. Première connexion : création automatique (JIT, événement `user.create`) ou refus `not_provisioned` selon le réglage. Nom d'utilisateur = `preferred_username`, sinon e-mail, sinon `sub`; s'il est déjà pris (compte local compris) on suffixe `@<hôte de l'issuer>` — le compte existant n'est **jamais** repris. Un compte SSO n'a pas de mot de passe local (pas de connexion ni de changement de mot de passe); désactivé ⇒ `account_disabled`.
 - **Déconnexion** : `POST /auth/logout` détruit toujours la session locale; pour un compte SSO et si l'option est activée, la réponse porte `{end_session_url}` (RP-Initiated Logout : `end_session_endpoint?client_id=…&post_logout_redirect_uri=<base>/`) et l'interface y navigue.
 - **Secret client** : chiffré AES-256-GCM avec la clé maître (réécrit par `rotate-master-key`), jamais renvoyé (`has_client_secret`), jamais écrit dans l'audit ni les logs. Vide à l'enregistrement = conservé; `clear_client_secret` l'efface (client public + PKCE).
-- **API** (admin) : `GET|PUT /api/v1/settings/oidc` (renvoie aussi `redirect_url` = URL publique + `/api/v1/auth/oidc/callback`; URL publique = `LEASSH_BASE_URL` s'il est défini, sinon `X-Forwarded-Host`/`X-Forwarded-Proto` d'un proxy listé dans `LEASSH_TRUSTED_PROXIES`, sinon l'hôte de la requête), `POST /settings/oidc/test` (découverte à jour de l'issuer saisi ou enregistré : endpoints, nombre de clés JWKS, avertissements `issuer_http`, `no_userinfo`, `no_end_session`, `no_pkce`). Public : `GET /auth/providers` → `{oidc: {name, start_url} | null, local_password_admins_only, auto_redirect}` (bouton « Se connecter avec <nom> »). Option `auto_redirect` : la page de connexion redirige d'elle-même vers le fournisseur; `/?login` (ou un échec SSO) affiche le formulaire local de secours. Un issuer en `http://` est accepté (LAN) mais signalé.
+- **API** (admin) : `GET|PUT /api/v1/settings/oidc` (renvoie aussi `redirect_url` = URL publique + `/api/v1/auth/oidc/callback`; URL publique = celle des réglages généraux si elle est définie, sinon `X-Forwarded-Host`/`X-Forwarded-Proto` d'un proxy de confiance, sinon l'hôte de la requête), `POST /settings/oidc/test` (découverte à jour de l'issuer saisi ou enregistré : endpoints, nombre de clés JWKS, avertissements `issuer_http`, `no_userinfo`, `no_end_session`, `no_pkce`). Public : `GET /auth/providers` → `{oidc: {name, start_url} | null, local_password_admins_only, auto_redirect}` (bouton « Se connecter avec <nom> »). Option `auto_redirect` : la page de connexion redirige d'elle-même vers le fournisseur; `/?login` (ou un échec SSO) affiche le formulaire local de secours. Un issuer en `http://` est accepté (LAN) mais signalé.
 - **Audit** : `oidc.update` (avant/après sans secret, `credential_changed`), `oidc.test`, `user.sso_login` (acteur = l'utilisateur), `user.sso_login_failed` (acteur `system`; `reason` parmi `state_missing`, `state_mismatch`, `provider_error`, `token_exchange_failed`, `token_signature`, `token_issuer`, `token_audience`, `token_expired`, `token_nonce`, `role_not_mapped`, `not_provisioned`, `account_disabled`…, jamais de jeton), `user.create` (JIT), `user.update` (synchronisation de rôle).
 - **Limites** : un seul fournisseur; pas de SCIM ni de déprovisionnement automatique (un utilisateur retiré du fournisseur ne peut plus se connecter mais garde sa session jusqu'à expiration — désactivez le compte pour un effet immédiat); pas de back-channel logout; avec le JIT désactivé, seuls les comptes déjà liés se connectent (pas de pré-création).
 
@@ -437,7 +437,7 @@ Français (défaut) et anglais, choix dans **Réglages → Apparence → Langue*
 - Chaque appel `list_*` et `get_execution` met à jour `last_used_at` de la clé ; pas de ligne d'exécution (pour éviter le bruit), mais compteur par clé visible.
 - Chaque modification de configuration produit un `audit_event` avec diff (secrets masqués).
 - Connexions à l'interface (réussies / échouées) journalisées.
-- Les journaux ne sont **pas modifiables** depuis l'interface ; seule la rétention automatique les purge (`LEASSH_LOG_RETENTION_DAYS`, défaut 365, 0 = illimité).
+- Les journaux ne sont **pas modifiables** depuis l'interface ; seule la rétention automatique les purge (réglage de rétention, défaut 365, 0 = illimité).
 - Chaîne d'intégrité (v0.1 recommandé) : chaque ligne d'exécution et d'audit stocke le hash de la ligne précédente, pour détecter une altération de la base. Un bouton « Vérifier l'intégrité » dans Réglages.
 - Export CSV et JSON (NDJSON) des résultats filtrés.
 - Mise à jour en direct du journal (Server-Sent Events).
@@ -450,7 +450,7 @@ Filtres : période, clé/agent, serveur, groupe de serveurs, commande, risque, s
 
 Un webhook sortant configurable (URL + secret). Corps JSON, en-tête `X-Leassh-Signature: sha256=<HMAC>`.
 Événements : `execution.pending_approval`, `execution.finished`, `execution.denied`, `proposal.created`, `host_key.mismatch`.
-Le payload contient un lien direct vers l'élément dans l'interface (`LEASSH_BASE_URL`). Trois tentatives avec backoff ; échecs visibles dans Réglages.
+Le payload contient un lien direct vers l'élément dans l'interface (URL publique des réglages). Trois tentatives avec backoff ; échecs visibles dans Réglages.
 
 ---
 
@@ -502,12 +502,8 @@ Packs fournis en v0.1 : `system`, `systemd`, `mysql`, `postgres`, `nginx`, `dock
 | `LEASSH_LISTEN` | `:8080` | adresse d'écoute (UI + MCP) |
 | `LEASSH_DATA_DIR` | `/data` | base SQLite |
 | `LEASSH_MASTER_KEY` | — (obligatoire) | 32 octets en base64, chiffrement des secrets |
-| `LEASSH_BASE_URL` | — | URL publique (liens webhook) |
-| `LEASSH_APPROVAL_TTL` | `30m` | expiration des demandes en attente |
-| `LEASSH_LOG_RETENTION_DAYS` | `365` | 0 = illimité |
-| `LEASSH_SESSION_TTL` | `12h` | sessions de l'interface |
-| `LEASSH_TRUSTED_PROXIES` | — | pour récupérer l'IP réelle derrière un reverse proxy |
-| `LEASSH_LOG_LEVEL` | `info` | logs applicatifs (stdout, JSON) |
+
+Les autres paramètres sont en base (table `app_settings`), éditables par un administrateur dans Réglages → Général (`GET|PUT /api/v1/settings/general`, audités ; le jeton `/metrics` n'est conservé que sous forme d'empreinte) : URL publique, reverse proxies de confiance, durée de session (défaut 12 h), expiration des validations (30 min), rétention des journaux (365 j, 0 = illimité), niveau de logs, jeton `/metrics`.
 
 Démarrage refusé si `LEASSH_MASTER_KEY` est absente ou invalide. Rotation de la clé maître via une sous-commande `leassh rotate-master-key`.
 
@@ -553,7 +549,7 @@ Démarrage refusé si `LEASSH_MASTER_KEY` est absente ou invalide. Rotation de l
 
 - **API journal** : `GET /api/v1/executions` (filtres `period|from|to`, `status` multiple, `key_id`, `server`, `server_group`, `command`, `risk`, `decided_by`, `q`; pagination `cursor`/`next_cursor`), `/executions/stream` (SSE, résumés sans stdout/stderr), `/executions/export?format=csv|ndjson` (mêmes filtres; CSV neutralise les formules tableur et n'inclut pas les sorties). Le journal d'administration a les mêmes routes sous `/audit` (`action` = préfixe, ex. `server.`).
 - **Intégrité** : `POST /integrity/verify` (admin) contrôle les deux chaînes. La première ligne restante sert d'ancre (la rétention purge les plus anciennes); contenu altéré, ligne supprimée au milieu et rupture de chaînage sont détectés. La troncature de la fin de chaîne ne l'est pas (il faudrait un ancrage externe).
-- **Rétention** : `LEASSH_LOG_RETENTION_DAYS` purge une fois par jour, hors demandes en attente ou en cours; la purge produit un événement `logs.purge`.
+- **Rétention** : la rétention (Réglages → Général) purge une fois par jour, hors demandes en attente ou en cours; la purge produit un événement `logs.purge`.
 - **Utilisateurs** : `/users` (admin), `/auth/password`, `/auth/theme`. Garde-fous : dernier admin actif, auto-désactivation/suppression refusées. Désactivation, changement de rôle ou de mot de passe ferment les sessions concernées.
 - Non mesuré : les performances à 1 million de lignes (recherche texte `LIKE` sans index plein texte).
 
@@ -561,12 +557,12 @@ Démarrage refusé si `LEASSH_MASTER_KEY` est absente ou invalide. Rotation de l
 
 - **Packs** : les 6 packs de `packs/*.yaml` sont embarqués dans le binaire (`packs/embed.go`). `POST /packs/preview` ne modifie rien; `POST /packs/import` est atomique. Un pack fourni est de confiance (avertissements acceptés); un fichier importé doit faire accepter explicitement les avertissements (`allow_warnings`). Toute erreur de lint (placeholder entre guillemets, type inconnu…) bloque l'import, même avec avertissements acceptés. Une commande déjà présente et modifiée par le pack est mise à jour (version incrémentée, source = pack) en conservant son statut activé/désactivé. Le groupe créé porte l'id du pack.
 - **Propositions** : « Modifier puis approuver » réutilise l'éditeur de commande en mode proposition (linter strict `POST /proposals/lint`, risque définitif, groupes à la création).
-- **Webhook** : un seul webhook (`/settings/webhook`, admin). Secret chiffré au repos, jamais renvoyé. Enveloppe `{id, event, timestamp, url, data}`, en-têtes `X-Leassh-Event` et `X-Leassh-Signature: sha256=<HMAC-SHA256 du corps>`. 3 tentatives (1 s puis 5 s), redirections non suivies, sorties de commandes jamais incluses. Les 200 dernières livraisons sont consultables dans Réglages. `url` pointe vers l'écran concerné si `LEASSH_BASE_URL` est définie.
+- **Webhook** : un seul webhook (`/settings/webhook`, admin). Secret chiffré au repos, jamais renvoyé. Enveloppe `{id, event, timestamp, url, data}`, en-têtes `X-Leassh-Event` et `X-Leassh-Signature: sha256=<HMAC-SHA256 du corps>`. 3 tentatives (1 s puis 5 s), redirections non suivies, sorties de commandes jamais incluses. Les 200 dernières livraisons sont consultables dans Réglages. `url` pointe vers l'écran concerné si l'URL publique des réglages est définie.
 
 ### Annexe — Finitions (M8)
 
 - **Tableau de bord** : `GET /api/v1/dashboard` (checklist à 6 étapes cochées automatiquement, chiffres 24 h, anomalies de serveurs, 10 dernières exécutions). « Agent connecté » = une clé MCP a déjà servi.
-- **`/metrics`** : compteurs en mémoire (`leassh_executions_total{status}` compte les transitions vers un statut depuis le démarrage, `leassh_ssh_errors_total{kind}`, histogramme de durée) + jauges lues en base. `LEASSH_METRICS_TOKEN` (facultatif) protège la route.
+- **`/metrics`** : compteurs en mémoire (`leassh_executions_total{status}` compte les transitions vers un statut depuis le démarrage, `leassh_ssh_errors_total{kind}`, histogramme de durée) + jauges lues en base. le jeton défini dans Réglages → Général (facultatif) protège la route.
 - **CLI** : `leassh serve | backup <fichier> | rotate-master-key | reset-password <identifiant> | healthcheck | version`. `backup` utilise `VACUUM INTO` (cohérent, serveur démarré); la clé maître n'est jamais incluse.
 - **Image Docker** : multi-étapes (Node → Go → distroless non-root), `HEALTHCHECK` via `leassh healthcheck`. Non construite dans l'environnement de développement (pas de Docker disponible).
 

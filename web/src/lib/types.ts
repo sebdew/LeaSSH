@@ -64,6 +64,10 @@ export interface UserAccount {
   theme: string; created_at: string; last_login_at: string; auth_provider: "local" | "oidc";
 }
 
+export interface GeneralSettings {
+  base_url: string; trusted_proxies: string; session_ttl_hours: number; approval_ttl_minutes: number; log_retention_days: number;
+  log_level: "debug" | "info" | "warn" | "error"; has_metrics_token: boolean; detected_url: string;
+}
 export interface OidcRoleMap { admin: string[]; approver: string[]; viewer: string[] }
 export interface OidcConfig {
   enabled: boolean; name: string; issuer: string; client_id: string; has_client_secret: boolean; scopes: string; role_claim: string;

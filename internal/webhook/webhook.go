@@ -63,7 +63,7 @@ type job struct {
 type Dispatcher struct {
 	st      *store.Store
 	box     *crypto.Box
-	baseURL string
+	baseURL func() string
 	log     *slog.Logger
 	client  *http.Client
 	queue   chan job
@@ -71,9 +71,9 @@ type Dispatcher struct {
 	Backoff []time.Duration
 }
 
-func New(st *store.Store, box *crypto.Box, baseURL string, log *slog.Logger) *Dispatcher {
+func New(st *store.Store, box *crypto.Box, baseURL func() string, log *slog.Logger) *Dispatcher {
 	return &Dispatcher{
-		st: st, box: box, baseURL: strings.TrimRight(baseURL, "/"), log: log, queue: make(chan job, 256),
+		st: st, box: box, baseURL: baseURL, log: log, queue: make(chan job, 256),
 		Backoff: []time.Duration{time.Second, 5 * time.Second},
 		client: &http.Client{Timeout: 10 * time.Second,
 			// pas de redirection suivie: une redirection ne doit pas détourner la livraison signée
@@ -81,12 +81,13 @@ func New(st *store.Store, box *crypto.Box, baseURL string, log *slog.Logger) *Di
 	}
 }
 
-// Link construit l'URL absolue d'un écran de l'interface (vide si LEASSH_BASE_URL n'est pas définie).
+// Link construit l'URL absolue d'un écran de l'interface (vide si l'URL publique n'est pas définie dans les réglages).
 func (d *Dispatcher) Link(path string) string {
-	if d.baseURL == "" {
+	base := strings.TrimRight(d.baseURL(), "/")
+	if base == "" {
 		return ""
 	}
-	return d.baseURL + path
+	return base + path
 }
 
 func (d *Dispatcher) Config(ctx context.Context) (Config, string, error) {

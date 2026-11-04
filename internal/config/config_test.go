@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"strings"
 	"testing"
-	"time"
 )
 
 func env(m map[string]string) func(string) string { return func(k string) string { return m[k] } }
@@ -28,7 +27,7 @@ func TestDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.Listen != ":8080" || c.ApprovalTTL != 30*time.Minute || c.SessionTTL != 12*time.Hour || c.LogRetentionDays != 365 {
+	if c.Listen != ":8080" || c.DataDir != "/data" {
 		t.Fatalf("défauts inattendus: %+v", c)
 	}
 }

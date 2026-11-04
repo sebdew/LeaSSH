@@ -12,9 +12,10 @@ import { applyLang, getLang, LANGS, type Lang } from "../lib/lang";
 import { useMe } from "../lib/useAuth";
 import { SyslogPanel } from "./SyslogPanel";
 import { OidcPanel } from "./OidcPanel";
+import { GeneralPanel } from "./GeneralPanel";
 import type { ChainResult, UserAccount, WebhookConfig, WebhookDelivery } from "../lib/types";
 
-type Tab = "users" | "webhook" | "syslog" | "sso" | "journal" | "appearance" | "account";
+type Tab = "users" | "general" | "webhook" | "syslog" | "sso" | "journal" | "appearance" | "account";
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -22,7 +23,7 @@ export function SettingsPage() {
   const admin = me.data?.role === "admin";
   const [tab, setTab] = useState<Tab | null>(null); // onglet par défaut selon le rôle, une fois connu
   const tabs: { id: Tab; label: string }[] = [
-    ...(admin ? [{ id: "users" as const, label: t("settings.users") }, { id: "webhook" as const, label: t("settings.webhook") }, { id: "syslog" as const, label: t("settings.syslog") }, { id: "sso" as const, label: t("settings.sso") }, { id: "journal" as const, label: t("settings.journal") }] : []),
+    ...(admin ? [{ id: "users" as const, label: t("settings.users") }, { id: "general" as const, label: t("settings.general") }, { id: "webhook" as const, label: t("settings.webhook") }, { id: "syslog" as const, label: t("settings.syslog") }, { id: "sso" as const, label: t("settings.sso") }, { id: "journal" as const, label: t("settings.journal") }] : []),
     { id: "appearance", label: t("settings.appearance") }, { id: "account", label: t("settings.account") },
   ];
   const current = tab && tabs.some((x) => x.id === tab) ? tab : tabs[0].id;
@@ -31,6 +32,7 @@ export function SettingsPage() {
       <PageHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
       <Tabs value={current} onChange={setTab} tabs={tabs} />
       {current === "users" && <UsersPanel meId={me.data?.id ?? ""} />}
+      {current === "general" && <GeneralPanel />}
       {current === "webhook" && <WebhookPanel />}
       {current === "syslog" && <SyslogPanel />}
       {current === "sso" && <OidcPanel />}
@@ -178,11 +180,20 @@ function AppearancePanel() {
 
 function AccountPanel() {
   const { t } = useTranslation();
+  const me = useMe(true);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const save = useApiMutation<{ current: string; new: string }>("POST", "/auth/password", []);
   const mismatch = confirm !== "" && confirm !== next;
+  if (me.data?.auth_provider === "oidc") {
+    return (
+      <Card className="flex max-w-md flex-col gap-2">
+        <h2 className="text-[15px] font-semibold">{t("settings.changePassword")}</h2>
+        <p className="text-muted">{t("settings.ssoPassword")}</p>
+      </Card>
+    );
+  }
   return (
     <Card className="flex max-w-md flex-col gap-3">
       <h2 className="text-[15px] font-semibold">{t("settings.changePassword")}</h2>

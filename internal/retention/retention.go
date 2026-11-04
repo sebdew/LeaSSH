@@ -1,4 +1,4 @@
-// Package retention: purge automatique des journaux (LEASSH_LOG_RETENTION_DAYS). Seul moyen de supprimer des lignes de journal.
+// Package retention: purge automatique des journaux (réglage de rétention). Seul moyen de supprimer des lignes de journal.
 package retention
 
 import (
@@ -36,10 +36,7 @@ func Purge(ctx context.Context, st *store.Store, days int, now time.Time) (execs
 }
 
 // Loop purge une fois par jour (première passe 1 minute après le démarrage).
-func Loop(ctx context.Context, st *store.Store, days int, log *slog.Logger) {
-	if days <= 0 {
-		return
-	}
+func Loop(ctx context.Context, st *store.Store, days func() int, log *slog.Logger) {
 	t := time.NewTimer(time.Minute)
 	defer t.Stop()
 	for {
@@ -47,10 +44,13 @@ func Loop(ctx context.Context, st *store.Store, days int, log *slog.Logger) {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			if e, a, err := Purge(ctx, st, days, time.Now()); err != nil {
-				log.Error("rétention", "err", err)
-			} else if e+a > 0 {
-				log.Info("journaux purgés", "executions", e, "audit", a)
+			// La durée est relue à chaque passe: elle se règle à chaud dans l'interface (0 = illimité).
+			if d := days(); d > 0 {
+				if e, a, err := Purge(ctx, st, d, time.Now()); err != nil {
+					log.Error("rétention", "err", err)
+				} else if e+a > 0 {
+					log.Info("journaux purgés", "executions", e, "audit", a)
+				}
 			}
 			t.Reset(24 * time.Hour)
 		}

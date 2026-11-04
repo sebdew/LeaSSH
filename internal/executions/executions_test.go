@@ -47,7 +47,7 @@ func newFixture(t *testing.T, profile string, wra bool, ttl time.Duration) *fixt
 	pool := sshexec.NewPool(time.Minute, 2)
 	t.Cleanup(pool.Close)
 	f := &fixture{t: t, st: st, ssh: fs, cmds: map[string]store.Command{}, ctx: ctx}
-	f.svc = New(ctx, st, access.New(st), box, pool, slog.New(slog.NewTextHandler(io.Discard, nil)), ttl)
+	f.svc = New(ctx, st, access.New(st), box, pool, slog.New(slog.NewTextHandler(io.Discard, nil)), func() time.Duration { return ttl })
 	t.Cleanup(f.svc.Wait)
 	enc, _ := box.Seal(fs.ClientPEM)
 	err = st.Tx(ctx, func(tx *sql.Tx) error {

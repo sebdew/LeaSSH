@@ -724,7 +724,7 @@
     "retention": "Rétention",
     "retentionUnlimited": "Conservation illimitée",
     "retentionDays": "{{count}} jours",
-    "retentionHelp": "Réglée par LEASSH_LOG_RETENTION_DAYS. Seule la purge automatique supprime des lignes du journal.",
+    "retentionHelp": "Réglable dans Réglages → Général. Seule la purge automatique supprime des lignes du journal.",
     "integrity": "Intégrité du journal",
     "integrityHelp": "Contrôle les chaînes de hash des exécutions et de l'administration pour détecter toute altération de la base.",
     "verify": "Vérifier l'intégrité",
@@ -744,7 +744,9 @@
     "sso": "SSO",
     "ssoManaged": "Compte SSO : le rôle vient du mapping des groupes du fournisseur (appliqué à chaque connexion) et il n'y a pas de mot de passe local.",
     "language": "Langue",
-    "languageHelp": "Choix mémorisé sur ce navigateur. Le français est la langue par défaut."
+    "languageHelp": "Choix mémorisé sur ce navigateur. Le français est la langue par défaut.",
+    "general": "Général",
+    "ssoPassword": "Ce compte est connecté par SSO : le mot de passe se gère chez le fournisseur d'identité, pas dans Leassh."
   },
   "packs": {
     "title": "Packs",
@@ -1110,5 +1112,24 @@
     "logoutUrl": "URL de redirection après déconnexion",
     "flowHelp": "Le flux utilise Authorization Code + PKCE (S256), avec state et nonce. L'ID token est vérifié (signature, émetteur, audience, expiration, nonce).",
     "breakGlass": "Gardez au moins un administrateur local actif : c'est votre accès si le fournisseur est en panne."
+  },
+  "general": {
+    "network": "Réseau et accès",
+    "baseUrl": "URL publique",
+    "baseUrlHelp": "Adresse par laquelle les utilisateurs accèdent à Leassh (ex. https://leassh.example.com). Elle sert à l'URL de callback SSO et aux liens des notifications. Laissée vide, elle est déduite de la requête ; actuellement vue par le serveur : {{url}}. Une valeur fixe est plus sûre derrière un reverse proxy.",
+    "proxies": "Reverse proxies de confiance",
+    "proxiesHelp": "IP ou réseaux (CIDR) séparés par des virgules. Seuls ces proxies sont crus sur l'IP réelle du client (X-Forwarded-For) et sur le protocole/hôte d'origine.",
+    "behaviour": "Sessions, validations et journaux",
+    "sessionTtl": "Durée d'une session (heures)",
+    "approvalTtl": "Expiration des validations (minutes)",
+    "retention": "Rétention des journaux (jours, 0 = illimité)",
+    "behaviourHelp": "S'applique immédiatement, sans redémarrage. Une nouvelle durée de session ne concerne que les prochaines connexions.",
+    "logLevel": "Niveau des logs applicatifs",
+    "metrics": "Métriques Prometheus",
+    "metricsToken": "Jeton de /metrics",
+    "metricsKept": "•••• (laisser vide pour conserver)",
+    "metricsOpen": "Aucun : /metrics est ouvert",
+    "metricsHelp": "Si un jeton est défini, /metrics exige « Authorization: Bearer <jeton> ». Seule son empreinte est conservée.",
+    "metricsClear": "Supprimer le jeton (ouvrir /metrics)"
   }
 }

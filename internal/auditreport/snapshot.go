@@ -22,7 +22,7 @@ import (
 
 const (
 	SchemaVersion = 1
-	Kind          = "leash-audit-report"
+	Kind          = "leassh-audit-report"
 	maxListed     = 1000 // événements d'administration listés dans le rapport (le total est toujours exact)
 	unusedDays    = 90
 )
@@ -31,7 +31,7 @@ const (
 type Params struct {
 	Now           time.Time
 	From, To      time.Time // jours UTC inclus
-	LeasshVersion  string
+	LeasshVersion string
 	RetentionDays int
 	ApprovalTTL   time.Duration
 	SessionTTL    time.Duration
@@ -245,7 +245,7 @@ type Snapshot struct {
 	Kind          string      `json:"kind"`
 	SchemaVersion int         `json:"schema_version"`
 	GeneratedAt   string      `json:"generated_at"`
-	LeasshVersion  string      `json:"leash_version"`
+	LeasshVersion string      `json:"leassh_version"`
 	Period        Period      `json:"period"`
 	Config        ConfigFacts `json:"configuration"`
 	Scope         Scope       `json:"scope"`

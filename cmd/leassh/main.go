@@ -29,6 +29,7 @@ import (
 	"github.com/leassh-dev/leassh/internal/provisioning/warpgate"
 	"github.com/leassh-dev/leassh/internal/retention"
 	"github.com/leassh-dev/leassh/internal/rotation"
+	"github.com/leassh-dev/leassh/internal/settings"
 	"github.com/leassh-dev/leassh/internal/sshexec"
 	"github.com/leassh-dev/leassh/internal/store"
 	"github.com/leassh-dev/leassh/internal/syslog"
@@ -59,7 +60,7 @@ func run(args []string) error {
 		if len(args) != 2 {
 			return errors.New("usage: leassh backup <fichier-de-destination>")
 		}
-		dir := config.Getenv("LEASSH_DATA_DIR")
+		dir := os.Getenv("LEASSH_DATA_DIR")
 		if dir == "" {
 			dir = "/data"
 		}
@@ -77,19 +78,24 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+		level := new(slog.LevelVar)
+		log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
 		st, err := store.Open(context.Background(), cfg.DataDir)
 		if err != nil {
 			return err
 		}
 		defer st.Close()
-		return serve(cfg, st, log)
+		set, err := settings.New(context.Background(), st, level)
+		if err != nil {
+			return err
+		}
+		return serve(cfg, set, st, log)
 	default:
 		return fmt.Errorf("sous-commande inconnue %q (serve, backup, rotate-master-key, reset-password, healthcheck, version)", cmd)
 	}
 }
 
-func serve(cfg *config.Config, st *store.Store, log *slog.Logger) error {
+func serve(cfg *config.Config, set *settings.Service, st *store.Store, log *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -100,12 +106,12 @@ func serve(cfg *config.Config, st *store.Store, log *slog.Logger) error {
 	pool := sshexec.NewPool(60*time.Second, 2)
 	defer pool.Close()
 	acc := access.New(st)
-	exec := executions.New(ctx, st, acc, box, pool, log, cfg.ApprovalTTL)
+	exec := executions.New(ctx, st, acc, box, pool, log, set.ApprovalTTL)
 	reg := metrics.New()
 	exec.Metrics = reg
 	props := proposals.New(st)
 	pk := packs.New(st)
-	hook := webhook.New(st, box, cfg.BaseURL, log)
+	hook := webhook.New(st, box, set.BaseURL, log)
 	sl := syslog.New(st, box, version, log)
 	if err := sl.Reload(ctx); err != nil {
 		log.Error("configuration syslog invalide, export désactivé", "err", err)
@@ -119,9 +125,9 @@ func serve(cfg *config.Config, st *store.Store, log *slog.Logger) error {
 	prov.Invalidate = pool.Invalidate
 	go prov.Run(ctx)
 	go exec.ExpireLoop(ctx, 30*time.Second)
-	go retention.Loop(ctx, st, cfg.LogRetentionDays, log)
+	go retention.Loop(ctx, st, set.RetentionDays, log)
 
-	srv, err := api.New(cfg, st, log, webHandler())
+	srv, err := api.New(set, st, log, webHandler())
 	if err != nil {
 		return err
 	}
@@ -151,7 +157,7 @@ func serve(cfg *config.Config, st *store.Store, log *slog.Logger) error {
 
 // healthcheck interroge /healthz en local (l'image distroless n'a ni shell ni curl).
 func healthcheck() error {
-	addr := config.Getenv("LEASSH_LISTEN")
+	addr := os.Getenv("LEASSH_LISTEN")
 	if addr == "" {
 		addr = ":8080"
 	}
@@ -176,7 +182,7 @@ func rotateMasterKey() error {
 	if err != nil {
 		return err
 	}
-	raw := config.Getenv("LEASSH_NEW_MASTER_KEY")
+	raw := os.Getenv("LEASSH_NEW_MASTER_KEY")
 	newKey, err := base64.StdEncoding.DecodeString(raw)
 	if raw == "" || err != nil || len(newKey) != 32 {
 		return errors.New("LEASSH_NEW_MASTER_KEY doit contenir la nouvelle clé (32 octets en base64, ex. `openssl rand -base64 32`)")

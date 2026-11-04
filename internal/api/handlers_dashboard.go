@@ -1,7 +1,6 @@
 package api
 
 import (
-	"crypto/subtle"
 	"net/http"
 	"strings"
 	"time"
@@ -64,15 +63,12 @@ func (s *Server) insights(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, in)
 }
 
-// metricsHandler: format Prometheus. Protégé par LEASSH_METRICS_TOKEN s'il est défini.
+// metricsHandler: format Prometheus. Protégé par le jeton défini dans Réglages → Général, s'il existe.
 func (s *Server) metricsHandler(w http.ResponseWriter, r *http.Request) {
-	if tok := s.cfg.MetricsToken; tok != "" {
-		got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if subtle.ConstantTimeCompare([]byte(got), []byte(tok)) != 1 {
-			w.Header().Set("WWW-Authenticate", `Bearer realm="leassh-metrics"`)
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
+	if !s.set.CheckMetricsToken(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")) {
+		w.Header().Set("WWW-Authenticate", `Bearer realm="leassh-metrics"`)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
 	}
 	var gauges []metrics.Gauge
 	add := func(name, help, label, query string) {

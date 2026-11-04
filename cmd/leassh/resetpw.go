@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/leassh-dev/leassh/internal/config"
 	"os"
 	"strings"
 
@@ -25,7 +24,7 @@ func resetPassword(args []string) error {
 	if len(args) != 1 {
 		return errors.New("usage: leassh reset-password <identifiant>")
 	}
-	dir := config.Getenv("LEASSH_DATA_DIR")
+	dir := os.Getenv("LEASSH_DATA_DIR")
 	if dir == "" {
 		dir = "/data"
 	}

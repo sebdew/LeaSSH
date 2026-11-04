@@ -75,7 +75,7 @@ type Service struct {
 	box    *crypto.Box
 	pool   *sshexec.Pool
 	log    *slog.Logger
-	ttl    time.Duration
+	ttl    func() time.Duration // délai d'expiration des demandes en attente (réglable à chaud)
 	Broker *Broker
 	Notify Notifier
 	// Observe reçoit en plus les transitions sans webhook (execution.rejected, execution.expired): export syslog.
@@ -87,7 +87,7 @@ type Service struct {
 }
 
 // New: bg est le contexte de vie du service (les exécutions survivent à la requête qui les a lancées).
-func New(bg context.Context, st *store.Store, acc *access.Service, box *crypto.Box, pool *sshexec.Pool, log *slog.Logger, approvalTTL time.Duration) *Service {
+func New(bg context.Context, st *store.Store, acc *access.Service, box *crypto.Box, pool *sshexec.Pool, log *slog.Logger, approvalTTL func() time.Duration) *Service {
 	return &Service{st: st, acc: acc, box: box, pool: pool, log: log, ttl: approvalTTL, Broker: NewBroker(), bg: bg, Notify: func(string, store.Execution) {}, Observe: func(string, store.Execution) {}}
 }
 
@@ -365,7 +365,7 @@ func (s *Service) Decide(ctx context.Context, id string, approver store.User, ap
 	if e.Status != StPending {
 		return e, ErrNotPending
 	}
-	if t, err := store.ParseTime(e.RequestedAt); err == nil && time.Since(t) > s.ttl {
+	if t, err := store.ParseTime(e.RequestedAt); err == nil && time.Since(t) > s.ttl() {
 		if ok, _ := store.TransitionExecution(ctx, s.st.DB, id, StPending, StExpired); ok {
 			e.Status, e.FinishedAt = StExpired, store.Now()
 			_ = store.SaveExecutionState(ctx, s.st.DB, e)
@@ -463,7 +463,7 @@ func (s *Service) ExpireLoop(ctx context.Context, every time.Duration) {
 }
 
 func (s *Service) ExpireNow(ctx context.Context) {
-	ids, err := store.ExpirePending(ctx, s.st.DB, store.FormatTime(time.Now().Add(-s.ttl)))
+	ids, err := store.ExpirePending(ctx, s.st.DB, store.FormatTime(time.Now().Add(-s.ttl())))
 	if err != nil {
 		s.log.Error("expiration des demandes", "err", err)
 		return

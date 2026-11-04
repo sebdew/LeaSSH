@@ -18,7 +18,6 @@ docker run -d --name leassh --restart unless-stopped \
   -p 127.0.0.1:8080:8080 \
   -v leassh-data:/data \
   -e LEASSH_MASTER_KEY \
-  -e LEASSH_BASE_URL=https://leassh.example.com \
   ghcr.io/<org>/leassh:latest
 ```
 
@@ -39,7 +38,6 @@ sudo useradd --system --home /var/lib/leassh --create-home --shell /usr/sbin/nol
 LEASSH_MASTER_KEY=…
 LEASSH_DATA_DIR=/var/lib/leassh
 LEASSH_LISTEN=127.0.0.1:8080
-LEASSH_BASE_URL=https://leassh.example.com
 ```
 
 `/etc/systemd/system/leassh.service` :
@@ -104,7 +102,7 @@ server {
 ```
 
 Dites ensuite à Leassh quel proxy croire pour l'IP réelle des clients (journal, limitation de connexions) :
-`LEASSH_TRUSTED_PROXIES=127.0.0.1` (ou le réseau Docker du proxy, ex. `172.16.0.0/12`). Sans cela, les en-têtes `X-Forwarded-*` sont ignorés. Sans `LEASSH_BASE_URL`, l'URL publique (SSO, liens) est alors déduite de `X-Forwarded-Host`/`X-Forwarded-Proto` : le proxy doit les transmettre. Les anciennes variables `LEASH_*` restent acceptées.
+dans **Réglages → Général → Reverse proxies de confiance** (ex. `127.0.0.1`, ou le réseau Docker du proxy, ex. `172.16.0.0/12`). Sans cela, les en-têtes `X-Forwarded-*` sont ignorés. Renseignez aussi l'**URL publique** (fixe, recommandée) ; à défaut elle est déduite de `X-Forwarded-Host`/`X-Forwarded-Proto`, que le proxy doit alors transmettre.
 
 ## 5. Premiers pas (checklist du tableau de bord)
 
@@ -139,13 +137,8 @@ Cinq outils : `list_servers`, `list_commands`, `run_command`, `get_execution`, `
 | `LEASSH_MASTER_KEY` | — (**obligatoire**) | 32 octets en base64 ; chiffre les secrets |
 | `LEASSH_LISTEN` | `:8080` | adresse d'écoute (interface + MCP) |
 | `LEASSH_DATA_DIR` | `/data` | dossier de la base SQLite (`leassh.db`) |
-| `LEASSH_BASE_URL` | — | URL publique (**recommandé derrière un proxy** : fixe, indépendante des en-têtes), utilisée pour les liens des webhooks et l'URL de redirection du SSO (§12) |
-| `LEASSH_APPROVAL_TTL` | `30m` | expiration des demandes non validées |
-| `LEASSH_LOG_RETENTION_DAYS` | `365` | purge quotidienne des journaux (`0` = illimité) |
-| `LEASSH_SESSION_TTL` | `12h` | durée des sessions de l'interface |
-| `LEASSH_TRUSTED_PROXIES` | — | proxies dont on croit `X-Forwarded-For` (IP/CIDR, séparés par des virgules) |
-| `LEASSH_METRICS_TOKEN` | — | si défini, `/metrics` exige `Authorization: Bearer <jeton>` |
-| `LEASSH_LOG_LEVEL` | `info` | niveau des logs applicatifs (JSON sur stdout) |
+
+Tout le reste se règle dans l'interface, **Réglages → Général** (stocké en base, appliqué à chaud) : URL publique, reverse proxies de confiance, durée des sessions, expiration des validations, rétention des journaux, niveau de logs, jeton `/metrics`.
 
 ## 8. Sauvegarde et restauration
 
@@ -227,7 +220,7 @@ Installez-les depuis **Catalogue → Packs** (aperçu, puis import avec créatio
 
 - **Remettre à l'auditeur** : le HTML (ou le PDF), le JSON signé, et la tête de chaîne des journaux qui figure dans le rapport (elle permet de détecter une troncature ultérieure). Il peut recalculer l'empreinte avec `jq -cj .snapshot rapport.json | sha256sum`; **Vérifier un rapport** confirme en plus que le fichier vient de votre instance.
 - **Synthèse rédigée par une IA** (facultatif, désactivée par défaut) : renseignez l'URL d'une API de type OpenAI (OpenAI, LiteLLM, Ollama…), le modèle et la clé. Seuls des chiffres agrégés et des intitulés de constats sont envoyés, jamais de nom ni de sortie de commande; si l'URL est externe, ces chiffres quittent votre réseau. Le texte est étiqueté « générée par IA, à relire » et reste hors de l'empreinte.
-- La rétention des journaux (`LEASSH_LOG_RETENTION_DAYS`, 365 jours par défaut) limite la période auditable.
+- La rétention des journaux (réglage « Rétention des journaux », 365 jours par défaut) limite la période auditable.
 
 ## 10. Observabilité
 
@@ -237,7 +230,7 @@ Installez-les depuis **Catalogue → Packs** (aperçu, puis import avec créatio
 ```yaml
 scrape_configs:
   - job_name: leassh
-    authorization: { credentials: "<LEASSH_METRICS_TOKEN>" }
+    authorization: { credentials: "<jeton /metrics>" }
     static_configs: [{ targets: ["leassh.example.com"] }]
     scheme: https
 ```
@@ -309,7 +302,7 @@ Avec le format **CEF**, utilisez le décodeur CEF de votre SIEM; avec **texte**,
 
 Le SSO permet de se connecter à l'**interface** avec Keycloak (ou Entra ID, Authentik, Google…). Il s'ajoute aux comptes locaux : le compte administrateur créé à l'initialisation reste votre accès de secours. Les clés MCP ne passent pas par le SSO.
 
-**Avant de commencer** : Leassh doit être joignable par l'URL que vos utilisateurs saisissent (`LEASSH_BASE_URL`, par ex. `https://leassh.example.com`, ou à défaut l'adresse utilisée dans le navigateur). Le serveur Leassh doit pouvoir joindre Keycloak (découverte, jetons, JWKS) et l'horloge des deux machines doit être à l'heure (NTP; tolérance de 60 s).
+**Avant de commencer** : Leassh doit être joignable par l'URL que vos utilisateurs saisissent (Réglages → Général → URL publique, par ex. `https://leassh.example.com`, ou à défaut l'adresse utilisée dans le navigateur). Le serveur Leassh doit pouvoir joindre Keycloak (découverte, jetons, JWKS) et l'horloge des deux machines doit être à l'heure (NTP; tolérance de 60 s).
 
 ### Côté Keycloak
 
@@ -365,8 +358,8 @@ Sauvegardez (§8), puis `docker pull` + recréation du conteneur (ou remplacemen
 | Symptôme | Piste |
 |---|---|
 | Démarrage refusé : `LEASSH_MASTER_KEY est obligatoire` | Variable absente, pas du base64, ou pas 32 octets (`openssl rand -base64 32`). |
-| Connexion à l'interface impossible derrière un proxy | Le proxy doit servir en HTTPS et transmettre `X-Forwarded-Proto: https` (ou définissez `LEASSH_BASE_URL=https://…`). |
-| « Trop de tentatives » à la connexion | Limite de 5 échecs / 15 min par IP et par compte ; vérifiez `LEASSH_TRUSTED_PROXIES` si tous les clients semblent avoir la même IP. |
+| Connexion à l'interface impossible derrière un proxy | Le proxy doit servir en HTTPS et transmettre `X-Forwarded-Proto: https` (ou renseignez l'URL publique `https://…` dans Réglages → Général). |
+| « Trop de tentatives » à la connexion | Limite de 5 échecs / 15 min par IP et par compte ; vérifiez les reverse proxies de confiance (Réglages → Général) si tous les clients semblent avoir la même IP. |
 | Le journal en direct ne se met pas à jour | Le proxy met en mémoire tampon : désactivez-la pour `/api/v1/executions/stream` (§4). |
 | Le bouton SSO renvoie une erreur ou un compte SSO est refusé | Voir §12 (« Problèmes courants »); le motif exact est dans le journal d'administration (`user.sso_login_failed`). Le compte admin local reste utilisable. |
 | Serveur « clé d'hôte divergente » | Réinstallation ou attaque : vérifiez l'empreinte puis *Accepter la nouvelle clé*. |

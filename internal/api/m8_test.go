@@ -108,9 +108,16 @@ func TestMetricsEndpoint(t *testing.T) {
 }
 
 func TestMetricsTokenProtection(t *testing.T) {
-	testMetricsToken = "m3trics-token"
-	defer func() { testMetricsToken = "" }()
 	e := newEnv(t)
+	if resp, _ := e.raw0("/metrics"); resp.StatusCode != 200 {
+		t.Fatalf("sans jeton défini, /metrics est ouvert: %d", resp.StatusCode)
+	}
+	cfg := e.must("GET", "/settings/general", nil, 200)
+	cfg["metrics_token"] = "m3trics-token"
+	out := e.must("PUT", "/settings/general", cfg, 200)
+	if out["has_metrics_token"] != true || out["metrics_token"] != nil {
+		t.Fatalf("le jeton ne doit jamais être renvoyé: %v", out)
+	}
 	if resp, _ := e.raw0("/metrics"); resp.StatusCode != 401 {
 		t.Fatalf("sans jeton: %d", resp.StatusCode)
 	}
