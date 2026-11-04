@@ -56,7 +56,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
           {items.map((i, n) => (
             <li key={i.id} id={`po-${i.id}`} role="option" aria-selected={n === cursor} onMouseEnter={() => setCursor(n)} onClick={() => go(i)}
               className={`flex cursor-pointer items-center gap-3 rounded-field px-3 py-2 ${n === cursor ? "bg-surface-2" : ""}`}>
-              <span className="w-20 shrink-0 text-[12px] uppercase tracking-wide text-muted">{i.section}</span>
+              <span className="w-28 shrink-0 text-[12px] uppercase tracking-wide text-muted">{i.section}</span>
               <span className="font-medium">{i.label}</span>{i.hint && <span className="text-muted">{i.hint}</span>}
             </li>
           ))}
