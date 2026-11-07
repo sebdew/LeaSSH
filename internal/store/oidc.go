@@ -19,22 +19,23 @@ type OIDCConfig struct {
 	DefaultRole             string // "" = refus | viewer
 	JIT                     bool
 	LocalPasswordAdminsOnly bool
+	LocalLoginDisabled      bool // aucun mot de passe local accepté tant que le SSO est actif
 	EndSession              bool
 	AutoRedirect            bool
 }
 
 func GetOIDCConfig(ctx context.Context, q Q) (OIDCConfig, error) {
 	var c OIDCConfig
-	err := q.QueryRowContext(ctx, `SELECT enabled,name,issuer,client_id,client_secret_enc,scopes,role_claim,role_map,default_role,jit,local_password_admins_only,end_session,auto_redirect
+	err := q.QueryRowContext(ctx, `SELECT enabled,name,issuer,client_id,client_secret_enc,scopes,role_claim,role_map,default_role,jit,local_password_admins_only,local_login_disabled,end_session,auto_redirect
 		FROM oidc_config WHERE id=1`).
-		Scan(&c.Enabled, &c.Name, &c.Issuer, &c.ClientID, &c.ClientSecretEnc, &c.Scopes, &c.RoleClaim, &c.RoleMap, &c.DefaultRole, &c.JIT, &c.LocalPasswordAdminsOnly, &c.EndSession, &c.AutoRedirect)
+		Scan(&c.Enabled, &c.Name, &c.Issuer, &c.ClientID, &c.ClientSecretEnc, &c.Scopes, &c.RoleClaim, &c.RoleMap, &c.DefaultRole, &c.JIT, &c.LocalPasswordAdminsOnly, &c.LocalLoginDisabled, &c.EndSession, &c.AutoRedirect)
 	return c, wrapErr("configuration SSO", err)
 }
 
 func SaveOIDCConfig(ctx context.Context, q Q, c OIDCConfig) error {
 	_, err := q.ExecContext(ctx, `UPDATE oidc_config SET enabled=?,name=?,issuer=?,client_id=?,client_secret_enc=?,scopes=?,role_claim=?,role_map=?,default_role=?,jit=?,
-		local_password_admins_only=?,end_session=?,auto_redirect=? WHERE id=1`,
-		c.Enabled, c.Name, c.Issuer, c.ClientID, c.ClientSecretEnc, c.Scopes, c.RoleClaim, c.RoleMap, c.DefaultRole, c.JIT, c.LocalPasswordAdminsOnly, c.EndSession, c.AutoRedirect)
+		local_password_admins_only=?,local_login_disabled=?,end_session=?,auto_redirect=? WHERE id=1`,
+		c.Enabled, c.Name, c.Issuer, c.ClientID, c.ClientSecretEnc, c.Scopes, c.RoleClaim, c.RoleMap, c.DefaultRole, c.JIT, c.LocalPasswordAdminsOnly, c.LocalLoginDisabled, c.EndSession, c.AutoRedirect)
 	return wrapErr("configuration SSO", err)
 }
 
@@ -80,4 +81,11 @@ func CountLocalAdmins(ctx context.Context, q Q) (int, error) {
 	var n int
 	err := q.QueryRowContext(ctx, `SELECT count(*) FROM users WHERE role='admin' AND disabled=0 AND auth_provider='local'`).Scan(&n)
 	return n, err
+}
+
+// CountOIDCAdmins: administrateurs SSO actifs ayant déjà ouvert une session (preuve que le SSO fonctionne).
+func CountOIDCAdmins(ctx context.Context, q Q) (int, error) {
+	var n int
+	err := q.QueryRowContext(ctx, `SELECT count(*) FROM users WHERE auth_provider='oidc' AND role='admin' AND disabled=0 AND last_login_at IS NOT NULL`).Scan(&n)
+	return n, wrapErr("administrateurs SSO", err)
 }

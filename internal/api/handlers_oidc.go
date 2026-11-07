@@ -41,6 +41,7 @@ type oidcView struct {
 	DefaultRole             string       `json:"default_role"` // "" = refus | viewer
 	JIT                     bool         `json:"jit"`
 	LocalPasswordAdminsOnly bool         `json:"local_password_admins_only"`
+	LocalLoginDisabled      bool         `json:"local_login_disabled"`
 	EndSession              bool         `json:"end_session"`
 	AutoRedirect            bool         `json:"auto_redirect"`
 	RedirectURL             string       `json:"redirect_url"`
@@ -54,7 +55,7 @@ type oidcInput struct {
 
 func viewOf(c store.OIDCConfig) oidcView {
 	v := oidcView{Enabled: c.Enabled, Name: c.Name, Issuer: c.Issuer, ClientID: c.ClientID, HasClientSecret: len(c.ClientSecretEnc) > 0, Scopes: c.Scopes,
-		RoleClaim: c.RoleClaim, DefaultRole: c.DefaultRole, JIT: c.JIT, LocalPasswordAdminsOnly: c.LocalPasswordAdminsOnly, EndSession: c.EndSession, AutoRedirect: c.AutoRedirect}
+		RoleClaim: c.RoleClaim, DefaultRole: c.DefaultRole, JIT: c.JIT, LocalPasswordAdminsOnly: c.LocalPasswordAdminsOnly, LocalLoginDisabled: c.LocalLoginDisabled, EndSession: c.EndSession, AutoRedirect: c.AutoRedirect}
 	_ = json.Unmarshal([]byte(c.RoleMap), &v.RoleMap)
 	return v
 }
@@ -63,7 +64,7 @@ func viewOf(c store.OIDCConfig) oidcView {
 func (v oidcView) auditView() map[string]any {
 	return map[string]any{"enabled": v.Enabled, "name": v.Name, "issuer": v.Issuer, "client_id": v.ClientID, "has_client_secret": v.HasClientSecret,
 		"scopes": v.Scopes, "role_claim": v.RoleClaim, "role_map": v.RoleMap, "default_role": v.DefaultRole, "jit": v.JIT,
-		"local_password_admins_only": v.LocalPasswordAdminsOnly, "end_session": v.EndSession, "auto_redirect": v.AutoRedirect}
+		"local_password_admins_only": v.LocalPasswordAdminsOnly, "local_login_disabled": v.LocalLoginDisabled, "end_session": v.EndSession, "auto_redirect": v.AutoRedirect}
 }
 
 // baseURL: URL publique de l'application, par ordre de priorité:
@@ -155,6 +156,9 @@ func (in *oidcInput) validate() error {
 		}
 		*l = clean
 	}
+	if in.LocalLoginDisabled && !in.Enabled {
+		return bad("invalid_oidc", "le mot de passe local ne peut être désactivé que si le SSO est actif")
+	}
 	if in.Enabled && (in.Issuer == "" || in.ClientID == "") {
 		return bad("invalid_oidc", "issuer et client ID sont requis pour activer le SSO")
 	}
@@ -193,9 +197,16 @@ func (s *Server) putOIDC(w http.ResponseWriter, r *http.Request) {
 				return bad("no_local_admin", "il faut au moins un administrateur local actif (compte de secours) pour restreindre le mot de passe local")
 			}
 		}
+		if in.LocalLoginDisabled {
+			if n, err := store.CountOIDCAdmins(r.Context(), tx); err != nil {
+				return err
+			} else if n == 0 {
+				return bad("no_sso_admin", "connectez-vous d'abord une fois en tant qu'administrateur via le SSO avant de désactiver le mot de passe local")
+			}
+		}
 		rm, _ := json.Marshal(in.RoleMap)
 		c := store.OIDCConfig{Enabled: in.Enabled, Name: in.Name, Issuer: in.Issuer, ClientID: in.ClientID, ClientSecretEnc: secret, Scopes: in.Scopes,
-			RoleClaim: in.RoleClaim, RoleMap: string(rm), DefaultRole: in.DefaultRole, JIT: in.JIT, LocalPasswordAdminsOnly: in.LocalPasswordAdminsOnly, EndSession: in.EndSession, AutoRedirect: in.AutoRedirect}
+			RoleClaim: in.RoleClaim, RoleMap: string(rm), DefaultRole: in.DefaultRole, JIT: in.JIT, LocalPasswordAdminsOnly: in.LocalPasswordAdminsOnly, LocalLoginDisabled: in.LocalLoginDisabled, EndSession: in.EndSession, AutoRedirect: in.AutoRedirect}
 		if err := store.SaveOIDCConfig(r.Context(), tx, c); err != nil {
 			return err
 		}
@@ -274,10 +285,11 @@ func (s *Server) authProviders(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	body := map[string]any{"oidc": nil, "local_password_admins_only": false, "auto_redirect": false}
+	body := map[string]any{"oidc": nil, "local_password_admins_only": false, "local_login_disabled": false, "auto_redirect": false}
 	if c.Enabled {
 		body["oidc"] = map[string]any{"name": c.Name, "start_url": "/api/v1/auth/oidc/start"}
 		body["local_password_admins_only"] = c.LocalPasswordAdminsOnly
+		body["local_login_disabled"] = c.LocalLoginDisabled
 		body["auto_redirect"] = c.AutoRedirect
 	}
 	writeJSON(w, 200, body)
