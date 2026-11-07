@@ -913,10 +913,11 @@
   "webhook": {
     "help": "A single outgoing webhook: each event is sent as JSON, signed with HMAC-SHA256.",
     "url": "URL",
-    "secret": "Signing secret",
+    "secret": "Signing secret (optional)",
     "secretKept": "•••• (leave empty to keep)",
+    "clearSecret": "Remove the secret (send without signature)",
     "events": "Events sent",
-    "signatureHelp": "X-Leassh-Signature header: sha256=<HMAC of the body with the secret>. Three attempts with increasing delay.",
+    "signatureHelp": "If a secret is set, X-Leassh-Signature header: sha256=<HMAC of the body with the secret>. Three attempts with increasing delay. The body's \"text\" field is Mattermost and Slack compatible.",
     "test": "Test delivery",
     "testOk": "Delivered (HTTP {{status}})",
     "testFailed": "Failed: {{error}}",

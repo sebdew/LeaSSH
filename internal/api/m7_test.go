@@ -121,8 +121,7 @@ func TestWebhookSettingsAndEvents(t *testing.T) {
 	defer ts.Close()
 
 	e.must("PUT", "/settings/webhook", map[string]any{"url": "ftp://x", "enabled": false}, 400)
-	e.must("PUT", "/settings/webhook", map[string]any{"url": ts.URL, "enabled": true}, 400) // secret requis
-	e.must("POST", "/settings/webhook/test", nil, 400)                                      // non configuré
+	e.must("POST", "/settings/webhook/test", nil, 400) // non configuré
 	e.must("PUT", "/settings/webhook", map[string]any{"url": ts.URL, "secret": "s3cret-hmac", "enabled": true}, 200)
 	cfg := e.must("GET", "/settings/webhook", nil, 200)
 	if c := cfg["config"].(map[string]any); c["has_secret"] != true || c["url"] != ts.URL || strings.Contains(toJSON(cfg), "s3cret-hmac") {

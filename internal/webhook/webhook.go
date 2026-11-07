@@ -114,10 +114,15 @@ func (d *Dispatcher) ConfigQ(ctx context.Context, q store.Q) (Config, string, er
 	return Config{URL: u, Enabled: en == "1", HasSecret: secret != ""}, secret, nil
 }
 
-// Save enregistre la configuration; secret vide = secret inchangé.
-func (d *Dispatcher) Save(ctx context.Context, q store.Q, url, secret string, enabled bool) error {
+// Save enregistre la configuration; secret vide = secret inchangé, sauf clearSecret (supprime le secret).
+func (d *Dispatcher) Save(ctx context.Context, q store.Q, url, secret string, clearSecret, enabled bool) error {
 	if err := store.SetSetting(ctx, q, keyURL, url); err != nil {
 		return err
+	}
+	if secret == "" && clearSecret {
+		if err := store.SetSetting(ctx, q, keySecret, ""); err != nil {
+			return err
+		}
 	}
 	if secret != "" {
 		sealed, err := d.box.Seal([]byte(secret))
@@ -157,6 +162,8 @@ func (d *Dispatcher) Run(ctx context.Context) {
 }
 
 type envelope struct {
+	// Text: résumé lisible, requis par les webhooks entrants Mattermost / Slack (ignoré par les autres).
+	Text      string `json:"text"`
 	ID        string `json:"id"`
 	Event     string `json:"event"`
 	Timestamp string `json:"timestamp"`
@@ -166,7 +173,7 @@ type envelope struct {
 
 func (d *Dispatcher) deliver(ctx context.Context, j job) {
 	cfg, secret, err := d.Config(ctx)
-	if err != nil || !cfg.Enabled || cfg.URL == "" || secret == "" {
+	if err != nil || !cfg.Enabled || cfg.URL == "" {
 		return
 	}
 	res := d.Send(ctx, cfg.URL, secret, j.event, j.data, j.link, maxAttempt)
@@ -184,7 +191,7 @@ type Result struct {
 
 // Send livre un événement (jusqu'à `attempts` essais avec backoff). Utilisé aussi pour le test d'envoi.
 func (d *Dispatcher) Send(ctx context.Context, target, secret, event string, data any, link string, attempts int) Result {
-	body, err := json.Marshal(envelope{ID: store.NewID(), Event: event, Timestamp: store.Now(), URL: link, Data: data})
+	body, err := json.Marshal(envelope{Text: summary(event, data, link), ID: store.NewID(), Event: event, Timestamp: store.Now(), URL: link, Data: data})
 	if err != nil {
 		return Result{Error: "sérialisation: " + err.Error()}
 	}
@@ -216,7 +223,9 @@ func (d *Dispatcher) once(ctx context.Context, target, secret, event string, bod
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "leassh-webhook")
 	req.Header.Set("X-Leassh-Event", event)
-	req.Header.Set("X-Leassh-Signature", Sign(secret, body))
+	if secret != "" {
+		req.Header.Set("X-Leassh-Signature", Sign(secret, body))
+	}
 	resp, err := d.client.Do(req)
 	if err != nil {
 		return 0, truncate(err.Error())
@@ -273,4 +282,20 @@ func (d *Dispatcher) OnExecution(event string, e store.Execution) {
 
 func (d *Dispatcher) OnProposal(event string, p store.Proposal) {
 	d.Enqueue(event, ProposalData(p), d.Link("/propositions/"+p.ID))
+}
+
+// summary compose le champ « text » (Markdown) de l'enveloppe.
+func summary(event string, data any, link string) string {
+	t := "**Leassh** · `" + event + "`"
+	if m, ok := data.(map[string]any); ok {
+		for _, k := range []string{"message", "agent", "server", "command", "status", "name", "slug"} {
+			if v, ok := m[k]; ok && v != nil && fmt.Sprint(v) != "" {
+				t += " · " + k + " : " + fmt.Sprint(v)
+			}
+		}
+	}
+	if link != "" {
+		t += " · [ouvrir](" + link + ")"
+	}
+	return t
 }

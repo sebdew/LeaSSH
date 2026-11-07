@@ -170,9 +170,11 @@ func (s *Server) getWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 type webhookInput struct {
-	URL     string `json:"url"`
-	Secret  string `json:"secret"`
-	Enabled bool   `json:"enabled"`
+	URL    string `json:"url"`
+	Secret string `json:"secret"`
+	// ClearSecret supprime le secret de signature (ignoré si un nouveau secret est fourni).
+	ClearSecret bool `json:"clear_secret"`
+	Enabled     bool `json:"enabled"`
 }
 
 func (s *Server) putWebhook(w http.ResponseWriter, r *http.Request) {
@@ -196,17 +198,14 @@ func (s *Server) putWebhook(w http.ResponseWriter, r *http.Request) {
 			if in.URL == "" {
 				return outcome{}, bad("url_required", "une URL est requise pour activer le webhook")
 			}
-			if in.Secret == "" && secret == "" {
-				return outcome{}, bad("secret_required", "un secret de signature est requis pour activer le webhook")
-			}
 		}
-		if err := s.hook.Save(ctx, tx, in.URL, in.Secret, in.Enabled); err != nil {
+		if err := s.hook.Save(ctx, tx, in.URL, in.Secret, in.ClearSecret, in.Enabled); err != nil {
 			return outcome{}, err
 		}
-		cfg := webhook.Config{URL: in.URL, Enabled: in.Enabled, HasSecret: secret != "" || in.Secret != ""}
+		cfg := webhook.Config{URL: in.URL, Enabled: in.Enabled, HasSecret: in.Secret != "" || (secret != "" && !in.ClearSecret)}
 		return outcome{200, map[string]any{"config": cfg}, &audit.Event{Action: "webhook.update", TargetType: "webhook", TargetName: in.URL,
 			Diff: map[string]any{"before": map[string]any{"url": old.URL, "enabled": old.Enabled},
-				"after": map[string]any{"url": in.URL, "enabled": in.Enabled, "signing_key_rotated": in.Secret != ""}}}}, nil
+				"after": map[string]any{"url": in.URL, "enabled": in.Enabled, "signing_key_rotated": in.Secret != "", "signing_key_removed": in.Secret == "" && in.ClearSecret && secret != ""}}}}, nil
 	})
 }
 
@@ -217,8 +216,8 @@ func (s *Server) testWebhook(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	if cfg.URL == "" || secret == "" {
-		s.fail(w, bad("not_configured", "renseignez une URL et un secret avant de tester"))
+	if cfg.URL == "" {
+		s.fail(w, bad("not_configured", "renseignez une URL avant de tester"))
 		return
 	}
 	res := s.hook.Send(r.Context(), cfg.URL, secret, "webhook.test", map[string]any{"message": "Test d'envoi depuis Leassh"}, s.hook.Link("/reglages"), 1)

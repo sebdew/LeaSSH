@@ -119,7 +119,7 @@ func TestQueueDeliversAndRecordsOutcome(t *testing.T) {
 	if len(rc.hits) != 0 {
 		t.Fatal("envoi alors que le webhook n'est pas configuré")
 	}
-	if err := d.Save(ctx, st.DB, ts.URL, "s3cret", true); err != nil {
+	if err := d.Save(ctx, st.DB, ts.URL, "s3cret", false, true); err != nil {
 		t.Fatal(err)
 	}
 	cfg, secret, _ := d.Config(ctx)
@@ -132,7 +132,7 @@ func TestQueueDeliversAndRecordsOutcome(t *testing.T) {
 		t.Fatal("secret stocké en clair")
 	}
 	// un secret vide conserve l'ancien
-	d.Save(ctx, st.DB, ts.URL, "", true)
+	d.Save(ctx, st.DB, ts.URL, "", false, true)
 	if _, s2, _ := d.Config(ctx); s2 != "s3cret" {
 		t.Fatal("secret écrasé par une valeur vide")
 	}

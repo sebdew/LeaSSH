@@ -227,7 +227,7 @@ describe("webhook", () => {
     const u = userEvent.setup();
     await u.click(await screen.findByRole("tab", { name: "Webhook" }));
     expect(await screen.findByLabelText("URL")).toHaveValue("https://ntfy.example.com/leassh");
-    const secret = screen.getByLabelText("Secret de signature");
+    const secret = screen.getByLabelText("Secret de signature (facultatif)");
     expect(secret).toHaveValue("");
     expect(secret).toHaveAttribute("placeholder", expect.stringContaining("conserver"));
     expect(await screen.findByText(/3 tentatives · HTTP 500 · réponse HTTP 500/)).toBeInTheDocument();
@@ -236,6 +236,6 @@ describe("webhook", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Échec : connexion refusée");
     await u.type(secret, "nouveau");
     await u.click(screen.getByRole("button", { name: "Enregistrer" }));
-    await waitFor(() => expect(saved).toEqual({ url: "https://ntfy.example.com/leassh", secret: "nouveau", enabled: true }));
+    await waitFor(() => expect(saved).toEqual({ url: "https://ntfy.example.com/leassh", secret: "nouveau", clear_secret: false, enabled: true }));
   });
 });

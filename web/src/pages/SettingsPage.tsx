@@ -231,6 +231,7 @@ function WebhookForm({ config, events, onSaved, onTested }: { config: WebhookCon
   const { t } = useTranslation();
   const [url, setUrl] = useState(config.url);
   const [secret, setSecret] = useState("");
+  const [clearSecret, setClearSecret] = useState(false);
   const [enabled, setEnabled] = useState(config.enabled);
   const [test, setTest] = useState<{ ok: boolean; http_status: number; error?: string } | null>(null);
   const save = useApiMutation<unknown>("PUT", "/settings/webhook", []);
@@ -241,7 +242,8 @@ function WebhookForm({ config, events, onSaved, onTested }: { config: WebhookCon
       <p className="text-muted">{t("webhook.help")}</p>
       <Field id="wh-url" label={t("webhook.url")} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://ntfy.example.com/leassh" />
       <Field id="wh-secret" type="password" autoComplete="new-password" label={t("webhook.secret")} value={secret} onChange={(e) => setSecret(e.target.value)}
-        placeholder={config.has_secret ? t("webhook.secretKept") : ""} />
+        placeholder={config.has_secret ? t("webhook.secretKept") : ""} disabled={clearSecret} />
+      {config.has_secret && <Check2 id="wh-clear-secret" label={t("webhook.clearSecret")} checked={clearSecret} onChange={(v) => { setClearSecret(v); if (v) setSecret(""); }} />}
       <Check2 id="wh-enabled" label={t("common.enabled")} checked={enabled} onChange={setEnabled} />
       <details className="text-muted"><summary className="cursor-pointer">{t("webhook.events")}</summary><ul className="mt-1 list-disc pl-5">{events.map((e) => <li key={e}><code className="font-mono">{e}</code></li>)}</ul></details>
       <p className="text-muted">{t("webhook.signatureHelp")}</p>
@@ -249,8 +251,8 @@ function WebhookForm({ config, events, onSaved, onTested }: { config: WebhookCon
       {testIt.error && <ErrorBox message={t("errors.generic")} detail={errorMessage(testIt.error)} title={t("errors.details")} />}
       {test && (test.ok ? <p className="text-read" aria-live="polite">✔ {t("webhook.testOk", { status: test.http_status })}</p> : <p role="alert" className="text-destructive">{t("webhook.testFailed", { error: test.error })}</p>)}
       <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="secondary" disabled={testIt.isPending || !config.url || !config.has_secret} onClick={() => testIt.mutate()}>{t("webhook.test")}</Button>
-        <Button disabled={save.isPending} onClick={() => save.mutate({ url, secret, enabled }, { onSuccess: () => { setSecret(""); toast(t("common.saved")); onSaved(); } })}>{t("common.save")}</Button>
+        <Button variant="secondary" disabled={testIt.isPending || !config.url} onClick={() => testIt.mutate()}>{t("webhook.test")}</Button>
+        <Button disabled={save.isPending} onClick={() => save.mutate({ url, secret, clear_secret: clearSecret, enabled }, { onSuccess: () => { setSecret(""); setClearSecret(false); toast(t("common.saved")); onSaved(); } })}>{t("common.save")}</Button>
       </div>
     </Card>
   );
