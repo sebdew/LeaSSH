@@ -45,7 +45,7 @@ jobs:
           ./gitleaks git --redact --verbose .
       - name: Trivy (dépendances, Dockerfile, secrets)
         run: |
-          curl -sSfL https://github.com/aquasecurity/trivy/releases/download/v0.65.0/trivy_0.65.0_Linux-64bit.tar.gz | tar -xz trivy
+          curl -sSfL https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_Linux-64bit.tar.gz | tar -xz trivy
           ./trivy fs --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 .
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
