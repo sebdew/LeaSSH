@@ -71,13 +71,13 @@ export interface GeneralSettings {
 export interface OidcRoleMap { admin: string[]; approver: string[]; viewer: string[] }
 export interface OidcConfig {
   enabled: boolean; name: string; issuer: string; client_id: string; has_client_secret: boolean; scopes: string; role_claim: string;
-  role_map: OidcRoleMap; default_role: "" | "viewer"; jit: boolean; local_password_admins_only: boolean; end_session: boolean; auto_redirect: boolean; redirect_url: string;
+  role_map: OidcRoleMap; default_role: "" | "viewer"; jit: boolean; local_password_admins_only: boolean; local_login_disabled: boolean; end_session: boolean; auto_redirect: boolean; redirect_url: string;
 }
 export interface OidcTestResult {
   ok: boolean; error?: string; issuer: string; authorization_endpoint?: string; token_endpoint?: string; jwks_uri?: string; jwks_keys?: number;
   userinfo_endpoint?: string; end_session_endpoint?: string; warnings?: string[];
 }
-export interface AuthProviders { oidc: { name: string; start_url: string } | null; local_password_admins_only: boolean; auto_redirect?: boolean }
+export interface AuthProviders { oidc: { name: string; start_url: string } | null; local_password_admins_only: boolean; local_login_disabled?: boolean; auto_redirect?: boolean }
 
 export interface ChainResult { checked: number; ok: boolean; bad_seq?: number; bad_id?: string; reason?: string }
 

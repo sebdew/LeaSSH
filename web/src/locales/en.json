@@ -69,6 +69,7 @@
       "or": "or with a local account",
       "redirecting": "Redirecting to {{name}}…",
       "localAdminsOnly": "Local passwords are reserved for local administrators (break-glass account).",
+      "localOff": "Local password sign-in is disabled: use SSO.",
       "errors": {
         "generic": "SSO sign-in failed.",
         "disabled": "SSO sign-in is not enabled.",
@@ -1092,6 +1093,8 @@
     "jitOn": "An account is created at first sign-in, linked to the provider's identifier (sub). Never linked by e-mail or name: a local account with the same name is not taken over.",
     "jitOff": "Only already-created SSO accounts can sign in. New people are refused.",
     "localOnly": "Reserve the local password for local administrators",
+    "localOff": "Disable local password sign-in (SSO required)",
+    "localOffHelp": "No local account can sign in with a password any more. Requires SSO to be active and at least one SSO administrator who has already signed in. If SSO is down: leassh enable-local-login.",
     "localOnlyHelp": "When SSO is active, non-administrator local accounts can no longer sign in with a password. Local administrators keep the fallback access.",
     "endSession": "Also end the session at the provider on sign-out",
     "autoRedirect": "Redirect automatically to the provider (skip the sign-in page)",

@@ -69,6 +69,7 @@
       "or": "ou avec un compte local",
       "redirecting": "Redirection vers {{name}}…",
       "localAdminsOnly": "Le mot de passe local est réservé aux administrateurs locaux (compte de secours).",
+      "localOff": "La connexion par mot de passe local est désactivée : utilisez le SSO.",
       "errors": {
         "generic": "La connexion SSO a échoué.",
         "disabled": "La connexion SSO n'est pas activée.",
@@ -1093,6 +1094,8 @@
     "jitOn": "Un compte est créé à la première connexion, lié à l'identifiant (sub) du fournisseur. Jamais lié par e-mail ou par nom : un compte local du même nom n'est pas repris.",
     "jitOff": "Seuls les comptes SSO déjà créés peuvent se connecter. Les nouvelles personnes sont refusées.",
     "localOnly": "Réserver le mot de passe local aux administrateurs locaux",
+    "localOff": "Désactiver le mot de passe local (SSO obligatoire)",
+    "localOffHelp": "Plus aucun compte local ne peut se connecter par mot de passe. Exige le SSO actif et au moins un administrateur SSO déjà connecté. En cas de panne du SSO : leassh enable-local-login.",
     "localOnlyHelp": "Quand le SSO est actif, les comptes locaux non administrateurs ne peuvent plus se connecter par mot de passe. Les administrateurs locaux gardent l'accès de secours.",
     "endSession": "Fermer aussi la session chez le fournisseur à la déconnexion",
     "autoRedirect": "Rediriger automatiquement vers le fournisseur (sans afficher la page de connexion)",
