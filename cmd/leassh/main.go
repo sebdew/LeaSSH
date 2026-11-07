@@ -73,6 +73,8 @@ func run(args []string) error {
 		return rotateMasterKey()
 	case "reset-password":
 		return resetPassword(args[1:])
+	case "enable-local-login":
+		return enableLocalLogin()
 	case "serve":
 		cfg, err := config.LoadEnv()
 		if err != nil {
@@ -91,7 +93,7 @@ func run(args []string) error {
 		}
 		return serve(cfg, set, st, log)
 	default:
-		return fmt.Errorf("sous-commande inconnue %q (serve, backup, rotate-master-key, reset-password, healthcheck, version)", cmd)
+		return fmt.Errorf("sous-commande inconnue %q (serve, backup, rotate-master-key, reset-password, enable-local-login, healthcheck, version)", cmd)
 	}
 }
 

@@ -515,3 +515,45 @@ func TestAuthProvidersAutoRedirect(t *testing.T) {
 		t.Fatalf("auto_redirect attendu: %v %v", body, err)
 	}
 }
+
+// ARC-01: SSO obligatoire. Une fois un admin SSO opérationnel, le mot de passe local peut être désactivé pour tous (même l'admin local).
+func TestSSOLocalLoginDisabled(t *testing.T) {
+	e, idp := ssoEnv(t, nil)
+	login := func() int {
+		r, _ := do(t, client(), "POST", e.ts.URL+"/api/v1/auth/login", credentials{Username: "admin", Password: "un-mot-de-passe-solide"}, nil)
+		return r.StatusCode
+	}
+	cfg := e.must("GET", "/settings/oidc", nil, 200)
+	delete(cfg, "has_client_secret")
+	delete(cfg, "redirect_url")
+
+	// garde-fou: sans administrateur SSO ayant déjà ouvert une session, la désactivation est refusée (risque de verrouillage)
+	cfg["local_login_disabled"] = true
+	e.must("PUT", "/settings/oidc", cfg, 400)
+	if login() != 200 {
+		t.Fatal("admin local doit rester utilisable tant que le réglage n'est pas posé")
+	}
+
+	// un administrateur SSO se connecte une première fois
+	idp.Who.Groups = []string{"leassh-admins"}
+	if dest, _ := ssoLogin(t, e, nil); dest != "/" {
+		t.Fatalf("connexion SSO admin: %s", dest)
+	}
+	e.must("PUT", "/settings/oidc", cfg, 200)
+	if got := login(); got != 403 {
+		t.Fatalf("admin local après désactivation: %d (403 attendu)", got)
+	}
+	if !strings.Contains(e.lastDiff("user.login_failed"), "local_login_disabled") {
+		t.Fatal("refus non audité avec sa raison")
+	}
+	if _, p := do(t, client(), "GET", e.ts.URL+"/api/v1/auth/providers", nil, nil); p["local_login_disabled"] != true {
+		t.Fatalf("providers: %v", p)
+	}
+	// le SSO continue de fonctionner
+	if dest, _ := ssoLogin(t, e, nil); dest != "/" {
+		t.Fatalf("SSO après désactivation: %s", dest)
+	}
+	// on ne peut pas couper le SSO tout en gardant le local désactivé
+	cfg["enabled"] = false
+	e.must("PUT", "/settings/oidc", cfg, 400)
+}

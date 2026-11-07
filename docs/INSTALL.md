@@ -300,7 +300,7 @@ Avec le format **CEF**, utilisez le décodeur CEF de votre SIEM; avec **texte**,
 
 ## 12. Connexion SSO (OpenID Connect, Keycloak pas à pas)
 
-Le SSO permet de se connecter à l'**interface** avec Keycloak (ou Entra ID, Authentik, Google…). Il s'ajoute aux comptes locaux : le compte administrateur créé à l'initialisation reste votre accès de secours. Les clés MCP ne passent pas par le SSO.
+Le SSO permet de se connecter à l'**interface** avec Keycloak (ou Entra ID, Authentik, Google…). Le compte administrateur créé à l'initialisation sert à la première connexion et à configurer le SSO ; une fois le SSO validé, vous pouvez désactiver le mot de passe local (étape 8, [ADR 0001](adr/0001-authentification-sso-et-compte-local.md)). Les clés MCP ne passent pas par le SSO.
 
 **Avant de commencer** : Leassh doit être joignable par l'URL que vos utilisateurs saisissent (Réglages → Général → URL publique, par ex. `https://leassh.example.com`, ou à défaut l'adresse utilisée dans le navigateur). Le serveur Leassh doit pouvoir joindre Keycloak (découverte, jetons, JWKS) et l'horloge des deux machines doit être à l'heure (NTP; tolérance de 60 s).
 
@@ -327,6 +327,7 @@ Le SSO permet de se connecter à l'**interface** avec Keycloak (ou Entra ID, Aut
 5. *Comptes* : laissez « créer automatiquement le compte » pour que chaque nouvelle personne autorisée obtienne un compte à sa première connexion. Les comptes sont liés à l'identifiant `sub` du fournisseur, **jamais à l'e-mail ni au nom** : un compte local portant le même nom n'est pas repris, le compte SSO reçoit un nom suffixé.
 6. *Réserver le mot de passe local aux administrateurs locaux* : à cocher une fois le SSO validé (les admins locaux gardent le secours). *Fermer aussi la session chez le fournisseur* : utilise l'URL de déconnexion de l'étape 4.
 7. Cochez **Activer le SSO**, enregistrez, puis testez dans une fenêtre privée en gardant votre session admin ouverte. Chaque connexion et chaque échec sont dans le journal d'administration (`user.sso_login`, `user.sso_login_failed` avec le motif).
+8. *Désactiver le mot de passe local (SSO obligatoire)* : une fois qu'un administrateur SSO s'est connecté avec succès, cochez cette option et enregistrez. Plus aucun compte local ne peut se connecter par mot de passe, administrateur compris. Si le SSO tombe, réactivez le local sur le serveur : `LEASSH_DATA_DIR=/data leassh enable-local-login` (Docker : `docker exec leassh leassh enable-local-login`).
 
 ### Autres fournisseurs
 

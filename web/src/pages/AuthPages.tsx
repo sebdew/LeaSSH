@@ -75,12 +75,14 @@ export function LoginPage({ onDone }: { onDone: (u: User) => void }) {
           {providers.data?.local_password_admins_only && <p className="mb-3 text-muted">{t("login.sso.localAdminsOnly")}</p>}
         </>
       )}
+      {sso && providers.data?.local_login_disabled ? <p role="status" className="text-muted">{t("login.sso.localOff")}</p> : (
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         <Field id="username" label={t("setup.username")} autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
         <Field id="password" label={t("setup.password")} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         {error && <ErrorBox {...error} title={t("errors.details")} />}
         <Button type="submit" variant={sso ? "secondary" : "primary"} disabled={busy}>{t("login.submit")}</Button>
       </form>
+      )}
     </Shell>
   );
 }

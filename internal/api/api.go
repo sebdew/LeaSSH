@@ -447,6 +447,13 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 429, "too_many_attempts", "trop de tentatives, réessayez dans quelques minutes")
 		return
 	}
+	// SSO obligatoire: le mot de passe local est refusé pour tous les comptes, avant toute vérification.
+	if oc, err := store.GetOIDCConfig(r.Context(), s.st.DB); err == nil && oc.Enabled && oc.LocalLoginDisabled {
+		_ = audit.RecordStandalone(r.Context(), s.st, audit.Event{ActorType: "system", ActorName: in.Username, Action: "user.login_failed",
+			TargetType: "user", TargetName: in.Username, Diff: map[string]any{"reason": "local_login_disabled"}, IP: ip})
+		writeErr(w, 403, "local_login_disabled", "la connexion par mot de passe est désactivée: utilisez le SSO")
+		return
+	}
 	u, err := s.st.UserByUsername(r.Context(), in.Username)
 	ok := false
 	if err == nil {

@@ -33,7 +33,7 @@ Leassh inverse la logique :
 - 💡 **Propositions** : l'agent peut proposer une nouvelle commande ; un linter rejette les templates dangereux, vous validez.
 - 📜 **Journal complet** : qui a lancé quoi, où, quand, pourquoi, avec quel résultat — y compris les tentatives refusées.
 - 📦 **Packs de commandes** en YAML (système, MySQL, PostgreSQL, nginx, Docker…), importables et partageables.
-- 🔐 **SSO OpenID Connect** (Keycloak, Entra ID, Authentik, Google…) : Authorization Code + PKCE, rôles issus des groupes, comptes locaux conservés en secours. Guide pas à pas : [`docs/INSTALL.md`](docs/INSTALL.md) §12.
+- 🔐 **SSO OpenID Connect** (Keycloak, Entra ID, Authentik, Google…) : Authorization Code + PKCE, rôles issus des groupes, compte local réservé à la première connexion, désactivable une fois le SSO en place ([ADR 0001](docs/adr/0001-authentification-sso-et-compte-local.md)). Guide pas à pas : [`docs/INSTALL.md`](docs/INSTALL.md) §12.
 - 🔄 **Provisioning** : synchronisation automatique des serveurs depuis un bastion (Warpgate).
 - 📡 **Export syslog** (UDP/TCP/TLS, RFC 5424, formats texte/JSON/CEF) et **webhook** signé HMAC.
 - 🧾 **Rapport d'audit** (ISO 27001, HDS) généré à partir de la base, avec synthèse IA facultative.

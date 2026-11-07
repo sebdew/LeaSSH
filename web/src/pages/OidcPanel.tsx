@@ -82,6 +82,8 @@ function OidcForm({ config, onChanged }: { config: OidcConfig; onChanged: () => 
           <p className="text-muted">{t(c.jit ? "oidc.jitOn" : "oidc.jitOff")}</p>
           <Check2 id="oidc-localonly" label={t("oidc.localOnly")} checked={c.local_password_admins_only} onChange={(v) => set("local_password_admins_only", v)} />
           <p className="text-muted">{t("oidc.localOnlyHelp")}</p>
+          <Check2 id="oidc-localoff" label={t("oidc.localOff")} checked={c.local_login_disabled} onChange={(v) => set("local_login_disabled", v)} />
+          <p className="text-muted">{t("oidc.localOffHelp")}</p>
           <Check2 id="oidc-endsession" label={t("oidc.endSession")} checked={c.end_session} onChange={(v) => set("end_session", v)} />
           <Check2 id="oidc-autoredirect" label={t("oidc.autoRedirect")} checked={c.auto_redirect} onChange={(v) => set("auto_redirect", v)} />
           <p className="text-muted">{t("oidc.autoRedirectHelp", { url: logoutUrl ? `${logoutUrl}?login` : "/?login" })}</p>
