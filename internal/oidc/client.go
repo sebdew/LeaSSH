@@ -1,9 +1,10 @@
+// Package oidc: client OpenID Connect (Authorization Code + PKCE) et vérification stricte des ID tokens.
+// La découverte, le JWKS, les signatures et PKCE sont délégués à github.com/coreos/go-oidc/v3 et golang.org/x/oauth2.
 package oidc
 
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
@@ -15,6 +16,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	gooidc "github.com/coreos/go-oidc/v3/oidc"
+	"golang.org/x/oauth2"
 )
 
 const (
@@ -23,6 +27,10 @@ const (
 	jwksMinReload = 30 * time.Second
 	clockSkew     = 60 * time.Second
 )
+
+// Algorithmes de signature acceptés. « none » et HMAC sont volontairement exclus
+// (un secret partagé ne doit jamais servir à vérifier un jeton signé par le fournisseur).
+var allowedAlgs = []string{"RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512", "EdDSA"}
 
 // Codes de motif d'échec (journal d'audit et interface). Ils ne contiennent jamais de jeton.
 const (
@@ -78,9 +86,6 @@ type Discovery struct {
 	UserinfoEndpoint      string   `json:"userinfo_endpoint"`
 	EndSessionEndpoint    string   `json:"end_session_endpoint"`
 	CodeChallengeMethods  []string `json:"code_challenge_methods_supported"`
-	TokenAuthMethods      []string `json:"token_endpoint_auth_methods_supported"`
-	ScopesSupported       []string `json:"scopes_supported"`
-	ClaimsSupported       []string `json:"claims_supported"`
 }
 
 // SupportsS256: PKCE S256 annoncé, ou non précisé (cas des fournisseurs qui omettent la liste).
@@ -97,14 +102,13 @@ func (d *Discovery) SupportsS256() bool {
 }
 
 type cached struct {
-	disc    *Discovery
-	at      time.Time
-	keys    []parsedKey
-	keysAt  time.Time
-	keysURI string
+	disc *Discovery
+	prov *gooidc.Provider
+	at   time.Time
 }
 
-// Client: découverte, échange de code, vérification d'ID token; caches de découverte et de JWKS.
+// Client: découverte, échange de code, vérification d'ID token; cache de découverte.
+// La découverte, le JWKS, la vérification des jetons et PKCE sont délégués à go-oidc et x/oauth2.
 type Client struct {
 	HTTP *http.Client
 	Now  func() time.Time
@@ -124,16 +128,6 @@ func (c *Client) Forget(issuer string) {
 	c.mu.Unlock()
 }
 
-// KeyCount renvoie le nombre de clés de signature publiées (recharge le JWKS).
-func (c *Client) KeyCount(ctx context.Context, issuer string) (int, error) {
-	d, err := c.Discover(ctx, issuer)
-	if err != nil {
-		return 0, err
-	}
-	keys, err := c.loadKeys(ctx, issuer, d)
-	return len(keys), err
-}
-
 // Reset vide les caches (après un changement de configuration).
 func (c *Client) Reset() {
 	c.mu.Lock()
@@ -141,32 +135,33 @@ func (c *Client) Reset() {
 	c.mu.Unlock()
 }
 
-func (c *Client) get(ctx context.Context, u string, bearer string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	if bearer != "" {
-		req.Header.Set("Authorization", "Bearer "+bearer)
-	}
-	return c.do(req)
+// withHTTP place le client HTTP configuré dans le contexte, comme go-oidc et x/oauth2 l'attendent.
+func (c *Client) withHTTP(ctx context.Context) context.Context {
+	return gooidc.ClientContext(ctx, c.HTTP)
 }
 
-func (c *Client) do(req *http.Request) ([]byte, error) {
-	res, err := c.HTTP.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("requête vers %s: %w", req.URL.Host, err)
+// jwksThrottle limite le rechargement du JWKS: go-oidc le recharge à chaque jeton dont le kid est inconnu,
+// ce qui permettrait de faire appeler le fournisseur en boucle. Un seul rechargement par jwksMinReload.
+type jwksThrottle struct {
+	base http.RoundTripper
+	now  func() time.Time
+
+	mu   sync.Mutex
+	url  string
+	last time.Time
+}
+
+func (t *jwksThrottle) RoundTrip(req *http.Request) (*http.Response, error) {
+	t.mu.Lock()
+	if t.url != "" && req.Method == http.MethodGet && req.URL.String() == t.url {
+		if !t.last.IsZero() && t.now().Sub(t.last) < jwksMinReload {
+			t.mu.Unlock()
+			return nil, errors.New("rechargement du JWKS trop fréquent")
+		}
+		t.last = t.now()
 	}
-	defer res.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(res.Body, maxBody))
-	if err != nil {
-		return nil, fmt.Errorf("lecture de la réponse: %w", err)
-	}
-	if res.StatusCode/100 != 2 {
-		return body, fmt.Errorf("%s a répondu %d", req.URL.Host, res.StatusCode)
-	}
-	return body, nil
+	t.mu.Unlock()
+	return t.base.RoundTrip(req)
 }
 
 func httpURL(s string) bool {
@@ -174,101 +169,93 @@ func httpURL(s string) bool {
 	return err == nil && (u.Scheme == "https" || u.Scheme == "http") && u.Host != ""
 }
 
-// Discover lit (ou ressort du cache) le document de découverte et vérifie que l'issuer annoncé est celui configuré.
-func (c *Client) Discover(ctx context.Context, issuer string) (*Discovery, error) {
+func (c *Client) provider(ctx context.Context, issuer string) (*cached, error) {
 	c.mu.Lock()
-	if e := c.cache[issuer]; e != nil && e.disc != nil && c.Now().Sub(e.at) < discoveryTTL {
-		d := e.disc
+	if e := c.cache[issuer]; e != nil && c.Now().Sub(e.at) < discoveryTTL {
 		c.mu.Unlock()
-		return d, nil
+		return e, nil
 	}
 	c.mu.Unlock()
 	if !httpURL(issuer) {
 		return nil, fail(ReasonDiscovery, "l'issuer doit être une URL http(s)")
 	}
-	body, err := c.get(ctx, strings.TrimRight(issuer, "/")+"/.well-known/openid-configuration", "")
+	base := c.HTTP.Transport
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	thr := &jwksThrottle{base: base, now: c.Now}
+	hc := *c.HTTP
+	hc.Transport = thr
+	// NewProvider lit le document de découverte et vérifie que l'issuer annoncé est celui configuré.
+	prov, err := gooidc.NewProvider(gooidc.ClientContext(ctx, &hc), issuer)
 	if err != nil {
 		return nil, fail(ReasonDiscovery, "découverte impossible: %v", err)
 	}
 	var d Discovery
-	if err := json.Unmarshal(body, &d); err != nil {
+	if err := prov.Claims(&d); err != nil {
 		return nil, fail(ReasonDiscovery, "document de découverte invalide")
 	}
 	switch {
-	case d.Issuer != issuer:
-		return nil, fail(ReasonDiscovery, "l'issuer annoncé (%q) diffère de celui configuré", d.Issuer)
 	case !httpURL(d.AuthorizationEndpoint) || !httpURL(d.TokenEndpoint) || !httpURL(d.JWKSURI):
 		return nil, fail(ReasonDiscovery, "authorization_endpoint, token_endpoint ou jwks_uri manquant ou invalide")
 	case d.UserinfoEndpoint != "" && !httpURL(d.UserinfoEndpoint), d.EndSessionEndpoint != "" && !httpURL(d.EndSessionEndpoint):
 		return nil, fail(ReasonDiscovery, "userinfo_endpoint ou end_session_endpoint invalide")
 	}
+	thr.mu.Lock()
+	thr.url = d.JWKSURI
+	thr.mu.Unlock()
+	e := &cached{disc: &d, prov: prov, at: c.Now()}
 	c.mu.Lock()
-	c.cache[issuer] = &cached{disc: &d, at: c.Now()}
+	c.cache[issuer] = e
 	c.mu.Unlock()
-	return &d, nil
+	return e, nil
 }
 
-// loadKeys télécharge le JWKS; les clés inutilisables sont ignorées. Renvoie le nombre de clés de signature.
-func (c *Client) loadKeys(ctx context.Context, issuer string, d *Discovery) ([]parsedKey, error) {
-	body, err := c.get(ctx, d.JWKSURI, "")
-	if err != nil {
-		return nil, fail(ReasonDiscovery, "JWKS inaccessible: %v", err)
-	}
-	var set struct {
-		Keys []jwk `json:"keys"`
-	}
-	if err := json.Unmarshal(body, &set); err != nil {
-		return nil, fail(ReasonDiscovery, "JWKS invalide")
-	}
-	var keys []parsedKey
-	for _, k := range set.Keys {
-		if pk, err := k.parse(); err == nil {
-			keys = append(keys, pk)
-		}
-	}
-	if len(keys) == 0 {
-		return nil, fail(ReasonDiscovery, "le JWKS ne contient aucune clé de signature exploitable")
-	}
-	c.mu.Lock()
-	if e := c.cache[issuer]; e != nil {
-		e.keys, e.keysAt, e.keysURI = keys, c.Now(), d.JWKSURI
-	}
-	c.mu.Unlock()
-	return keys, nil
-}
-
-// keysFor renvoie les clés candidates; si le kid est inconnu, le JWKS est rechargé (rotation), au plus une fois par 30 s.
-func (c *Client) keysFor(ctx context.Context, issuer string, d *Discovery, kid, alg string) ([]parsedKey, error) {
-	pick := func(keys []parsedKey) []parsedKey {
-		var out []parsedKey
-		for _, k := range keys {
-			if k.compatible(alg) && (kid == "" || k.kid == kid) {
-				out = append(out, k)
-			}
-		}
-		return out
-	}
-	c.mu.Lock()
-	var have []parsedKey
-	var age time.Duration = time.Hour
-	if e := c.cache[issuer]; e != nil && e.keys != nil && e.keysURI == d.JWKSURI {
-		have, age = e.keys, c.Now().Sub(e.keysAt)
-	}
-	c.mu.Unlock()
-	if m := pick(have); len(m) > 0 {
-		return m, nil
-	}
-	if have != nil && age < jwksMinReload {
-		return nil, nil
-	}
-	keys, err := c.loadKeys(ctx, issuer, d)
+// Discover lit (ou ressort du cache) le document de découverte.
+func (c *Client) Discover(ctx context.Context, issuer string) (*Discovery, error) {
+	e, err := c.provider(ctx, issuer)
 	if err != nil {
 		return nil, err
 	}
-	return pick(keys), nil
+	return e.disc, nil
 }
 
-// ---- PKCE, state, nonce ----
+// KeyCount renvoie le nombre de clés de signature publiées (lecture à jour du JWKS, pour le test de configuration).
+func (c *Client) KeyCount(ctx context.Context, issuer string) (int, error) {
+	d, err := c.Discover(ctx, issuer)
+	if err != nil {
+		return 0, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, d.JWKSURI, nil)
+	if err != nil {
+		return 0, fail(ReasonDiscovery, "JWKS inaccessible")
+	}
+	res, err := c.HTTP.Do(req)
+	if err != nil {
+		return 0, fail(ReasonDiscovery, "JWKS inaccessible: %v", err)
+	}
+	defer res.Body.Close()
+	var set struct {
+		Keys []struct {
+			Use string `json:"use"`
+		} `json:"keys"`
+	}
+	if res.StatusCode != http.StatusOK || json.NewDecoder(io.LimitReader(res.Body, maxBody)).Decode(&set) != nil {
+		return 0, fail(ReasonDiscovery, "JWKS invalide")
+	}
+	n := 0
+	for _, k := range set.Keys {
+		if k.Use == "" || k.Use == "sig" {
+			n++
+		}
+	}
+	if n == 0 {
+		return 0, fail(ReasonDiscovery, "le JWKS ne contient aucune clé de signature")
+	}
+	return n, nil
+}
+
+// ---- state, nonce, verifier PKCE ----
 
 func RandomString(n int) (string, error) {
 	b := make([]byte, n)
@@ -278,82 +265,47 @@ func RandomString(n int) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
-// Challenge: code_challenge S256 (RFC 7636).
-func Challenge(verifier string) string {
-	h := sha256.Sum256([]byte(verifier))
-	return base64.RawURLEncoding.EncodeToString(h[:])
+func (c *Client) oauth(e *cached, cfg Config, redirectURI string) *oauth2.Config {
+	return &oauth2.Config{
+		ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, RedirectURL: redirectURI, Scopes: cfg.Scopes,
+		Endpoint: oauth2.Endpoint{AuthURL: e.disc.AuthorizationEndpoint, TokenURL: e.disc.TokenEndpoint, AuthStyle: oauth2.AuthStyleAutoDetect},
+	}
 }
 
 // AuthURL construit l'URL d'autorisation (Authorization Code + PKCE S256).
 func (c *Client) AuthURL(ctx context.Context, cfg Config, redirectURI, state, nonce, verifier string) (string, error) {
-	d, err := c.Discover(ctx, cfg.Issuer)
+	e, err := c.provider(ctx, cfg.Issuer)
 	if err != nil {
 		return "", err
 	}
-	if !d.SupportsS256() {
+	if !e.disc.SupportsS256() {
 		return "", fail(ReasonDiscovery, "le fournisseur ne prend pas en charge PKCE S256")
 	}
-	u, _ := url.Parse(d.AuthorizationEndpoint)
-	q := u.Query()
-	q.Set("response_type", "code")
-	q.Set("client_id", cfg.ClientID)
-	q.Set("redirect_uri", redirectURI)
-	q.Set("scope", strings.Join(cfg.Scopes, " "))
-	q.Set("state", state)
-	q.Set("nonce", nonce)
-	q.Set("code_challenge", Challenge(verifier))
-	q.Set("code_challenge_method", "S256")
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return c.oauth(e, cfg, redirectURI).AuthCodeURL(state, oauth2.S256ChallengeOption(verifier), gooidc.Nonce(nonce)), nil
 }
 
 // Tokens: réponse de l'endpoint de jeton (jamais journalisée).
 type Tokens struct {
-	IDToken     string `json:"id_token"`
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
+	IDToken     string
+	AccessToken string
+	TokenType   string
 }
 
-// Exchange échange le code d'autorisation contre les jetons.
+// Exchange échange le code d'autorisation contre les jetons (avec le verifier PKCE).
 func (c *Client) Exchange(ctx context.Context, cfg Config, redirectURI, code, verifier string) (Tokens, error) {
-	d, err := c.Discover(ctx, cfg.Issuer)
+	e, err := c.provider(ctx, cfg.Issuer)
 	if err != nil {
 		return Tokens{}, err
 	}
-	form := url.Values{"grant_type": {"authorization_code"}, "code": {code}, "redirect_uri": {redirectURI}, "code_verifier": {verifier}}
-	post := false
-	if len(d.TokenAuthMethods) > 0 {
-		post = true
-		for _, m := range d.TokenAuthMethods {
-			if m == "client_secret_basic" {
-				post = false
-			}
-		}
-	}
-	if cfg.ClientSecret == "" || post {
-		form.Set("client_id", cfg.ClientID)
-		if cfg.ClientSecret != "" {
-			form.Set("client_secret", cfg.ClientSecret)
-		}
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, d.TokenEndpoint, strings.NewReader(form.Encode()))
-	if err != nil {
-		return Tokens{}, fail(ReasonExchange, "requête invalide")
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Accept", "application/json")
-	if cfg.ClientSecret != "" && !post {
-		req.SetBasicAuth(url.QueryEscape(cfg.ClientID), url.QueryEscape(cfg.ClientSecret))
-	}
-	body, err := c.do(req)
+	tok, err := c.oauth(e, cfg, redirectURI).Exchange(c.withHTTP(ctx), code, oauth2.VerifierOption(verifier))
 	if err != nil {
 		return Tokens{}, fail(ReasonExchange, "échange du code refusé: %v", err)
 	}
-	var t Tokens
-	if err := json.Unmarshal(body, &t); err != nil || t.IDToken == "" {
+	id, _ := tok.Extra("id_token").(string)
+	if id == "" {
 		return Tokens{}, fail(ReasonExchange, "réponse de l'endpoint de jeton sans id_token")
 	}
-	return t, nil
+	return Tokens{IDToken: id, AccessToken: tok.AccessToken, TokenType: tok.TokenType}, nil
 }
 
 // Claims: revendications d'un ID token vérifié (ou du userinfo).
@@ -426,52 +378,45 @@ func numDate(v any) (time.Time, bool) {
 
 func eq(a, b string) bool { return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1 }
 
-// VerifyIDToken vérifie signature (JWKS), iss, aud (+azp), exp, nbf, iat et nonce. Toute anomalie est un refus.
+// classify rattache une erreur de go-oidc à un motif stable. go-oidc ne type que l'expiration:
+// les autres cas sont reconnus à leur message, et chaque correspondance est couverte par un test.
+func classify(err error) string {
+	var exp *gooidc.TokenExpiredError
+	msg := err.Error()
+	switch {
+	case errors.As(err, &exp):
+		return ReasonExpired
+	case strings.Contains(msg, "unexpected signature algorithm"):
+		return ReasonAlg
+	case strings.Contains(msg, "malformed jwt"), strings.Contains(msg, "not signed"):
+		return ReasonMalformed
+	case strings.Contains(msg, "different provider"):
+		return ReasonIssuer
+	case strings.Contains(msg, "expected audience"):
+		return ReasonAudience
+	}
+	return ReasonSignature
+}
+
+// VerifyIDToken délègue signature, algorithmes, iss et aud à go-oidc, puis contrôle sur les revendications
+// vérifiées: azp, exp, nbf, iat (avec 60 s de tolérance d'horloge), nonce et sub. Toute anomalie est un refus.
 func (c *Client) VerifyIDToken(ctx context.Context, cfg Config, raw, nonce string) (Claims, error) {
-	hdr, payload, sig, signed, err := splitJWT(raw)
-	if err != nil {
-		return nil, fail(ReasonMalformed, "%v", err)
-	}
-	if !allowedAlgs[hdr.Alg] {
-		return nil, fail(ReasonAlg, "algorithme de signature %q refusé", hdr.Alg)
-	}
-	d, err := c.Discover(ctx, cfg.Issuer)
+	e, err := c.provider(ctx, cfg.Issuer)
 	if err != nil {
 		return nil, err
 	}
-	keys, err := c.keysFor(ctx, cfg.Issuer, d, hdr.Kid, hdr.Alg)
+	// L'expiration est contrôlée plus bas, avec le même décalage toléré que nbf et iat.
+	verifier := e.prov.Verifier(&gooidc.Config{ClientID: cfg.ClientID, SupportedSigningAlgs: allowedAlgs, SkipExpiryCheck: true})
+	idt, err := verifier.Verify(c.withHTTP(ctx), raw)
 	if err != nil {
-		return nil, err
-	}
-	okSig := false
-	for _, k := range keys {
-		if k.verify(hdr.Alg, signed, sig) {
-			okSig = true
-			break
-		}
-	}
-	if !okSig {
-		return nil, fail(ReasonSignature, "signature de l'ID token invalide ou clé inconnue")
+		return nil, fail(classify(err), "ID token refusé: %v", err)
 	}
 	var cl Claims
-	if err := json.Unmarshal(payload, &cl); err != nil {
+	if err := idt.Claims(&cl); err != nil {
 		return nil, fail(ReasonMalformed, "corps de l'ID token invalide")
 	}
 	now := c.Now()
-	if cl.String("iss") != cfg.Issuer {
-		return nil, fail(ReasonIssuer, "issuer %q inattendu", cl.String("iss"))
-	}
-	aud := audiences(cl["aud"])
-	found := false
-	for _, a := range aud {
-		if a == cfg.ClientID {
-			found = true
-		}
-	}
-	if !found {
-		return nil, fail(ReasonAudience, "l'ID token n'est pas destiné à ce client")
-	}
-	if len(aud) > 1 && cl.String("azp") != cfg.ClientID {
+	if len(idt.Audience) > 1 && cl.String("azp") != cfg.ClientID {
 		return nil, fail(ReasonAudience, "azp absent ou différent du client pour un jeton à plusieurs audiences")
 	}
 	if azp := cl.String("azp"); azp != "" && azp != cfg.ClientID {
@@ -490,30 +435,30 @@ func (c *Client) VerifyIDToken(ctx context.Context, cfg Config, raw, nonce strin
 	if iat, ok := numDate(cl["iat"]); ok && now.Add(clockSkew).Before(iat) {
 		return nil, fail(ReasonNotYet, "ID token émis dans le futur (iat)")
 	}
-	if nonce == "" || !eq(cl.String("nonce"), nonce) {
+	if nonce == "" || !eq(idt.Nonce, nonce) {
 		return nil, fail(ReasonNonce, "nonce invalide")
 	}
-	if cl.String("sub") == "" {
+	if idt.Subject == "" {
 		return nil, fail(ReasonSubject, "sub manquant")
 	}
 	return cl, nil
 }
 
-// UserInfo interroge l'endpoint userinfo avec le jeton d'accès (lecture des revendications absentes de l'ID token).
+// UserInfo lit les revendications absentes de l'ID token (userinfo, avec le jeton d'accès).
 func (c *Client) UserInfo(ctx context.Context, cfg Config, accessToken string) (Claims, error) {
-	d, err := c.Discover(ctx, cfg.Issuer)
+	e, err := c.provider(ctx, cfg.Issuer)
 	if err != nil {
 		return nil, err
 	}
-	if d.UserinfoEndpoint == "" || accessToken == "" {
+	if e.disc.UserinfoEndpoint == "" || accessToken == "" {
 		return nil, fail(ReasonUserinfo, "userinfo indisponible")
 	}
-	body, err := c.get(ctx, d.UserinfoEndpoint, accessToken)
+	ui, err := e.prov.UserInfo(c.withHTTP(ctx), oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken, TokenType: "Bearer"}))
 	if err != nil {
 		return nil, fail(ReasonUserinfo, "userinfo: %v", err)
 	}
 	var cl Claims
-	if err := json.Unmarshal(body, &cl); err != nil {
+	if err := ui.Claims(&cl); err != nil {
 		return nil, fail(ReasonUserinfo, "réponse userinfo invalide")
 	}
 	return cl, nil
