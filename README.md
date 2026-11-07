@@ -139,6 +139,10 @@ make build   # build du frontend puis binaire unique (bin/leassh)
 make docker  # image Docker
 ```
 
+### Intégration continue
+
+Le workflow `.gitea/workflows/ci.yml` (Gitea Actions) s'exécute sur chaque merge request et sur `main` : `make lint`, `make test`, gitleaks (secrets, historique complet), Trivy (`fs`, sévérités HIGH et CRITICAL), `govulncheck ./...` et `npm audit`. Rien n'est fusionné sans CI verte ; `main` doit être protégée (merge request obligatoire, jobs `qualite` et `securite` requis).
+
 ## Documentation
 
 - [`docs/SPEC.md`](docs/SPEC.md) — cahier des charges fonctionnel et technique
