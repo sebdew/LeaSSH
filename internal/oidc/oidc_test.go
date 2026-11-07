@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -226,5 +227,76 @@ func TestMapRole(t *testing.T) {
 	// aucune valeur de mapping vide ne doit matcher une revendication vide
 	if r, ok := oidc.MapRole(oidc.Claims{"groups": []any{""}}, "groups", oidc.RoleMap{Admin: []string{""}}, ""); ok {
 		t.Fatalf("valeur vide mappée: %q", r)
+	}
+}
+
+// ---- filet de non-régression exigé par le ticket #2 (jetons forgés ou invalides) ----
+
+func TestVerifyRejectsAlgNone(t *testing.T) {
+	idp := oidctest.New(t)
+	none := oidctest.SignRaw(t, map[string]any{"alg": "none", "typ": "JWT", "kid": idp.Kid}, payload(idp, nil), nil)
+	_, err := oidc.New().VerifyIDToken(context.Background(), cfgOf(idp), none, "n1")
+	reason(t, err, oidc.ReasonAlg)
+}
+
+func TestVerifyRejectsExpiredToken(t *testing.T) {
+	idp := oidctest.New(t)
+	tok := oidctest.Sign(t, payload(idp, map[string]any{"exp": time.Now().Add(-time.Hour).Unix()}), idp.Key, idp.Kid)
+	_, err := oidc.New().VerifyIDToken(context.Background(), cfgOf(idp), tok, "n1")
+	reason(t, err, oidc.ReasonExpired)
+}
+
+func TestVerifyRejectsWrongNonce(t *testing.T) {
+	idp := oidctest.New(t)
+	tok := oidctest.Sign(t, payload(idp, nil), idp.Key, idp.Kid)
+	_, err := oidc.New().VerifyIDToken(context.Background(), cfgOf(idp), tok, "autre-nonce")
+	reason(t, err, oidc.ReasonNonce)
+}
+
+func TestVerifyRejectsWrongIssuerAudienceAndAzp(t *testing.T) {
+	idp := oidctest.New(t)
+	c, ctx, cfg := oidc.New(), context.Background(), cfgOf(idp)
+	sign := func(over map[string]any) string { return oidctest.Sign(t, payload(idp, over), idp.Key, idp.Kid) }
+	_, err := c.VerifyIDToken(ctx, cfg, sign(map[string]any{"iss": "https://autre.example.test"}), "n1")
+	reason(t, err, oidc.ReasonIssuer)
+	_, err = c.VerifyIDToken(ctx, cfg, sign(map[string]any{"aud": "un-autre-client"}), "n1")
+	reason(t, err, oidc.ReasonAudience)
+	_, err = c.VerifyIDToken(ctx, cfg, sign(map[string]any{"aud": []string{idp.ClientID, "autre"}}), "n1")
+	reason(t, err, oidc.ReasonAudience) // plusieurs audiences sans azp
+	_, err = c.VerifyIDToken(ctx, cfg, sign(map[string]any{"azp": "autre"}), "n1")
+	reason(t, err, oidc.ReasonAudience)
+}
+
+func TestVerifyRejectsNotYetValidAndMissingSubject(t *testing.T) {
+	idp := oidctest.New(t)
+	c, ctx, cfg := oidc.New(), context.Background(), cfgOf(idp)
+	sign := func(over map[string]any) string { return oidctest.Sign(t, payload(idp, over), idp.Key, idp.Kid) }
+	_, err := c.VerifyIDToken(ctx, cfg, sign(map[string]any{"nbf": time.Now().Add(time.Hour).Unix()}), "n1")
+	reason(t, err, oidc.ReasonNotYet)
+	_, err = c.VerifyIDToken(ctx, cfg, sign(map[string]any{"iat": time.Now().Add(time.Hour).Unix()}), "n1")
+	reason(t, err, oidc.ReasonNotYet)
+	_, err = c.VerifyIDToken(ctx, cfg, sign(map[string]any{"sub": ""}), "n1")
+	reason(t, err, oidc.ReasonSubject)
+}
+
+// Principe 2 de la constitution: aucune vérification de signature écrite à la main.
+func TestNoHandWrittenJWTVerification(t *testing.T) {
+	if _, err := os.Stat("jwt.go"); err == nil {
+		t.Fatal("internal/oidc/jwt.go existe encore: la vérification des jetons doit venir de go-oidc")
+	}
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
+			continue
+		}
+		src, _ := os.ReadFile(e.Name())
+		for _, banned := range []string{"rsa.VerifyPKCS1v15", "rsa.VerifyPSS", "ecdsa.Verify", "ed25519.Verify"} {
+			if strings.Contains(string(src), banned) {
+				t.Errorf("%s appelle %s: vérification de signature maison", e.Name(), banned)
+			}
+		}
 	}
 }
