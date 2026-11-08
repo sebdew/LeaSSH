@@ -344,12 +344,17 @@ func (s *Service) TargetFor(ctx context.Context, srv store.Server) (sshexec.Targ
 func (s *Service) onHostKeyMismatch(ctx context.Context, srv store.Server, mm *sshexec.HostKeyMismatchError) {
 	bg := context.WithoutCancel(ctx)
 	s.pool.Invalidate(srv.ID)
-	if err := store.SetHostKeyStatus(bg, s.st.DB, srv.ID, "mismatch"); err != nil {
+	err := s.st.Tx(bg, func(tx *sqlTx) error {
+		if err := store.SetHostKeyStatus(bg, tx, srv.ID, "mismatch"); err != nil {
+			return err
+		}
+		return audit.Record(bg, tx, audit.Event{ActorType: "system", ActorName: "ssh", Action: "host_key.mismatch",
+			TargetType: "server", TargetID: srv.ID, TargetName: srv.Slug,
+			Diff: map[string]any{"expected": mm.Expected, "received": mm.Got}})
+	})
+	if err != nil {
 		s.log.Error("marquage mismatch", "server", srv.Slug, "err", err)
 	}
-	_ = audit.RecordStandalone(bg, s.st, audit.Event{ActorType: "system", ActorName: "ssh", Action: "host_key.mismatch",
-		TargetType: "server", TargetID: srv.ID, TargetName: srv.Slug,
-		Diff: map[string]any{"expected": mm.Expected, "received": mm.Got}})
 	s.Notify("host_key.mismatch", store.Execution{ServerID: srv.ID, ServerSlug: srv.Slug})
 }
 
@@ -380,26 +385,37 @@ func (s *Service) Decide(ctx context.Context, id string, approver store.User, ap
 	if approve && e.Risk == string(catalog.RiskDestructive) && confirmSlug != e.ServerSlug {
 		return e, ErrConfirm
 	}
-	to := StRejected
+	to, action := StRejected, "execution.reject"
 	if approve {
-		to = StRunning
+		to, action = StRunning, "execution.approve"
 	}
-	if ok, err := store.TransitionExecution(ctx, s.st.DB, id, StPending, to); err != nil {
-		return e, err
-	} else if !ok {
+	applied := false
+	// transition de statut, état et audit dans une seule transaction: pas de décision sans événement d'audit
+	err = s.st.Tx(ctx, func(tx *sqlTx) error {
+		ok, err := store.TransitionExecution(ctx, tx, id, StPending, to)
+		if err != nil || !ok {
+			return err
+		}
+		applied = true
+		e.Status, e.DecidedBy, e.DecidedByName, e.DecidedAt, e.DecisionComment = to, approver.ID, approver.Username, store.Now(), comment
+		if approve {
+			e.StartedAt = store.Now()
+		} else {
+			e.FinishedAt = store.Now()
+		}
+		if err := audit.Record(ctx, tx, audit.Event{ActorType: "user", ActorID: approver.ID, ActorName: approver.Username, Action: action,
+			TargetType: "execution", TargetID: e.ID, TargetName: e.CommandSlug + "@" + e.ServerSlug, Diff: map[string]any{"comment": comment}}); err != nil {
+			return err
+		}
+		return store.SaveExecutionState(ctx, tx, e)
+	})
+	if err != nil {
+		return store.Execution{}, fmt.Errorf("enregistrement de la décision: %w", err)
+	}
+	if !applied {
 		return e, ErrNotPending
 	}
-	e.Status, e.DecidedBy, e.DecidedByName, e.DecidedAt, e.DecisionComment = to, approver.ID, approver.Username, store.Now(), comment
-	action := "execution.reject"
 	if !approve {
-		e.FinishedAt = store.Now()
-	} else {
-		action, e.StartedAt = "execution.approve", store.Now()
-	}
-	_ = audit.RecordStandalone(ctx, s.st, audit.Event{ActorType: "user", ActorID: approver.ID, ActorName: approver.Username, Action: action,
-		TargetType: "execution", TargetID: e.ID, TargetName: e.CommandSlug + "@" + e.ServerSlug, Diff: map[string]any{"comment": comment}})
-	if !approve {
-		_ = store.SaveExecutionState(ctx, s.st.DB, e)
 		s.Metrics.Execution(StRejected)
 		s.notifyState("execution.rejected", e)
 		return e, nil
@@ -413,7 +429,6 @@ func (s *Service) Decide(ctx context.Context, id string, approver store.User, ap
 		s.notify("execution.finished", e)
 		return e, nil
 	}
-	_ = store.SaveExecutionState(ctx, s.st.DB, e)
 	s.Broker.Publish(e.ID)
 	s.launch(e, srv, cmd)
 	return e, nil
@@ -460,6 +475,23 @@ func (s *Service) ExpireLoop(ctx context.Context, every time.Duration) {
 			s.ExpireNow(ctx)
 		}
 	}
+}
+
+// ReconcileRunning clôture les exécutions restées « running » après un arrêt brutal (raison « interrupted »).
+// À appeler au démarrage, avant d'accepter des demandes.
+func (s *Service) ReconcileRunning(ctx context.Context) error {
+	ids, err := store.InterruptRunning(ctx, s.st.DB, store.Now())
+	if err != nil {
+		return fmt.Errorf("réconciliation des exécutions: %w", err)
+	}
+	for _, id := range ids {
+		s.log.Warn("exécution interrompue par un redémarrage", "execution", id)
+		s.Metrics.Execution(StError)
+		if e, err := store.ExecutionByID(ctx, s.st.DB, id); err == nil {
+			s.notify("execution.finished", e)
+		}
+	}
+	return nil
 }
 
 func (s *Service) ExpireNow(ctx context.Context) {
