@@ -18,7 +18,7 @@ docker run -d --name leassh --restart unless-stopped \
   -p 127.0.0.1:8080:8080 \
   -v leassh-data:/data \
   -e LEASSH_MASTER_KEY \
-  ghcr.io/<org>/leassh:latest
+  gitea.dewarlez.fr/sebastien/leassh:latest
 ```
 
 Avec Compose : copiez [`docker-compose.yml`](../docker-compose.yml), créez un fichier `.env` contenant `LEASSH_MASTER_KEY=…` puis `docker compose up -d`.
@@ -141,7 +141,7 @@ Cinq outils : `list_servers`, `list_commands`, `run_command`, `get_execution`, `
 | `LEASSH_DATA_DIR` | `/data` | dossier de la base SQLite (`leassh.db`) |
 | `LEASSH_SETUP_TOKEN` | généré au démarrage | jeton d'initialisation (instance neuve uniquement) ; affiché une fois s'il n'est pas fourni |
 
-Tout le reste se règle dans l'interface, **Réglages → Général** (stocké en base, appliqué à chaud) : URL publique, reverse proxies de confiance, durée des sessions, expiration des validations, rétention des journaux, niveau de logs, jeton `/metrics`.
+Tout le reste se règle dans l'interface, **Réglages → Général** (stocké en base, appliqué à chaud) : URL publique, reverse proxies de confiance, durée des sessions, expiration des validations, rétention des journaux, niveau de logs, jeton `/metrics`. Les variables d'environnement (clé maître, répertoire de données, adresse d'écoute, `LLM_*`) sont listées dans [`.env.example`](../.env.example).
 
 ## 8. Sauvegarde et restauration
 
@@ -222,13 +222,15 @@ Installez-les depuis **Catalogue → Packs** (aperçu, puis import avec créatio
 **Audit** (menu de gauche, administrateurs): choisissez une période, **Générer le rapport**, puis **Ouvrir** (page HTML autonome: imprimez-la en PDF depuis le navigateur) ou téléchargez le **JSON signé**. Le rapport reprend l'inventaire, l'activité, la vérification d'intégrité des deux journaux, les changements de configuration, des constats automatiques et une correspondance **indicative** aux contrôles ISO 27001:2022 et aux thèmes HDS. C'est une aide à l'audit, pas une certification.
 
 - **Remettre à l'auditeur** : le HTML (ou le PDF), le JSON signé, et la tête de chaîne des journaux qui figure dans le rapport (elle permet de détecter une troncature ultérieure). Il peut recalculer l'empreinte avec `jq -cj .snapshot rapport.json | sha256sum`; **Vérifier un rapport** confirme en plus que le fichier vient de votre instance.
-- **Synthèse rédigée par une IA** (facultatif, désactivée par défaut) : renseignez l'URL d'une API de type OpenAI (OpenAI, LiteLLM, Ollama…), le modèle et la clé. Seuls des chiffres agrégés et des intitulés de constats sont envoyés, jamais de nom ni de sortie de commande; si l'URL est externe, ces chiffres quittent votre réseau. Le texte est étiqueté « générée par IA, à relire » et reste hors de l'empreinte.
+- **Synthèse rédigée par une IA** (facultatif, désactivée par défaut) : renseignez l'URL d'une API de type OpenAI (OpenAI, LiteLLM, Ollama…), le modèle et la clé, ou définissez `LLM_BASE_URL`, `LLM_MODEL` et `LLM_API_KEY` (voir [`.env.example`](../.env.example)) : ces variables servent de valeurs par défaut, ce qui est saisi dans l'interface les remplace. L'activation reste un choix de l'administrateur. Seuls des chiffres agrégés et des intitulés de constats sont envoyés, jamais de nom ni de sortie de commande; si l'URL est externe, ces chiffres quittent votre réseau. Le texte est étiqueté « générée par IA, à relire » et reste hors de l'empreinte.
 - La rétention des journaux (réglage « Rétention des journaux », 365 jours par défaut) limite la période auditable.
 
 ## 10. Observabilité
 
-- `GET /healthz` → `ok` (utilisé par le `HEALTHCHECK` de l'image via `leassh healthcheck`).
-- `GET /metrics` (Prometheus) : **fermé par défaut** (401 tant qu'aucun jeton n'est défini dans **Réglages → Général**). Définissez un jeton et présentez-le avec `Authorization: Bearer <jeton>`. En complément, bloquez `/metrics` au niveau du reverse proxy si Prometheus est sur le même réseau (exemple Caddy : `@metrics path /metrics` puis `respond @metrics 403` pour les clients hors `10.0.0.0/8`, ou n'exposer `/metrics` que sur un port interne). Exposées : `leassh_executions_total{status}`, `leassh_execution_duration_seconds`, `leassh_ssh_errors_total{kind}`, `leassh_pending_approvals`, `leassh_servers{host_key_status}`, `leassh_mcp_keys{state}`…
+- `GET /health` → `ok` (`/healthz` reste accepté) (utilisé par le `HEALTHCHECK` de l'image via `leassh healthcheck`).
+- `GET /metrics` (Prometheus) : **fermé par défaut** (401 tant qu'aucun jeton n'est défini dans **Réglages → Général**). Définissez un jeton et présentez-le avec `Authorization: Bearer <jeton>`. En complément, bloquez `/metrics` au niveau du reverse proxy si Prometheus est sur le même réseau (exemple Caddy : `@metrics path /metrics` puis `respond @metrics 403` pour les clients hors `10.0.0.0/8`, ou n'exposer `/metrics` que sur un port interne). Exposées : `leassh_executions_total{status}`, `leassh_execution_duration_seconds`, `leassh_ssh_errors_total{kind}`, `leassh_pending_approvals`, `leassh_servers{host_key_status}`, `leassh_mcp_keys{state}`, `leassh_outbound_duration_seconds{target,result}` (durée des appels sortants : `database` pour les transactions d'écriture, `webhook`, `ai`, `idp`)…
+- **Mise à jour des images de base** : le `Dockerfile` fige Node 24 LTS, Go et distroless par condensat `@sha256:`. Pour les mettre à jour : `docker buildx imagetools inspect <image>:<tag>`, remplacer le condensat, reconstruire et tester.
+- **Publication** : `docker login gitea.dewarlez.fr` puis `docker buildx build --platform linux/amd64,linux/arm64 -t gitea.dewarlez.fr/sebastien/leassh:<version> --push .`
 
 ```yaml
 scrape_configs:

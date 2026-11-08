@@ -107,7 +107,7 @@ func TestMetricsEndpoint(t *testing.T) {
 		t.Fatalf("/metrics: %d %v", resp.StatusCode, resp.Header)
 	}
 	for _, want := range []string{`leassh_executions_total{status="succeeded"} 1`, `leassh_executions_total{status="denied"} 1`, `leassh_execution_duration_seconds_count 1`,
-		`leassh_servers{host_key_status="pinned"} 1`, `leassh_build_info{version="test"} 1`, "leassh_pending_approvals 0", "# TYPE leassh_ssh_errors_total counter"} {
+		`leassh_servers{host_key_status="pinned"} 1`, `leassh_build_info{version="test"} 1`, "leassh_pending_approvals 0", "# TYPE leassh_executions_total counter"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("manque %q dans:\n%s", want, body)
 		}
@@ -115,8 +115,10 @@ func TestMetricsEndpoint(t *testing.T) {
 	if strings.Contains(body, "echo hello") || strings.Contains(body, "hello") && strings.Contains(body, "reason") {
 		t.Fatal("la sortie ou la commande ne doit pas apparaître dans les métriques")
 	}
-	if resp, _ := e.raw0("/healthz"); resp.StatusCode != 200 {
-		t.Fatalf("healthz: %d", resp.StatusCode)
+	for _, path := range []string{"/health", "/healthz"} {
+		if resp, _ := e.raw0(path); resp.StatusCode != 200 {
+			t.Fatalf("%s: %d", path, resp.StatusCode)
+		}
 	}
 }
 

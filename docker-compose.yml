@@ -4,7 +4,7 @@
 # Le reste (URL publique, reverse proxies de confiance, rétention…) se règle dans l'interface : Réglages → Général.
 services:
   leassh:
-    image: ghcr.io/<org>/leassh:latest   # ou : build: .
+    image: gitea.dewarlez.fr/sebastien/leassh:latest   # ou : build: .
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:8080"           # exposez via un reverse proxy TLS, pas directement
@@ -12,6 +12,9 @@ services:
       - leassh-data:/data
     environment:
       LEASSH_MASTER_KEY: ${LEASSH_MASTER_KEY:?définissez LEASSH_MASTER_KEY dans .env}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}   # facultatif : valeurs par défaut de la synthèse IA (voir .env.example)
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
       LEASSH_SETUP_TOKEN: ${LEASSH_SETUP_TOKEN:-}   # facultatif : sinon affiché une fois dans les logs au premier démarrage
     read_only: true
     cap_drop: [ALL]

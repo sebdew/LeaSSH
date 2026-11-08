@@ -47,7 +47,7 @@ docker run -d --name leassh \
   -p 8080:8080 \
   -v leassh-data:/data \
   -e LEASSH_MASTER_KEY="$(openssl rand -base64 32)" \
-  ghcr.io/<org>/leassh:latest
+  gitea.dewarlez.fr/sebastien/leassh:latest
 ```
 
 Ouvrez `http://localhost:8080`, créez le compte administrateur, puis suivez la checklist d'accueil :

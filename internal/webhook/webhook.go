@@ -81,6 +81,9 @@ func New(st *store.Store, box *crypto.Box, baseURL func() string, log *slog.Logg
 	}
 }
 
+// SetTransport remplace le transport HTTP des livraisons (mesure des durées d'appel, tests).
+func (d *Dispatcher) SetTransport(rt http.RoundTripper) { d.client.Transport = rt }
+
 // Link construit l'URL absolue d'un écran de l'interface (vide si l'URL publique n'est pas définie dans les réglages).
 func (d *Dispatcher) Link(path string) string {
 	base := strings.TrimRight(d.baseURL(), "/")

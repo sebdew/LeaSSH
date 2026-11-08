@@ -324,3 +324,17 @@ func TestAIConfigSecretIsEncryptedAndKeptWhenBlank(t *testing.T) {
 		t.Fatal("la synthèse doit refuser de s'exécuter quand elle est désactivée")
 	}
 }
+
+func TestAIDefaultsFillOnlyWhatIsNotConfigured(t *testing.T) {
+	d := AIDefaults{URL: "http://litellm:4000/v1", Model: "m-env", APIKey: "sk-env"}
+	// rien en base: les variables LLM_* servent de valeurs par défaut (la synthèse reste désactivée tant qu'on ne l'active pas)
+	c, key := d.Apply(AIConfig{}, "")
+	if c.URL != d.URL || c.Model != "m-env" || key != "sk-env" || !c.HasKey || c.Enabled {
+		t.Fatalf("défauts non appliqués: %+v %q", c, key)
+	}
+	// valeurs saisies dans l'interface: elles l'emportent
+	c, key = d.Apply(AIConfig{URL: "http://autre/v1", Model: "m-ui", HasKey: true}, "sk-ui")
+	if c.URL != "http://autre/v1" || c.Model != "m-ui" || key != "sk-ui" {
+		t.Fatalf("les réglages de l'interface doivent l'emporter: %+v %q", c, key)
+	}
+}
