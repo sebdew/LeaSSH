@@ -83,16 +83,17 @@ type Session struct {
 
 func (s *Store) CreateSession(ctx context.Context, idHash, userID, csrf, ip string, ttl time.Duration) error {
 	now := time.Now()
-	_, err := s.DB.ExecContext(ctx, `INSERT INTO sessions (id_hash,user_id,csrf_token,created_at,expires_at,ip) VALUES (?,?,?,?,?,?)`,
-		idHash, userID, csrf, FormatTime(now), FormatTime(now.Add(ttl)), ip)
+	_, err := s.DB.ExecContext(ctx, `INSERT INTO sessions (id_hash,user_id,csrf_token,created_at,last_seen_at,expires_at,ip) VALUES (?,?,?,?,?,?,?)`,
+		idHash, userID, csrf, FormatTime(now), FormatTime(now), FormatTime(now.Add(ttl)), ip)
 	return err
 }
 
-// SessionByHash renvoie la session si elle existe et n'est pas expirée.
-func (s *Store) SessionByHash(ctx context.Context, idHash string) (Session, error) {
+// SessionByHash renvoie la session si elle existe, n'est pas expirée et n'est pas restée inactive plus de idle.
+// Elle rafraîchit last_seen_at au plus une fois par minute pour limiter les écritures.
+func (s *Store) SessionByHash(ctx context.Context, idHash string, idle time.Duration) (Session, error) {
 	var se Session
-	var exp string
-	err := s.DB.QueryRowContext(ctx, `SELECT user_id,csrf_token,expires_at FROM sessions WHERE id_hash=?`, idHash).Scan(&se.UserID, &se.CSRF, &exp)
+	var exp, seen string
+	err := s.DB.QueryRowContext(ctx, `SELECT user_id,csrf_token,expires_at,last_seen_at FROM sessions WHERE id_hash=?`, idHash).Scan(&se.UserID, &se.CSRF, &exp, &seen)
 	if errors.Is(err, sql.ErrNoRows) {
 		return se, ErrNotFound
 	}
@@ -102,6 +103,14 @@ func (s *Store) SessionByHash(ctx context.Context, idHash string) (Session, erro
 	if se.ExpiresAt, err = ParseTime(exp); err != nil || !time.Now().Before(se.ExpiresAt) {
 		_ = s.DeleteSession(ctx, idHash)
 		return se, ErrNotFound
+	}
+	last, err := ParseTime(seen)
+	if err != nil || time.Since(last) >= idle {
+		_ = s.DeleteSession(ctx, idHash)
+		return se, ErrNotFound
+	}
+	if time.Since(last) > time.Minute {
+		_, _ = s.DB.ExecContext(ctx, `UPDATE sessions SET last_seen_at=? WHERE id_hash=?`, Now(), idHash)
 	}
 	return se, nil
 }
