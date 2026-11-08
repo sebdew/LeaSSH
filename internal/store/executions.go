@@ -215,3 +215,17 @@ func ExpirePending(ctx context.Context, q Q, cutoff string) ([]string, error) {
 		return id, r.Scan(&id)
 	})
 }
+
+// InterruptRunning passe en erreur (raison « interrupted ») les exécutions « running » démarrées avant cutoff;
+// renvoie leurs identifiants. Appelée au démarrage: aucune de ces exécutions n'a plus de processus pour la terminer.
+func InterruptRunning(ctx context.Context, q Q, cutoff string) ([]string, error) {
+	rows, err := q.QueryContext(ctx, `UPDATE executions SET status='error',denial_reason='interrupted',stderr='leassh: exécution interrompue par un redémarrage',finished_at=?
+		WHERE status='running' AND (started_at IS NULL OR started_at<?) RETURNING id`, Now(), cutoff)
+	if err != nil {
+		return nil, wrapErr("réconciliation", err)
+	}
+	return collect(rows, func(r *sql.Rows) (string, error) {
+		var id string
+		return id, r.Scan(&id)
+	})
+}

@@ -121,6 +121,9 @@ func serve(cfg *config.Config, set *settings.Service, st *store.Store, log *slog
 	}
 	exec.Notify, exec.Observe = hook.OnExecution, sl.OnExecution
 	props.Notify = func(event string, p store.Proposal) { hook.OnProposal(event, p); sl.OnProposal(event, p) }
+	if err := exec.ReconcileRunning(ctx); err != nil {
+		return err
+	}
 	go hook.Run(ctx)
 	go sl.Run(ctx)
 	provisioning.Register(warpgate.Type())

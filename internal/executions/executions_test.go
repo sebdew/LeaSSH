@@ -409,3 +409,37 @@ func TestEditingConnectionClearsStaleSSHFailure(t *testing.T) {
 		t.Fatalf("changer l'utilisateur SSH doit effacer l'échec: %v", d.Anomalies)
 	}
 }
+
+// SEC-03 (#5): une exécution restée « running » après un plantage passe en erreur (interrupted) au démarrage.
+func TestReconcileInterruptedRunning(t *testing.T) {
+	f := newFixture(t, "RO", true, time.Hour)
+	id := f.run("t.read", nil).Exec.ID
+	f.svc.Wait()
+	old := store.FormatTime(time.Now().Add(-time.Hour))
+	if _, err := f.st.DB.ExecContext(f.ctx, `UPDATE executions SET status='running',finished_at=NULL,exit_code=NULL,started_at=? WHERE id=?`, old, id); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.ReconcileRunning(f.ctx); err != nil {
+		t.Fatal(err)
+	}
+	e := f.get(id)
+	if e.Status != StError || e.DenialReason != "interrupted" || e.FinishedAt == "" {
+		t.Fatalf("exécution orpheline non réconciliée: %+v", e)
+	}
+}
+
+// SEC-03 (#5): si l'écriture d'audit échoue, la décision n'est pas appliquée.
+func TestDecideAtomicWithAudit(t *testing.T) {
+	f := newFixture(t, "RW", true, time.Hour)
+	o := f.run("t.write", nil)
+	if _, err := f.st.DB.ExecContext(f.ctx, `CREATE TRIGGER fail_audit BEFORE INSERT ON audit_events BEGIN SELECT RAISE(ABORT,'audit indisponible'); END`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.Decide(f.ctx, o.Exec.ID, f.admin, true, "OK", ""); err == nil {
+		t.Fatal("la décision doit échouer si l'audit échoue")
+	}
+	f.svc.Wait()
+	if e := f.get(o.Exec.ID); e.Status != StPending || e.DecidedBy != "" || e.Stdout != "" {
+		t.Fatalf("décision appliquée malgré l'échec de l'audit: %+v", e)
+	}
+}
