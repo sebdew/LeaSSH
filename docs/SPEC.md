@@ -513,7 +513,7 @@ Démarrage refusé si `LEASSH_MASTER_KEY` est absente ou invalide. Rotation de l
 
 - **Installation** : `docker run` avec un volume, ou binaire unique Linux amd64/arm64.
 - **Performances** : 200 serveurs, 1 000 commandes, 1 million de lignes de journal sans dégradation perceptible de l'interface (pagination par curseur, index).
-- **Sécurité** : cookies `HttpOnly`, `Secure`, `SameSite=Strict` ; protection CSRF ; en-têtes CSP stricts ; limite de tentatives de connexion (5 échecs par couple IP + compte / 15 min, plafond de 50 par IP) ; session expirée après 30 min d'inactivité ; `Strict-Transport-Security` posé dès que la requête est en HTTPS ; logs MCP sans contenu d'arguments (nom d'outil, clé, taille seulement) ; argon2id.
+- **Sécurité** : cookies `HttpOnly`, `Secure`, `SameSite=Strict` ; protection CSRF ; en-têtes CSP stricts ; limite de tentatives de connexion (5 échecs par couple IP + compte / 15 min, plafond de 50 par IP) ; session expirée après 30 min d'inactivité ; `Strict-Transport-Security` (`max-age=31536000; includeSubDomains`) posé par Leassh dès que la requête est en HTTPS, **sauf si elle arrive d'un reverse proxy de confiance** (Réglages › Général): le proxy est alors seul responsable de HSTS, pour éviter un doublon d'en-têtes — déclarer son proxy dans « Reverse proxies de confiance » ; logs MCP sans contenu d'arguments (nom d'outil, clé, taille seulement) ; argon2id.
 - **Accessibilité** : WCAG 2.1 AA (contrastes dans les deux thèmes, navigation clavier).
 - **Observabilité** : `/healthz`, `/metrics` (Prometheus) : exécutions par statut, durée, erreurs SSH.
 - **Sauvegarde** : documentation de la sauvegarde de la base + clé maître.

@@ -179,7 +179,9 @@ func (s *Server) securityHeaders(next http.Handler) http.Handler {
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Referrer-Policy", "same-origin")
-		if s.isHTTPS(r) {
+		// Derrière un proxy de confiance, HSTS est la politique du proxy (qui termine le TLS): on n'ajoute pas
+		// un second en-tête, que les navigateurs gèrent mal. Sinon, Leassh impose sa valeur.
+		if s.isHTTPS(r) && !s.fromTrustedProxy(r) {
 			h.Set("Strict-Transport-Security", hstsValue)
 		}
 		next.ServeHTTP(w, r)
