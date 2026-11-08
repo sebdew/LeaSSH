@@ -1,0 +1,55 @@
+# CI Leassh — qualité (lint, tests) et sécurité (secrets, dépendances).
+# Constitution : principes 5 (gitleaks), 7 (Trivy), 9 (rien n'est fusionné sans CI verte).
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  qualite:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Dépendances frontend
+        run: cd web && npm ci --no-audit --no-fund
+      - name: Lint
+        run: make lint
+      - name: Tests
+        run: make test
+
+  securite:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # gitleaks analyse tout l'historique
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: gitleaks (secrets)
+        run: |
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz | tar -xz gitleaks
+          ./gitleaks git --redact --verbose .
+      - name: Trivy (dépendances, Dockerfile, secrets)
+        run: |
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_Linux-64bit.tar.gz | tar -xz trivy
+          ./trivy fs --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 .
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+      - name: npm audit
+        run: cd web && npm audit --omit=dev --audit-level=high
