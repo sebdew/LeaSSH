@@ -19,6 +19,7 @@ import (
 
 	"github.com/leassh-dev/leassh/internal/access"
 	"github.com/leassh-dev/leassh/internal/api"
+	"github.com/leassh-dev/leassh/internal/auditreport"
 	"github.com/leassh-dev/leassh/internal/config"
 	"github.com/leassh-dev/leassh/internal/crypto"
 	"github.com/leassh-dev/leassh/internal/executions"
@@ -111,10 +112,12 @@ func serve(cfg *config.Config, set *settings.Service, st *store.Store, log *slog
 	acc := access.New(st)
 	exec := executions.New(ctx, st, acc, box, pool, log, set.ApprovalTTL)
 	reg := metrics.New()
+	st.Observe = func(d time.Duration, err error) { reg.Outbound("database", d, err) }
 	exec.Metrics = reg
 	props := proposals.New(st)
 	pk := packs.New(st)
 	hook := webhook.New(st, box, set.BaseURL, log)
+	hook.SetTransport(reg.Transport("webhook", nil))
 	sl := syslog.New(st, box, version, log)
 	if err := sl.Reload(ctx); err != nil {
 		log.Error("configuration syslog invalide, export désactivé", "err", err)
@@ -141,7 +144,8 @@ func serve(cfg *config.Config, set *settings.Service, st *store.Store, log *slog
 	if err := configureSetupToken(context.Background(), srv, cfg, st); err != nil {
 		return err
 	}
-	srv.Attach(api.Services{Box: box, Pool: pool, Acc: acc, Exec: exec, Props: props, Packs: pk, Hook: hook, Syslog: sl, Prov: prov, MCP: mcp.Handler(), Metrics: reg, Version: version})
+	srv.Attach(api.Services{Box: box, Pool: pool, Acc: acc, Exec: exec, Props: props, Packs: pk, Hook: hook, Syslog: sl, Prov: prov, MCP: mcp.Handler(), Metrics: reg, Version: version,
+		AIDefaults: auditreport.AIDefaults{URL: cfg.LLMBaseURL, Model: cfg.LLMModel, APIKey: cfg.LLMAPIKey}})
 
 	// Les flux longs (SSE du journal, attentes de get_execution) se terminent à l'arrêt: sans cela Shutdown attendrait le délai complet.
 	baseCtx, cancelBase := context.WithCancel(context.Background())
@@ -164,7 +168,7 @@ func serve(cfg *config.Config, set *settings.Service, st *store.Store, log *slog
 	return err
 }
 
-// healthcheck interroge /healthz en local (l'image distroless n'a ni shell ni curl).
+// healthcheck interroge /health en local (l'image distroless n'a ni shell ni curl).
 func healthcheck() error {
 	addr := os.Getenv("LEASSH_LISTEN")
 	if addr == "" {
@@ -174,13 +178,13 @@ func healthcheck() error {
 		addr = "127.0.0.1" + addr
 	}
 	c := http.Client{Timeout: 3 * time.Second}
-	resp, err := c.Get("http://" + addr + "/healthz")
+	resp, err := c.Get("http://" + addr + "/health")
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("healthz: HTTP %d", resp.StatusCode)
+		return fmt.Errorf("health: HTTP %d", resp.StatusCode)
 	}
 	return nil
 }

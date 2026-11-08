@@ -21,6 +21,7 @@ import (
 	"github.com/leassh-dev/leassh/internal/access"
 	"github.com/leassh-dev/leassh/internal/accounts"
 	"github.com/leassh-dev/leassh/internal/audit"
+	"github.com/leassh-dev/leassh/internal/auditreport"
 	"github.com/leassh-dev/leassh/internal/crypto"
 	"github.com/leassh-dev/leassh/internal/executions"
 	"github.com/leassh-dev/leassh/internal/metrics"
@@ -70,8 +71,9 @@ type Server struct {
 	mcp   http.Handler
 	oidc  *oidc.Client
 
-	metrics *metrics.Registry
-	version string
+	metrics    *metrics.Registry
+	version    string
+	aiDefaults auditreport.AIDefaults // LLM_* : valeurs par défaut de la synthèse IA
 
 	setupTokenHash string // SHA-256 du jeton d'initialisation; vide = /setup refusé
 }
@@ -89,15 +91,17 @@ type Services struct {
 	Prov   *provisioning.Service
 	MCP    http.Handler
 
-	Metrics *metrics.Registry
-	Version string
+	Metrics    *metrics.Registry
+	Version    string
+	AIDefaults auditreport.AIDefaults
 }
 
 // Attach branche les services métier; à appeler avant Handler().
 func (s *Server) Attach(sv Services) {
 	s.box, s.pool, s.acc, s.exec, s.props, s.packs, s.hook, s.mcp = sv.Box, sv.Pool, sv.Acc, sv.Exec, sv.Props, sv.Packs, sv.Hook, sv.MCP
 	s.prov, s.sysl = sv.Prov, sv.Syslog
-	s.metrics, s.version = sv.Metrics, sv.Version
+	s.metrics, s.version, s.aiDefaults = sv.Metrics, sv.Version, sv.AIDefaults
+	s.oidc.HTTP.Transport = s.metrics.Transport("idp", s.oidc.HTTP.Transport) // durée des appels au fournisseur d'identité
 }
 
 // SetSetupToken définit le jeton d'initialisation exigé par POST /setup (SEC-01). Sans jeton, /setup est refusé.
@@ -120,7 +124,9 @@ func New(set *settings.Service, st *store.Store, log *slog.Logger, static http.H
 func (s *Server) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Use(s.securityHeaders)
-	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
+	health := func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) }
+	r.Get("/health", health)
+	r.Get("/healthz", health) // ancien nom, conservé pour les sondes déjà en place
 	r.Get("/metrics", s.metricsHandler)
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(langMiddleware)

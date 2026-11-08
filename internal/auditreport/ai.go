@@ -33,6 +33,34 @@ type AIConfig struct {
 	HasKey  bool   `json:"has_key"`
 }
 
+type summarizeOpts struct{ transport http.RoundTripper }
+
+// SummarizeOption ajuste l'appel au modèle.
+type SummarizeOption func(*summarizeOpts)
+
+// WithTransport remplace le transport HTTP (mesure des durées d'appel, tests).
+func WithTransport(rt http.RoundTripper) SummarizeOption {
+	return func(o *summarizeOpts) { o.transport = rt }
+}
+
+// AIDefaults: valeurs issues de LLM_BASE_URL, LLM_API_KEY et LLM_MODEL, utilisées tant que l'interface n'a rien enregistré.
+// Elles ne modifient jamais l'activation: la synthèse reste désactivée tant qu'un administrateur ne l'active pas.
+type AIDefaults struct{ URL, Model, APIKey string }
+
+// Apply complète c et la clé avec les valeurs par défaut pour ce qui est vide.
+func (d AIDefaults) Apply(c AIConfig, key string) (AIConfig, string) {
+	if c.URL == "" {
+		c.URL = d.URL
+	}
+	if c.Model == "" {
+		c.Model = d.Model
+	}
+	if key == "" && d.APIKey != "" {
+		key, c.HasKey = d.APIKey, true
+	}
+	return c, key
+}
+
 func LoadAIConfig(ctx context.Context, q store.Q, box *crypto.Box) (AIConfig, string, error) {
 	var c AIConfig
 	en, err := store.GetSetting(ctx, q, keyAIEnabled)
@@ -175,7 +203,11 @@ const (
 
 // Summarize envoie l'agrégat au modèle configuré et renvoie le texte et le nom du modèle.
 // lang: "fr" (défaut) ou "en", langue de la synthèse rédigée.
-func Summarize(ctx context.Context, cfg AIConfig, apiKey string, in AIInput, lang string) (string, string, error) {
+func Summarize(ctx context.Context, cfg AIConfig, apiKey string, in AIInput, lang string, opts ...SummarizeOption) (string, string, error) {
+	var o summarizeOpts
+	for _, f := range opts {
+		f(&o)
+	}
 	if !cfg.Enabled {
 		return "", "", errors.New("la synthèse IA est désactivée")
 	}
@@ -204,7 +236,7 @@ func Summarize(ctx context.Context, cfg AIConfig, apiKey string, in AIInput, lan
 	if apiKey != "" {
 		req.Header.Set("Authorization", "Bearer "+apiKey)
 	}
-	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	client := &http.Client{Transport: o.transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", "", fmt.Errorf("modèle injoignable: %w", err)

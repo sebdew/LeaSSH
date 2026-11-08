@@ -42,3 +42,21 @@ func TestSetupTokenFromEnv(t *testing.T) {
 		t.Fatalf("%v %+v", err, c)
 	}
 }
+
+func TestLLMVariablesAreRead(t *testing.T) {
+	k := base64.StdEncoding.EncodeToString(make([]byte, 32))
+	c, err := Load(env(map[string]string{"LEASSH_MASTER_KEY": k, "LLM_BASE_URL": "http://litellm:4000/v1", "LLM_API_KEY": "sk-x", "LLM_MODEL": "gpt-x"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.LLMBaseURL != "http://litellm:4000/v1" || c.LLMAPIKey != "sk-x" || c.LLMModel != "gpt-x" {
+		t.Fatalf("variables LLM_* ignorées: %+v", c)
+	}
+}
+
+func TestLLMBaseURLMustBeHTTP(t *testing.T) {
+	k := base64.StdEncoding.EncodeToString(make([]byte, 32))
+	if _, err := Load(env(map[string]string{"LEASSH_MASTER_KEY": k, "LLM_BASE_URL": "ftp://x"})); err == nil {
+		t.Fatal("LLM_BASE_URL non http(s) acceptée")
+	}
+}

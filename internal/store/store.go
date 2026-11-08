@@ -20,6 +20,8 @@ var migrations embed.FS
 
 type Store struct {
 	DB *sql.DB
+	// Observe (facultatif) reçoit la durée de chaque transaction et son erreur éventuelle (mesure des appels à la base).
+	Observe func(d time.Duration, err error)
 }
 
 // Open ouvre (ou crée) la base dans dir, active WAL et clés étrangères, applique les migrations.
@@ -67,7 +69,11 @@ func FormatTime(t time.Time) string { return t.UTC().Format(timeLayout) }
 func ParseTime(s string) (time.Time, error) { return time.Parse(timeLayout, s) }
 
 // Tx exécute fn dans une transaction (rollback si erreur).
-func (s *Store) Tx(ctx context.Context, fn func(*sql.Tx) error) error {
+func (s *Store) Tx(ctx context.Context, fn func(*sql.Tx) error) (err error) {
+	if s.Observe != nil {
+		start := time.Now()
+		defer func() { s.Observe(time.Since(start), err) }()
+	}
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin: %w", err)

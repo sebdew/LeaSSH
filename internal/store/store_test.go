@@ -2,7 +2,10 @@ package store
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"testing"
+	"time"
 )
 
 func TestOpenMigrates(t *testing.T) {
@@ -48,5 +51,19 @@ func TestBackup(t *testing.T) {
 	var v string
 	if err := b.DB.QueryRow(`SELECT value FROM settings WHERE key='k'`).Scan(&v); err != nil || v != "v" {
 		t.Fatalf("sauvegarde incomplète: %q %v", v, err)
+	}
+}
+
+func TestTxReportsItsDuration(t *testing.T) {
+	st := openT(t)
+	var calls int
+	var last error
+	st.Observe = func(_ time.Duration, err error) { calls, last = calls+1, err }
+	if err := st.Tx(context.Background(), func(*sql.Tx) error { return nil }); err != nil || calls != 1 || last != nil {
+		t.Fatalf("succès: %d %v %v", calls, last, err)
+	}
+	boom := errors.New("boom")
+	if err := st.Tx(context.Background(), func(*sql.Tx) error { return boom }); !errors.Is(err, boom) || calls != 2 || !errors.Is(last, boom) {
+		t.Fatalf("échec: %d %v %v", calls, last, err)
 	}
 }

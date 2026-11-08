@@ -4324,9 +4324,31 @@
         }
       }
     },
-    "/healthz": {
+    "/health": {
       "get": {
         "summary": "Sonde de vie",
+        "tags": [
+          "système"
+        ],
+        "operationId": "GET_health",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "summary": "Sonde de vie (ancien nom de /health)",
         "tags": [
           "système"
         ],
@@ -4343,7 +4365,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/metrics": {

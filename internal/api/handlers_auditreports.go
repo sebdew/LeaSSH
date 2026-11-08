@@ -192,6 +192,7 @@ func (s *Server) summarizeAuditReport(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	cfg, key = s.aiDefaults.Apply(cfg, key)
 	if !cfg.Enabled {
 		s.fail(w, &apiError{Status: 409, Code: "ai_disabled", Message: "la synthèse IA est désactivée: activez-la d'abord dans les réglages de l'audit"})
 		return
@@ -214,7 +215,7 @@ func (s *Server) summarizeAuditReport(w http.ResponseWriter, r *http.Request) {
 	if in.Lang == "en" || in.Lang == "fr" {
 		lang = in.Lang
 	}
-	text, model, err := auditreport.Summarize(r.Context(), cfg, key, auditreport.BuildAIInput(snap), lang) // appel réseau hors transaction
+	text, model, err := auditreport.Summarize(r.Context(), cfg, key, auditreport.BuildAIInput(snap), lang, auditreport.WithTransport(s.metrics.Transport("ai", nil))) // appel réseau hors transaction
 	if err != nil {
 		s.fail(w, &apiError{Status: 502, Code: "ai_error", Message: err.Error()})
 		return
@@ -229,11 +230,12 @@ func (s *Server) summarizeAuditReport(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getAuditAI(w http.ResponseWriter, r *http.Request) {
-	cfg, _, err := auditreport.LoadAIConfig(r.Context(), s.st.DB, s.box)
+	cfg, key, err := auditreport.LoadAIConfig(r.Context(), s.st.DB, s.box)
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
+	cfg, _ = s.aiDefaults.Apply(cfg, key) // la clé elle-même n'est jamais renvoyée, seulement has_key
 	writeJSON(w, 200, map[string]any{"config": cfg})
 }
 
