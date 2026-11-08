@@ -194,7 +194,8 @@ describe("propositions", () => {
     renderApp(<ProposalEditorRoute id="P1" />);
     const u = userEvent.setup();
     const tpl = await screen.findByLabelText("Modèle de commande");
-    expect(tpl).toHaveValue("uptime; id");
+    // Le champ existe avant d'être prérempli par la proposition chargée: on attend la valeur (test instable en CI).
+    await waitFor(() => expect(tpl).toHaveValue("uptime; id"));
     expect(await screen.findByText(/métacaractère shell/)).toBeInTheDocument();
     const approveBtn = screen.getByRole("button", { name: /Approuver/ });
     expect(approveBtn).toBeDisabled();

@@ -32,9 +32,14 @@ export function useSessionActions() {
     logout: async () => {
       const res = await api<{ end_session_url?: string } | undefined>("/auth/logout", { method: "POST" });
       setCsrf("");
+      // Compte SSO: la session locale est déjà détruite; on part fermer celle du fournisseur. `me` reste en place:
+      // le passer à null afficherait la page de connexion, dont la redirection automatique vers le SSO
+      // pourrait partir après cette navigation et reconnecter l'utilisateur.
+      if (res?.end_session_url) {
+        window.location.assign(res.end_session_url);
+        return;
+      }
       qc.setQueryData(["me"], null);
-      // compte SSO: fermeture de la session côté fournisseur (la session locale est déjà détruite)
-      if (res?.end_session_url) window.location.assign(res.end_session_url);
     },
   };
 }
