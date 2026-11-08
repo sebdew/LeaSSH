@@ -2,9 +2,11 @@ package mcpserver
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -260,3 +262,38 @@ func TestMalformedRunCommandIsStillJournaled(t *testing.T) {
 		t.Fatalf("params en texte JSON: %+v %v", res, out)
 	}
 }
+
+// SEC-06: les logs d'un appel run_command ne contiennent ni la raison ni les valeurs des paramètres.
+func TestLogsDoNotLeakToolArguments(t *testing.T) {
+	k := testkit.New(t, "RW", false, time.Hour)
+	var buf syncBuffer
+	s := New(Config{Store: k.St, Access: k.Acc, Executions: k.Exec, Proposals: k.Props, Version: "test",
+		Log:      slog.New(slog.NewJSONHandler(&buf, nil)),
+		ClientIP: func(r *http.Request) string { return "10.1.1.1" }})
+	ts := httptest.NewServer(s.Handler())
+	t.Cleanup(ts.Close)
+	cs := connect(t, ts.URL, k.Token)
+	call(t, cs, "run_command", map[string]any{"server": "web-01", "command": "t.lines", "params": map[string]any{"lines": 5}, "reason": "SECRET-RAISON-xyz"})
+	call(t, cs, "run_command", map[string]any{"server": "web-01", "command": "t.lines", "params": map[string]any{"lines": "SECRET-VALEUR-abc"}, "reason": "SECRET-RAISON-xyz"})
+	out := buf.String()
+	if !strings.Contains(out, "run_command") {
+		t.Fatalf("l'appel devrait être logué: %s", out)
+	}
+	for _, leak := range []string{"SECRET-RAISON-xyz", "SECRET-VALEUR-abc"} {
+		if strings.Contains(out, leak) {
+			t.Fatalf("fuite de %q dans les logs: %s", leak, out)
+		}
+	}
+}
+
+type syncBuffer struct {
+	mu sync.Mutex
+	b  strings.Builder
+}
+
+func (s *syncBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.Write(p)
+}
+func (s *syncBuffer) String() string { s.mu.Lock(); defer s.mu.Unlock(); return s.b.String() }
