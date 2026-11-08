@@ -11,6 +11,7 @@ dev:
 
 web:
 	cd web && npm ci --no-audit --no-fund && npm run build
+	@touch web/dist/.gitkeep # vite vide dist/ ; le fichier doit rester versionné pour go:embed
 
 test:
 	go test ./...
