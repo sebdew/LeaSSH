@@ -76,7 +76,8 @@ func startSSHD(t *testing.T) Target {
 	}
 	tg := Target{Host: host, Port: port, User: "leassh", Auth: Auth{PrivateKeyPEM: priv}}
 
-	deadline := time.Now().Add(90 * time.Second)
+	// Sur un runner lent, le démarrage (création des clés d'hôte, usermod…) peut dépasser la minute.
+	deadline := time.Now().Add(4 * time.Minute)
 	for {
 		fp, _, err := ScanHostKey(context.Background(), tg.Host, tg.Port)
 		if err == nil {

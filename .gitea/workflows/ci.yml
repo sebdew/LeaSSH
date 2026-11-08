@@ -37,8 +37,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Image sshd (téléchargement hors du test)
+        run: docker pull lscr.io/linuxserver/openssh-server@sha256:aa4e1b3916e8555f24e574e6108b0b89a1b20362b0a11800a71280b45999649e
       - name: Tests d'intégration SSH
-        run: go test -tags integration ./internal/sshexec -run Integration -v
+        run: go test -tags integration ./internal/sshexec -run Integration -v -timeout 10m
 
   e2e:
     # Parcours navigateur (Playwright) sur le binaire réel : initialisation, connexion, clé MCP, journal.
