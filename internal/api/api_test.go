@@ -310,3 +310,24 @@ func TestHSTSOnlyOverHTTPS(t *testing.T) {
 		t.Fatal("HSTS ne doit pas être posé en HTTP clair")
 	}
 }
+
+// SEC-05: derrière un proxy de confiance, c'est le proxy qui pose HSTS (pas de doublon); sans proxy, Leassh pose le sien.
+func TestHSTSLeftToTrustedProxy(t *testing.T) {
+	s := &Server{set: testSettings(t, "https://leassh.example.com", "10.0.0.0/8")}
+	h := s.securityHeaders(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	req := httptest.NewRequest("GET", "/", nil)
+	req.RemoteAddr = "10.0.0.5:1234"
+	req.Header.Set("X-Forwarded-Proto", "https")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if v := rec.Header().Get("Strict-Transport-Security"); v != "" {
+		t.Fatalf("requête d'un proxy de confiance: HSTS laissé au proxy, obtenu %q", v)
+	}
+	req = httptest.NewRequest("GET", "/", nil)
+	req.RemoteAddr = "198.51.100.1:1234" // pas un proxy de confiance
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Header().Get("Strict-Transport-Security") == "" {
+		t.Fatal("hors proxy de confiance, Leassh doit poser HSTS")
+	}
+}
