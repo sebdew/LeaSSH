@@ -13,13 +13,16 @@ type Config struct {
 	Listen    string
 	DataDir   string
 	MasterKey []byte
+	// SetupToken: jeton d'initialisation à usage unique (LEASSH_SETUP_TOKEN). Vide = généré au démarrage si l'instance est neuve.
+	SetupToken string
 }
 
 // Load construit la configuration à partir de getenv (injectable pour les tests).
 func Load(getenv func(string) string) (*Config, error) {
 	c := &Config{
-		Listen:  or(getenv("LEASSH_LISTEN"), ":8080"),
-		DataDir: or(getenv("LEASSH_DATA_DIR"), "/data"),
+		Listen:     or(getenv("LEASSH_LISTEN"), ":8080"),
+		DataDir:    or(getenv("LEASSH_DATA_DIR"), "/data"),
+		SetupToken: getenv("LEASSH_SETUP_TOKEN"),
 	}
 	raw := getenv("LEASSH_MASTER_KEY")
 	if raw == "" {

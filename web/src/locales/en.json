@@ -50,6 +50,8 @@
     "username": "Username",
     "password": "Password",
     "confirm": "Confirmation",
+    "token": "Setup token",
+    "tokenHelp": "Provided by LEASSH_SETUP_TOKEN, or printed once when the server starts (docker logs leassh).",
     "submit": "Create account",
     "mismatch": "Passwords do not match.",
     "backup": "Keep LEASSH_MASTER_KEY safe: it encrypts SSH secrets. Without it they cannot be recovered.",
@@ -153,6 +155,7 @@
     "too_many_attempts": "Too many attempts, try again in a few minutes.",
     "weak_password": "Password must be at least 10 characters.",
     "already_initialized": "This instance is already initialized.",
+    "invalid_setup_token": "Invalid setup token.",
     "local_login_disabled": "Password sign-in is reserved for administrators: use SSO.",
     "sso_account": "This account is managed by SSO."
   },
@@ -1132,8 +1135,8 @@
     "metrics": "Prometheus metrics",
     "metricsToken": "/metrics token",
     "metricsKept": "•••• (leave empty to keep)",
-    "metricsOpen": "None: /metrics is open",
-    "metricsHelp": "When a token is set, /metrics requires \"Authorization: Bearer <token>\". Only its hash is stored.",
-    "metricsClear": "Remove the token (open /metrics)"
+    "metricsOpen": "None: /metrics is closed",
+    "metricsHelp": "Without a token, /metrics is closed (401). With a token, /metrics requires \"Authorization: Bearer <token>\". Only its hash is stored.",
+    "metricsClear": "Remove the token (close /metrics)"
   }
 }

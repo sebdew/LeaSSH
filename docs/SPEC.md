@@ -376,7 +376,7 @@ Disponible uniquement si `can_propose = true`. Limite : 10 propositions en atten
 Détails visuels et parcours : voir [`UX.md`](UX.md).
 
 Écrans :
-1. **Initialisation** (premier lancement) : création du compte admin.
+1. **Initialisation** (premier lancement) : création du compte admin, protégée par un jeton d'initialisation (`LEASSH_SETUP_TOKEN`, ou jeton aléatoire affiché une fois au démarrage).
 2. **Tableau de bord** : checklist d'accueil, exécutions récentes, en attente de validation, propositions, serveurs en anomalie.
 3. **Journal** : exécutions (onglet principal) et événements d'administration.
 4. **Validations** : demandes en attente, approuver / refuser avec commentaire.
@@ -562,7 +562,7 @@ Démarrage refusé si `LEASSH_MASTER_KEY` est absente ou invalide. Rotation de l
 ### Annexe — Finitions (M8)
 
 - **Tableau de bord** : `GET /api/v1/dashboard` (checklist à 6 étapes cochées automatiquement, chiffres 24 h, anomalies de serveurs, 10 dernières exécutions). « Agent connecté » = une clé MCP a déjà servi.
-- **`/metrics`** : compteurs en mémoire (`leassh_executions_total{status}` compte les transitions vers un statut depuis le démarrage, `leassh_ssh_errors_total{kind}`, histogramme de durée) + jauges lues en base. le jeton défini dans Réglages → Général (facultatif) protège la route.
+- **`/metrics`** : compteurs en mémoire (`leassh_executions_total{status}` compte les transitions vers un statut depuis le démarrage, `leassh_ssh_errors_total{kind}`, histogramme de durée) + jauges lues en base. fermée par défaut : sans jeton défini dans Réglages → Général, la route répond 401.
 - **CLI** : `leassh serve | backup <fichier> | rotate-master-key | reset-password <identifiant> | healthcheck | version`. `backup` utilise `VACUUM INTO` (cohérent, serveur démarré); la clé maître n'est jamais incluse.
 - **Image Docker** : multi-étapes (Node → Go → distroless non-root), `HEALTHCHECK` via `leassh healthcheck`. Non construite dans l'environnement de développement (pas de Docker disponible).
 

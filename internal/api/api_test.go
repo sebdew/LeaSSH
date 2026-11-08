@@ -30,9 +30,18 @@ func newTest(t *testing.T) (*httptest.Server, *store.Store) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	s.SetSetupToken(testSetupToken)
 	ts := httptest.NewServer(s.Handler())
 	t.Cleanup(ts.Close)
 	return ts, st
+}
+
+// testSetupToken: jeton d'initialisation armé par les serveurs de test.
+const testSetupToken = "jeton-d-initialisation-de-test"
+
+// setupBody: corps valide de POST /setup, avec le jeton d'initialisation de test.
+func setupBody(user, pass string) map[string]string {
+	return map[string]string{"username": user, "password": pass, "setup_token": testSetupToken}
 }
 
 func do(t *testing.T, c *http.Client, method, url string, body any, hdr map[string]string) (*http.Response, map[string]any) {
@@ -70,10 +79,10 @@ func TestSetupLoginFlow(t *testing.T) {
 	if st["initialized"] != false {
 		t.Fatalf("status: %v", st)
 	}
-	if r, _ := do(t, c, "POST", base+"/setup", credentials{Username: "admin", Password: "court"}, nil); r.StatusCode != 400 {
+	if r, _ := do(t, c, "POST", base+"/setup", setupBody("admin", "court"), nil); r.StatusCode != 400 {
 		t.Fatalf("mot de passe faible accepté: %d", r.StatusCode)
 	}
-	r, out := do(t, c, "POST", base+"/setup", credentials{Username: "admin", Password: "un-mot-de-passe-solide"}, nil)
+	r, out := do(t, c, "POST", base+"/setup", setupBody("admin", "un-mot-de-passe-solide"), nil)
 	if r.StatusCode != 201 || out["role"] != "admin" || out["csrf_token"] == "" {
 		t.Fatalf("setup: %d %v", r.StatusCode, out)
 	}
@@ -85,7 +94,7 @@ func TestSetupLoginFlow(t *testing.T) {
 		t.Fatalf("cookie: %s", ck)
 	}
 	// second setup refusé
-	if r, _ := do(t, client(), "POST", base+"/setup", credentials{Username: "evil", Password: "un-mot-de-passe-solide"}, nil); r.StatusCode != 409 {
+	if r, _ := do(t, client(), "POST", base+"/setup", setupBody("evil", "un-mot-de-passe-solide"), nil); r.StatusCode != 409 {
 		t.Fatalf("double setup: %d", r.StatusCode)
 	}
 	csrf := out["csrf_token"].(string)
@@ -117,7 +126,7 @@ func TestSetupLoginFlow(t *testing.T) {
 func TestLoginRateLimitAndAudit(t *testing.T) {
 	ts, st := newTest(t)
 	base := ts.URL + "/api/v1"
-	do(t, client(), "POST", base+"/setup", credentials{Username: "admin", Password: "un-mot-de-passe-solide"}, nil)
+	do(t, client(), "POST", base+"/setup", setupBody("admin", "un-mot-de-passe-solide"), nil)
 	c := client()
 	var last int
 	for i := 0; i < maxFailures+2; i++ {
@@ -179,4 +188,59 @@ func testSettings(t *testing.T, baseURL, proxies string) *settings.Service {
 	v.BaseURL, v.TrustedProxies = baseURL, proxies
 	set.Apply(v)
 	return set
+}
+
+// SEC-01: sur une instance neuve, /setup sans jeton d'initialisation valide ne doit jamais créer d'administrateur.
+func TestSetupRefusedWithoutValidToken(t *testing.T) {
+	ts, st := newTest(t)
+	base := ts.URL + "/api/v1"
+	for name, tok := range map[string]string{"sans jeton": "", "mauvais jeton": "faux", "jeton tronqué": testSetupToken[:5]} {
+		b := setupBody("evil", "un-mot-de-passe-solide")
+		b["setup_token"] = tok
+		if r, _ := do(t, client(), "POST", base+"/setup", b, nil); r.StatusCode != 401 {
+			t.Errorf("%s: statut %d, attendu 401", name, r.StatusCode)
+		}
+	}
+	if r, _ := do(t, client(), "POST", base+"/setup", map[string]string{"username": "evil", "password": "un-mot-de-passe-solide"}, nil); r.StatusCode != 401 {
+		t.Errorf("champ absent: statut %d, attendu 401", r.StatusCode)
+	}
+	if n, _ := st.UserCount(context.Background()); n != 0 {
+		t.Fatalf("%d utilisateur(s) créé(s) sans jeton valide", n)
+	}
+	// Le jeton valide fonctionne, une seule fois (le second appel, même avec le bon jeton, est refusé).
+	if r, _ := do(t, client(), "POST", base+"/setup", setupBody("admin", "un-mot-de-passe-solide"), nil); r.StatusCode != 201 {
+		t.Fatalf("jeton valide: %d", r.StatusCode)
+	}
+	if r, _ := do(t, client(), "POST", base+"/setup", setupBody("autre", "un-mot-de-passe-solide"), nil); r.StatusCode != 409 {
+		t.Fatalf("second setup: %d", r.StatusCode)
+	}
+}
+
+// Sans jeton armé côté serveur, /setup est fermé, même avec un jeton vide.
+func TestSetupClosedWhenNoTokenConfigured(t *testing.T) {
+	_, st := newTest(t)
+	set, _ := settings.New(context.Background(), st, nil)
+	s2, _ := New(set, st, slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
+	ts2 := httptest.NewServer(s2.Handler())
+	t.Cleanup(ts2.Close)
+	b := setupBody("evil", "un-mot-de-passe-solide")
+	b["setup_token"] = ""
+	if r, _ := do(t, client(), "POST", ts2.URL+"/api/v1/setup", b, nil); r.StatusCode != 401 {
+		t.Fatalf("attendu 401, reçu %d", r.StatusCode)
+	}
+}
+
+// Les tentatives de jeton sont limitées (force brute).
+func TestSetupTokenBruteForceLimited(t *testing.T) {
+	ts, _ := newTest(t)
+	b := setupBody("evil", "un-mot-de-passe-solide")
+	b["setup_token"] = "faux"
+	var last int
+	for i := 0; i < maxFailures+1; i++ {
+		r, _ := do(t, client(), "POST", ts.URL+"/api/v1/setup", b, nil)
+		last = r.StatusCode
+	}
+	if last != 429 {
+		t.Fatalf("attendu 429 après %d échecs, reçu %d", maxFailures, last)
+	}
 }

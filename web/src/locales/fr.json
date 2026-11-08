@@ -50,6 +50,8 @@
     "username": "Nom d'utilisateur",
     "password": "Mot de passe",
     "confirm": "Confirmation",
+    "token": "Jeton d'initialisation",
+    "tokenHelp": "Fourni par LEASSH_SETUP_TOKEN, ou affiché une fois au démarrage du serveur (docker logs leassh).",
     "submit": "Créer le compte",
     "mismatch": "Les mots de passe ne correspondent pas.",
     "backup": "Conservez LEASSH_MASTER_KEY : elle chiffre les secrets SSH. Sans elle, ils sont irrécupérables.",
@@ -153,6 +155,7 @@
     "too_many_attempts": "Trop de tentatives, réessayez dans quelques minutes.",
     "weak_password": "Le mot de passe doit faire au moins 10 caractères.",
     "already_initialized": "L'instance est déjà initialisée.",
+    "invalid_setup_token": "Jeton d'initialisation invalide.",
     "local_login_disabled": "La connexion par mot de passe est réservée aux administrateurs : utilisez le SSO.",
     "sso_account": "Ce compte est géré par le SSO."
   },
@@ -1133,8 +1136,8 @@
     "metrics": "Métriques Prometheus",
     "metricsToken": "Jeton de /metrics",
     "metricsKept": "•••• (laisser vide pour conserver)",
-    "metricsOpen": "Aucun : /metrics est ouvert",
-    "metricsHelp": "Si un jeton est défini, /metrics exige « Authorization: Bearer <jeton> ». Seule son empreinte est conservée.",
-    "metricsClear": "Supprimer le jeton (ouvrir /metrics)"
+    "metricsOpen": "Aucun : /metrics est fermé",
+    "metricsHelp": "Sans jeton, /metrics est fermé (401). Avec un jeton, /metrics exige « Authorization: Bearer <jeton> ». Seule son empreinte est conservée.",
+    "metricsClear": "Supprimer le jeton (fermer /metrics)"
   }
 }

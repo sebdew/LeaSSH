@@ -64,6 +64,8 @@ type Server struct {
 
 	metrics *metrics.Registry
 	version string
+
+	setupTokenHash string // SHA-256 du jeton d'initialisation; vide = /setup refusé
 }
 
 // Services regroupe les dépendances métier de l'API.
@@ -88,6 +90,15 @@ func (s *Server) Attach(sv Services) {
 	s.box, s.pool, s.acc, s.exec, s.props, s.packs, s.hook, s.mcp = sv.Box, sv.Pool, sv.Acc, sv.Exec, sv.Props, sv.Packs, sv.Hook, sv.MCP
 	s.prov, s.sysl = sv.Prov, sv.Syslog
 	s.metrics, s.version = sv.Metrics, sv.Version
+}
+
+// SetSetupToken définit le jeton d'initialisation exigé par POST /setup (SEC-01). Sans jeton, /setup est refusé.
+func (s *Server) SetSetupToken(tok string) {
+	if tok == "" {
+		s.setupTokenHash = ""
+		return
+	}
+	s.setupTokenHash = settings.HashToken(tok)
 }
 
 // ClientIP expose la résolution d'IP (proxies de confiance) aux autres composants.
@@ -376,9 +387,25 @@ type credentials struct {
 	DisplayName string `json:"display_name"`
 }
 
+type setupInput struct {
+	credentials
+	SetupToken string `json:"setup_token"`
+}
+
 func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
-	var in credentials
+	var in setupInput
 	if !decode(w, r, &in) {
+		return
+	}
+	// SEC-01: le jeton d'initialisation est vérifié avant toute autre chose (temps constant, tentatives limitées).
+	limKey := "setup|" + s.clientIP(r)
+	if s.lim.blocked(limKey) {
+		writeErr(w, 429, "too_many_attempts", "trop de tentatives, réessayez dans quelques minutes")
+		return
+	}
+	if s.setupTokenHash == "" || subtle.ConstantTimeCompare([]byte(settings.HashToken(in.SetupToken)), []byte(s.setupTokenHash)) != 1 {
+		s.lim.fail(limKey)
+		writeErr(w, 401, "invalid_setup_token", "jeton d'initialisation invalide")
 		return
 	}
 	in.Username = strings.TrimSpace(in.Username)

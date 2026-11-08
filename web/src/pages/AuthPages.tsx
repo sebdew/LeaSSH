@@ -92,13 +92,16 @@ export function SetupPage({ onDone }: { onDone: (u: User) => void }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [setupToken, setSetupToken] = useState("");
   const { error, busy, submit } = useSubmit("/setup", onDone);
   const strength = passwordStrength(password);
   const mismatch = confirm !== "" && confirm !== password;
-  const onSubmit = (e: FormEvent) => { e.preventDefault(); if (!mismatch) void submit({ username, password }); };
+  const onSubmit = (e: FormEvent) => { e.preventDefault(); if (!mismatch) void submit({ username, password, setup_token: setupToken.trim() }); };
   return (
     <Shell title={t("setup.title")} subtitle={t("setup.subtitle")}>
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
+        <Field id="setup-token" label={t("setup.token")} type="password" autoComplete="off" value={setupToken} onChange={(e) => setSetupToken(e.target.value)} required />
+        <p className="text-muted">{t("setup.tokenHelp")}</p>
         <Field id="username" label={t("setup.username")} autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
         <Field id="password" label={t("setup.password")} type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         <p aria-live="polite" className="text-muted">{t("setup.strength.label")} : <strong className="text-fg">{t(`setup.strength.${strength}`)}</strong></p>
