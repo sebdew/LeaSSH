@@ -175,3 +175,10 @@ func DeleteSessionsOf(ctx context.Context, q Q, userID, keepHash string) error {
 	_, err := q.ExecContext(ctx, `DELETE FROM sessions WHERE user_id=? AND id_hash<>?`, userID, keepHash)
 	return err
 }
+
+// CountUsers compte les comptes; accepte une transaction pour les tests « premier compte ».
+func CountUsers(ctx context.Context, q Q) (int, error) {
+	var n int
+	err := q.QueryRowContext(ctx, `SELECT count(*) FROM users`).Scan(&n)
+	return n, err
+}

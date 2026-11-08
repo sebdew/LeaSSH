@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/subtle"
-	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -20,6 +19,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/leassh-dev/leassh/internal/access"
+	"github.com/leassh-dev/leassh/internal/accounts"
 	"github.com/leassh-dev/leassh/internal/audit"
 	"github.com/leassh-dev/leassh/internal/crypto"
 	"github.com/leassh-dev/leassh/internal/executions"
@@ -37,7 +37,7 @@ import (
 
 const (
 	cookieName  = "leassh_session"
-	minPassword = 10
+	minPassword = accounts.MinPassword
 	maxFailures = 5
 	failWindow  = 15 * time.Minute
 	// maxFailuresPerIP: seuil par adresse, volontairement bien plus haut que maxFailures (NAT, proxy):
@@ -49,12 +49,13 @@ const (
 )
 
 type Server struct {
-	set    *settings.Service
-	st     *store.Store
-	log    *slog.Logger
-	lim    *limiter
-	limIP  *limiter
-	static http.Handler
+	set      *settings.Service
+	st       *store.Store
+	accounts *accounts.Service
+	log      *slog.Logger
+	lim      *limiter
+	limIP    *limiter
+	static   http.Handler
 
 	// services attachés par Attach (nécessaires aux routes de configuration et d'exécution)
 	box   *crypto.Box
@@ -113,7 +114,7 @@ func (s *Server) ClientIP(r *http.Request) string { return s.clientIP(r) }
 
 // New construit le routeur. static sert l'interface (SPA); peut être nil.
 func New(set *settings.Service, st *store.Store, log *slog.Logger, static http.Handler) (*Server, error) {
-	return &Server{set: set, st: st, log: log, lim: newLimiter(maxFailures, failWindow), limIP: newLimiter(maxFailuresPerIP, failWindow), static: static, oidc: oidc.New()}, nil
+	return &Server{set: set, st: st, accounts: accounts.New(st), log: log, lim: newLimiter(maxFailures, failWindow), limIP: newLimiter(maxFailuresPerIP, failWindow), static: static, oidc: oidc.New()}, nil
 }
 
 func (s *Server) Handler() http.Handler {
@@ -420,46 +421,19 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 401, "invalid_setup_token", "jeton d'initialisation invalide")
 		return
 	}
-	in.Username = strings.TrimSpace(in.Username)
-	if in.Username == "" || len(in.Username) > 64 {
-		writeErr(w, 400, "invalid_username", "nom d'utilisateur requis (64 caractères max)")
+	u, err := s.accounts.InitializeAdmin(r.Context(), accounts.InitAdminInput{
+		Username: in.Username, DisplayName: in.DisplayName, Password: in.Password, IP: s.clientIP(r)})
+	switch {
+	case errors.Is(err, accounts.ErrInvalidUsername):
+		writeErr(w, 400, "invalid_username", err.Error())
 		return
-	}
-	if len(in.Password) < minPassword {
-		writeErr(w, 400, "weak_password", "le mot de passe doit faire au moins 10 caractères")
+	case errors.Is(err, accounts.ErrWeakPassword):
+		writeErr(w, 400, "weak_password", err.Error())
 		return
-	}
-	hash, err := crypto.HashPassword(in.Password)
-	if err != nil {
-		writeErr(w, 500, "internal", "erreur interne")
+	case errors.Is(err, accounts.ErrAlreadyInitialized):
+		writeErr(w, 409, "already_initialized", err.Error())
 		return
-	}
-	if in.DisplayName == "" {
-		in.DisplayName = in.Username
-	}
-	var u store.User
-	errAlready := errors.New("déjà initialisé")
-	// Le test « aucun utilisateur » et l'insertion sont dans la même transaction (pas de double admin).
-	err = s.st.Tx(r.Context(), func(tx *sql.Tx) error {
-		var n int
-		if err := tx.QueryRowContext(r.Context(), `SELECT count(*) FROM users`).Scan(&n); err != nil {
-			return err
-		}
-		if n > 0 {
-			return errAlready
-		}
-		u, err = store.InsertUser(r.Context(), tx, store.User{Username: in.Username, DisplayName: in.DisplayName, Role: "admin", PasswordHash: hash})
-		if err != nil {
-			return err
-		}
-		return audit.Record(r.Context(), tx, audit.Event{ActorType: "system", ActorName: "setup", Action: "user.create",
-			TargetType: "user", TargetID: u.ID, TargetName: u.Username, Diff: map[string]any{"after": map[string]any{"username": u.Username, "role": u.Role}}, IP: s.clientIP(r)})
-	})
-	if errors.Is(err, errAlready) {
-		writeErr(w, 409, "already_initialized", "l'instance est déjà initialisée")
-		return
-	}
-	if err != nil {
+	case err != nil:
 		s.log.Error("setup", "err", err)
 		writeErr(w, 500, "internal", "erreur interne")
 		return
