@@ -32,25 +32,49 @@ func startSSHD(t *testing.T) Target {
 	if err != nil {
 		t.Fatal(err)
 	}
-	out, err := exec.Command("docker", "run", "-d", "--rm", "-p", "127.0.0.1::2222",
-		"-e", "PUBLIC_KEY="+strings.TrimSpace(pub), "-e", "USER_NAME=leassh",
-		"-e", "PASSWORD_ACCESS=false", "-e", "SUDO_ACCESS=false", image).CombinedOutput()
+	// Dans un job CI, le test tourne lui-même dans un conteneur et parle au Docker de l'hôte :
+	// un port publié sur 127.0.0.1 n'y serait pas joignable. On rejoint alors le réseau du job
+	// et on vise l'adresse du conteneur sshd.
+	jobNet := currentContainerNetwork()
+	args := []string{"run", "-d"}
+	if jobNet != "" {
+		args = append(args, "--network", jobNet)
+	} else {
+		args = append(args, "-p", "127.0.0.1::2222")
+	}
+	args = append(args, "-e", "PUBLIC_KEY="+strings.TrimSpace(pub), "-e", "USER_NAME=leassh",
+		"-e", "PASSWORD_ACCESS=false", "-e", "SUDO_ACCESS=false", image)
+	out, err := exec.Command("docker", args...).CombinedOutput()
 	if err != nil {
 		t.Fatalf("docker run: %v: %s", err, out)
 	}
 	id := strings.TrimSpace(string(out))
-	t.Cleanup(func() { _ = exec.Command("docker", "rm", "-f", id).Run() })
+	t.Cleanup(func() {
+		if t.Failed() { // sans --rm, les logs restent lisibles pour comprendre l'échec
+			logs, _ := exec.Command("docker", "logs", "--tail", "40", id).CombinedOutput()
+			t.Logf("logs du conteneur sshd:\n%s", logs)
+		}
+		_ = exec.Command("docker", "rm", "-f", id).Run()
+	})
 
-	portOut, err := exec.Command("docker", "port", id, "2222/tcp").Output()
-	if err != nil {
-		t.Fatalf("docker port: %v", err)
+	host, port := "127.0.0.1", 2222
+	if jobNet != "" {
+		ip, err := exec.Command("docker", "inspect", "-f", "{{(index .NetworkSettings.Networks \""+jobNet+"\").IPAddress}}", id).Output()
+		if err != nil || strings.TrimSpace(string(ip)) == "" {
+			t.Fatalf("adresse du conteneur sshd introuvable sur %s: %v", jobNet, err)
+		}
+		host = strings.TrimSpace(string(ip))
+	} else {
+		portOut, err := exec.Command("docker", "port", id, "2222/tcp").CombinedOutput()
+		if err != nil {
+			t.Fatalf("docker port: %v: %s", err, portOut)
+		}
+		line := strings.Fields(string(portOut))[0]
+		if port, err = strconv.Atoi(line[strings.LastIndex(line, ":")+1:]); err != nil {
+			t.Fatalf("port illisible dans %q", line)
+		}
 	}
-	line := strings.Fields(string(portOut))[0]
-	port, err := strconv.Atoi(line[strings.LastIndex(line, ":")+1:])
-	if err != nil {
-		t.Fatalf("port illisible dans %q", line)
-	}
-	tg := Target{Host: "127.0.0.1", Port: port, User: "leassh", Auth: Auth{PrivateKeyPEM: priv}}
+	tg := Target{Host: host, Port: port, User: "leassh", Auth: Auth{PrivateKeyPEM: priv}}
 
 	deadline := time.Now().Add(90 * time.Second)
 	for {
@@ -123,4 +147,21 @@ func TestIntegrationOpenSSH(t *testing.T) {
 			t.Fatal("mauvaise clé acceptée")
 		}
 	})
+}
+
+// currentContainerNetwork renvoie le réseau Docker du conteneur dans lequel tourne le test
+// (le nom d'hôte d'un conteneur est son identifiant), ou "" hors conteneur.
+func currentContainerNetwork() string {
+	host, err := os.Hostname()
+	if err != nil {
+		return ""
+	}
+	out, err := exec.Command("docker", "inspect", "-f", "{{range $n, $_ := .NetworkSettings.Networks}}{{$n}} {{end}}", host).Output()
+	if err != nil {
+		return ""
+	}
+	if nets := strings.Fields(string(out)); len(nets) > 0 {
+		return nets[0]
+	}
+	return ""
 }
