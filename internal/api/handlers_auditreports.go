@@ -96,7 +96,7 @@ func (s *Server) createAuditReport(w http.ResponseWriter, r *http.Request) {
 			return outcome{}, err
 		}
 		rep.HMAC = auditreport.Tag(s.box.Derive(auditTagLabel), rep.SHA256, rep.ID, rep.CreatedAt)
-		if _, err = tx.ExecContext(ctx, `UPDATE audit_reports SET hmac=? WHERE id=?`, rep.HMAC, rep.ID); err != nil {
+		if err = store.SetAuditReportHMAC(ctx, tx, rep.ID, rep.HMAC); err != nil {
 			return outcome{}, err
 		}
 		meta := store.AuditReportMeta{AuditReport: rep}

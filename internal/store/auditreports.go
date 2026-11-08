@@ -276,3 +276,9 @@ func ListAdminEventsBetween(ctx context.Context, q Q, from, to string, limit int
 func AdminActionCounts(ctx context.Context, q Q, from, to string) ([]NameCount, error) {
 	return nameCounts(ctx, q, `SELECT action,count(*) FROM audit_events WHERE ts>=? AND ts<=? GROUP BY action ORDER BY action`, from, to)
 }
+
+// SetAuditReportHMAC pose l'étiquette HMAC, calculée après coup car elle couvre l'identifiant et la date générés à l'insertion.
+func SetAuditReportHMAC(ctx context.Context, tx Q, id, hmac string) error {
+	_, err := tx.ExecContext(ctx, `UPDATE audit_reports SET hmac=? WHERE id=?`, hmac, id)
+	return wrapErr("signature du rapport d'audit", err)
+}
