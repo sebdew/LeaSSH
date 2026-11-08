@@ -40,6 +40,12 @@ const (
 	minPassword = 10
 	maxFailures = 5
 	failWindow  = 15 * time.Minute
+	// maxFailuresPerIP: seuil par adresse, volontairement bien plus haut que maxFailures (NAT, proxy):
+	// il freine le bourrage d'identifiants sans verrouiller les comptes voisins d'une même IP (SEC-04).
+	maxFailuresPerIP = 50
+	// idleTimeout: durée sans requête au-delà de laquelle une session est refusée (SEC-04, ASVS V3.3).
+	idleTimeout = 30 * time.Minute
+	hstsValue   = "max-age=31536000; includeSubDomains"
 )
 
 type Server struct {
@@ -47,6 +53,7 @@ type Server struct {
 	st     *store.Store
 	log    *slog.Logger
 	lim    *limiter
+	limIP  *limiter
 	static http.Handler
 
 	// services attachés par Attach (nécessaires aux routes de configuration et d'exécution)
@@ -106,12 +113,12 @@ func (s *Server) ClientIP(r *http.Request) string { return s.clientIP(r) }
 
 // New construit le routeur. static sert l'interface (SPA); peut être nil.
 func New(set *settings.Service, st *store.Store, log *slog.Logger, static http.Handler) (*Server, error) {
-	return &Server{set: set, st: st, log: log, lim: newLimiter(maxFailures, failWindow), static: static, oidc: oidc.New()}, nil
+	return &Server{set: set, st: st, log: log, lim: newLimiter(maxFailures, failWindow), limIP: newLimiter(maxFailuresPerIP, failWindow), static: static, oidc: oidc.New()}, nil
 }
 
 func (s *Server) Handler() http.Handler {
 	r := chi.NewRouter()
-	r.Use(securityHeaders)
+	r.Use(s.securityHeaders)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
 	r.Get("/metrics", s.metricsHandler)
 	r.Route("/api/v1", func(r chi.Router) {
@@ -165,13 +172,16 @@ func decode(w http.ResponseWriter, r *http.Request, v any) bool {
 	return true
 }
 
-func securityHeaders(next http.Handler) http.Handler {
+func (s *Server) securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
 		h.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Referrer-Policy", "same-origin")
+		if s.isHTTPS(r) {
+			h.Set("Strict-Transport-Security", hstsValue)
+		}
 		next.ServeHTTP(w, r)
 	})
 }
@@ -329,7 +339,7 @@ func (s *Server) requireSession(next http.Handler) http.Handler {
 			writeErr(w, 401, "unauthenticated", "connexion requise")
 			return
 		}
-		se, err := s.st.SessionByHash(r.Context(), hashSession(c.Value))
+		se, err := s.st.SessionByHash(r.Context(), hashSession(c.Value), idleTimeout)
 		if err != nil {
 			writeErr(w, 401, "unauthenticated", "session expirée")
 			return
@@ -470,7 +480,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	ip := s.clientIP(r)
 	key := ip + "|" + strings.ToLower(in.Username)
-	if s.lim.blocked(key) || s.lim.blocked(ip) {
+	if s.lim.blocked(key) || s.limIP.blocked(ip) {
 		writeErr(w, 429, "too_many_attempts", "trop de tentatives, réessayez dans quelques minutes")
 		return
 	}
@@ -493,7 +503,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	if !ok {
 		s.lim.fail(key)
-		s.lim.fail(ip)
+		s.limIP.fail(ip)
 		_ = audit.RecordStandalone(r.Context(), s.st, audit.Event{ActorType: "system", ActorName: in.Username, Action: "user.login_failed",
 			TargetType: "user", TargetName: in.Username, IP: ip})
 		writeErr(w, 401, "invalid_credentials", "identifiants incorrects")

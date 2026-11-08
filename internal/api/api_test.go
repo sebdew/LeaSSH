@@ -3,6 +3,8 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"database/sql"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -10,7 +12,9 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/leassh-dev/leassh/internal/crypto"
 	"github.com/leassh-dev/leassh/internal/settings"
 	"github.com/leassh-dev/leassh/internal/store"
 )
@@ -242,5 +246,67 @@ func TestSetupTokenBruteForceLimited(t *testing.T) {
 	}
 	if last != 429 {
 		t.Fatalf("attendu 429 après %d échecs, reçu %d", maxFailures, last)
+	}
+}
+
+// SEC-04: une session inactive depuis plus longtemps que le délai d'inactivité est refusée.
+func TestInactiveSessionRefused(t *testing.T) {
+	ts, st := newTest(t)
+	base := ts.URL + "/api/v1"
+	c := client()
+	do(t, c, "POST", base+"/setup", setupBody("admin", "un-mot-de-passe-solide"), nil)
+	if r, _ := do(t, c, "GET", base+"/auth/me", nil, nil); r.StatusCode != 200 {
+		t.Fatalf("session active: %d", r.StatusCode)
+	}
+	old := store.FormatTime(time.Now().Add(-2 * idleTimeout))
+	if _, err := st.DB.Exec(`UPDATE sessions SET last_seen_at=?`, old); err != nil {
+		t.Fatal(err)
+	}
+	if r, _ := do(t, c, "GET", base+"/auth/me", nil, nil); r.StatusCode != 401 {
+		t.Fatalf("session inactive attendue refusée, obtenu %d", r.StatusCode)
+	}
+}
+
+// SEC-04: cinq échecs sur un compte ne verrouillent pas les autres comptes derrière la même IP.
+func TestLoginLockIsPerAccount(t *testing.T) {
+	ts, st := newTest(t)
+	base := ts.URL + "/api/v1"
+	do(t, client(), "POST", base+"/setup", setupBody("admin", "un-mot-de-passe-solide"), nil)
+	hash, err := crypto.HashPassword("autre-mot-de-passe-solide")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Tx(context.Background(), func(tx *sql.Tx) error {
+		_, err := store.InsertUser(context.Background(), tx, store.User{Username: "bob", Role: "viewer", PasswordHash: hash})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < maxFailures; i++ {
+		do(t, client(), "POST", base+"/auth/login", credentials{Username: "admin", Password: "x"}, nil)
+	}
+	if r, _ := do(t, client(), "POST", base+"/auth/login", credentials{Username: "admin", Password: "un-mot-de-passe-solide"}, nil); r.StatusCode != 429 {
+		t.Fatalf("le compte ciblé doit être verrouillé: %d", r.StatusCode)
+	}
+	if r, _ := do(t, client(), "POST", base+"/auth/login", credentials{Username: "bob", Password: "autre-mot-de-passe-solide"}, nil); r.StatusCode != 200 {
+		t.Fatalf("un autre compte de la même IP ne doit pas être verrouillé: %d", r.StatusCode)
+	}
+}
+
+// SEC-05: HSTS présent en HTTPS, absent en HTTP clair.
+func TestHSTSOnlyOverHTTPS(t *testing.T) {
+	s := &Server{set: testSettings(t, "", "")}
+	h := s.securityHeaders(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	req := httptest.NewRequest("GET", "/", nil)
+	req.TLS = &tls.ConnectionState{}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if !strings.Contains(rec.Header().Get("Strict-Transport-Security"), "max-age=") {
+		t.Fatal("Strict-Transport-Security absent en HTTPS")
+	}
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+	if rec.Header().Get("Strict-Transport-Security") != "" {
+		t.Fatal("HSTS ne doit pas être posé en HTTP clair")
 	}
 }

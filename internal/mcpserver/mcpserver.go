@@ -444,22 +444,16 @@ func (s *Server) logCalls(cc callCtx) mcp.Middleware {
 				}
 				return res, err
 			}
-			tool, args := "", ""
+			// Jamais le contenu des arguments (reason, params): seulement leur taille (SEC-06).
+			// Le détail complet est dans le journal d'exécution, qui est protégé.
+			tool, argsLen := "", 0
 			if p, ok := req.GetParams().(*mcp.CallToolParamsRaw); ok {
-				tool, args = p.Name, string(p.Arguments)
-				if len(args) > 300 {
-					args = args[:300] + "…"
-				}
+				tool, argsLen = p.Name, len(p.Arguments)
 			}
-			attrs := []any{"tool", tool, "key", cc.key.Prefix, "ip", cc.ip, "args", args}
+			attrs := []any{"tool", tool, "key", cc.key.Prefix, "ip", cc.ip, "args_len", argsLen}
 			if r, ok := res.(*mcp.CallToolResult); ok && r != nil && r.IsError {
-				msg := ""
-				if len(r.Content) > 0 {
-					if tc, ok := r.Content[0].(*mcp.TextContent); ok {
-						msg = tc.Text
-					}
-				}
-				s.cfg.Log.Info("appel MCP refusé", append(attrs, "message", msg)...)
+				// Le message de refus peut citer une valeur fournie par l'agent: on ne le logue pas.
+				s.cfg.Log.Info("appel MCP refusé", attrs...)
 				return res, err
 			}
 			if err != nil {
