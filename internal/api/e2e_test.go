@@ -76,12 +76,13 @@ func newEnv(t *testing.T) *env {
 	ex.Notify, props.Notify = hook.OnExecution, hook.OnProposal
 	go hook.Run(ctx)
 	srv, _ := New(set, st, log, nil)
+	srv.SetSetupToken(testSetupToken)
 	m := mcpserver.New(mcpserver.Config{Store: st, Access: acc, Executions: ex, Proposals: props, ClientIP: srv.ClientIP, Version: "t"})
 	srv.Attach(Services{Box: box, Pool: pool, Acc: acc, Exec: ex, Props: props, Packs: pk, Hook: hook, Syslog: sl, Prov: provisioning.New(st, box, log), MCP: m.Handler(), Metrics: reg, Version: "test"})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 	e := &env{t: t, ts: ts, c: client(), ssh: sshtest.New(t), st: st, exec: ex, props: props}
-	_, out := do(t, e.c, "POST", ts.URL+"/api/v1/setup", credentials{Username: "admin", Password: "un-mot-de-passe-solide"}, nil)
+	_, out := do(t, e.c, "POST", ts.URL+"/api/v1/setup", setupBody("admin", "un-mot-de-passe-solide"), nil)
 	e.csrf = out["csrf_token"].(string)
 	return e
 }

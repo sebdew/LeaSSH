@@ -27,7 +27,18 @@ func TestDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if c.SetupToken != "" {
+		t.Fatalf("jeton d'initialisation inattendu: %q", c.SetupToken)
+	}
 	if c.Listen != ":8080" || c.DataDir != "/data" {
 		t.Fatalf("défauts inattendus: %+v", c)
+	}
+}
+
+func TestSetupTokenFromEnv(t *testing.T) {
+	k := base64.StdEncoding.EncodeToString(make([]byte, 32))
+	c, err := Load(env(map[string]string{"LEASSH_MASTER_KEY": k, "LEASSH_SETUP_TOKEN": "abc"}))
+	if err != nil || c.SetupToken != "abc" {
+		t.Fatalf("%v %+v", err, c)
 	}
 }

@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/leassh-dev/leassh/internal/store"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -89,7 +90,19 @@ func TestMetricsEndpoint(t *testing.T) {
 	e.must("POST", "/commands/"+str(cmd, "id")+"/test", map[string]any{"server": "web-01"}, 200)
 	e.must("POST", "/commands/"+str(cmd, "id")+"/test", map[string]any{"server": "nope"}, 200)
 
-	resp, body := e.raw0("/metrics")
+	// /metrics est fermé par défaut (SEC-02): on définit un jeton puis on le présente.
+	cfg := e.must("GET", "/settings/general", nil, 200)
+	cfg["metrics_token"] = "m3trics-token"
+	e.must("PUT", "/settings/general", cfg, 200)
+	req, _ := http.NewRequest("GET", e.ts.URL+"/metrics", nil)
+	req.Header.Set("Authorization", "Bearer m3trics-token")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	body := string(raw)
 	if resp.StatusCode != 200 || !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/plain") {
 		t.Fatalf("/metrics: %d %v", resp.StatusCode, resp.Header)
 	}
@@ -109,8 +122,9 @@ func TestMetricsEndpoint(t *testing.T) {
 
 func TestMetricsTokenProtection(t *testing.T) {
 	e := newEnv(t)
-	if resp, _ := e.raw0("/metrics"); resp.StatusCode != 200 {
-		t.Fatalf("sans jeton défini, /metrics est ouvert: %d", resp.StatusCode)
+	// SEC-02: sécurisé par défaut, tant qu'aucun jeton n'est défini /metrics est fermé.
+	if resp, _ := e.raw0("/metrics"); resp.StatusCode != 401 {
+		t.Fatalf("sans jeton défini, /metrics doit être fermé: %d", resp.StatusCode)
 	}
 	cfg := e.must("GET", "/settings/general", nil, 200)
 	cfg["metrics_token"] = "m3trics-token"

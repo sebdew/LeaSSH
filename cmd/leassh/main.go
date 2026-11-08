@@ -4,6 +4,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -134,6 +135,9 @@ func serve(cfg *config.Config, set *settings.Service, st *store.Store, log *slog
 		return err
 	}
 	mcp := mcpserver.New(mcpserver.Config{Store: st, Access: acc, Executions: exec, Proposals: props, ClientIP: srv.ClientIP, Version: version, Log: log})
+	if err := configureSetupToken(context.Background(), srv, cfg, st); err != nil {
+		return err
+	}
 	srv.Attach(api.Services{Box: box, Pool: pool, Acc: acc, Exec: exec, Props: props, Packs: pk, Hook: hook, Syslog: sl, Prov: prov, MCP: mcp.Handler(), Metrics: reg, Version: version})
 
 	// Les flux longs (SSE du journal, attentes de get_execution) se terminent à l'arrêt: sans cela Shutdown attendrait le délai complet.
@@ -211,5 +215,29 @@ func rotateMasterKey() error {
 		return fmt.Errorf("rotation annulée, rien n'a été modifié: %w", err)
 	}
 	fmt.Printf("%d secret(s) rechiffré(s). Remplacez LEASSH_MASTER_KEY par la nouvelle clé avant de redémarrer Leassh.\n", n)
+	return nil
+}
+
+// configureSetupToken arme le jeton d'initialisation (SEC-01). Sur une instance déjà initialisée, aucun jeton n'est nécessaire.
+// Sans LEASSH_SETUP_TOKEN, un jeton aléatoire est généré et affiché une seule fois sur la sortie d'erreur
+// (volontairement hors du logger structuré, dont les lignes peuvent être transmises à un syslog).
+func configureSetupToken(ctx context.Context, srv *api.Server, cfg *config.Config, st *store.Store) error {
+	n, err := st.UserCount(ctx)
+	if err != nil {
+		return fmt.Errorf("lecture des utilisateurs: %w", err)
+	}
+	if n > 0 {
+		return nil
+	}
+	tok := cfg.SetupToken
+	if tok == "" {
+		b := make([]byte, 24)
+		if _, err := rand.Read(b); err != nil {
+			return fmt.Errorf("génération du jeton d'initialisation: %w", err)
+		}
+		tok = base64.RawURLEncoding.EncodeToString(b)
+		fmt.Fprintf(os.Stderr, "Instance non initialisée. Jeton d'initialisation (usage unique, valable jusqu'au redémarrage) : %s\n", tok)
+	}
+	srv.SetSetupToken(tok)
 	return nil
 }

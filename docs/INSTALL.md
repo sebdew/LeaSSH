@@ -106,7 +106,9 @@ dans **Réglages → Général → Reverse proxies de confiance** (ex. `127.0.0.
 
 ## 5. Premiers pas (checklist du tableau de bord)
 
-1. Ouvrez l'URL, **créez le compte administrateur** (10 caractères minimum).
+1. Ouvrez l'URL, saisissez le **jeton d'initialisation** (voir ci-dessous) et **créez le compte administrateur** (10 caractères minimum).
+
+   > **Jeton d'initialisation.** Tant qu'aucun compte n'existe, `POST /api/v1/setup` exige un jeton, sinon la première personne qui atteint l'instance en deviendrait administratrice. Définissez `LEASSH_SETUP_TOKEN` (par exemple `openssl rand -base64 24`) ou, à défaut, relevez le jeton aléatoire affiché **une seule fois** au démarrage (`docker logs leassh`, ou `journalctl -u leassh`). Il n'est jamais écrit dans la base ni dans les logs structurés, et n'est plus utile une fois le compte créé (vous pouvez retirer la variable).
 2. **Identités SSH** → *Nouvelle identité* → « Générer une clé ed25519 ». Copiez la ligne affichée.
 3. Sur chaque serveur cible, ajoutez la clé publique :
    `echo '<clé publique>' >> ~/.ssh/authorized_keys` (voir §9 pour un utilisateur restreint).
@@ -137,6 +139,7 @@ Cinq outils : `list_servers`, `list_commands`, `run_command`, `get_execution`, `
 | `LEASSH_MASTER_KEY` | — (**obligatoire**) | 32 octets en base64 ; chiffre les secrets |
 | `LEASSH_LISTEN` | `:8080` | adresse d'écoute (interface + MCP) |
 | `LEASSH_DATA_DIR` | `/data` | dossier de la base SQLite (`leassh.db`) |
+| `LEASSH_SETUP_TOKEN` | généré au démarrage | jeton d'initialisation (instance neuve uniquement) ; affiché une fois s'il n'est pas fourni |
 
 Tout le reste se règle dans l'interface, **Réglages → Général** (stocké en base, appliqué à chaud) : URL publique, reverse proxies de confiance, durée des sessions, expiration des validations, rétention des journaux, niveau de logs, jeton `/metrics`.
 
@@ -225,7 +228,7 @@ Installez-les depuis **Catalogue → Packs** (aperçu, puis import avec créatio
 ## 10. Observabilité
 
 - `GET /healthz` → `ok` (utilisé par le `HEALTHCHECK` de l'image via `leassh healthcheck`).
-- `GET /metrics` (Prometheus) : `leassh_executions_total{status}`, `leassh_execution_duration_seconds`, `leassh_ssh_errors_total{kind}`, `leassh_pending_approvals`, `leassh_servers{host_key_status}`, `leassh_mcp_keys{state}`…
+- `GET /metrics` (Prometheus) : **fermé par défaut** (401 tant qu'aucun jeton n'est défini dans **Réglages → Général**). Définissez un jeton et présentez-le avec `Authorization: Bearer <jeton>`. En complément, bloquez `/metrics` au niveau du reverse proxy si Prometheus est sur le même réseau (exemple Caddy : `@metrics path /metrics` puis `respond @metrics 403` pour les clients hors `10.0.0.0/8`, ou n'exposer `/metrics` que sur un port interne). Exposées : `leassh_executions_total{status}`, `leassh_execution_duration_seconds`, `leassh_ssh_errors_total{kind}`, `leassh_pending_approvals`, `leassh_servers{host_key_status}`, `leassh_mcp_keys{state}`…
 
 ```yaml
 scrape_configs:

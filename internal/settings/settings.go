@@ -27,7 +27,7 @@ type Values struct {
 	ApprovalTTLMin   int
 	LogRetentionDays int // 0 = illimité
 	LogLevel         string
-	MetricsTokenHash string // SHA-256 hex; vide = /metrics ouvert
+	MetricsTokenHash string // SHA-256 hex; vide = /metrics fermé (401)
 }
 
 // Service: lecture en cache, rechargé après chaque modification.
@@ -119,11 +119,12 @@ func (s *Service) Trusted(a netip.Addr) bool {
 	return false
 }
 
-// CheckMetricsToken: true si /metrics est ouvert ou si le jeton fourni correspond (temps constant).
+// CheckMetricsToken: true seulement si un jeton est défini et que celui fourni correspond (temps constant).
+// Sécurisé par défaut: sans jeton défini, /metrics reste fermé.
 func (s *Service) CheckMetricsToken(got string) bool {
 	h := s.Get().MetricsTokenHash
 	if h == "" {
-		return true
+		return false
 	}
 	return subtle.ConstantTimeCompare([]byte(HashToken(got)), []byte(h)) == 1
 }

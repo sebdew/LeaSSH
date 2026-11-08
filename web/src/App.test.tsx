@@ -33,6 +33,24 @@ describe("App", () => {
     expect(screen.getByText(/LEASSH_MASTER_KEY/)).toBeInTheDocument();
   });
 
+  it("envoie le jeton d'initialisation avec la création du compte", async () => {
+    let sent: Record<string, string> = {};
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      const key = `${init?.method ?? "GET"} ${url.replace("/api/v1", "")}`;
+      if (key === "POST /setup") sent = JSON.parse(String(init?.body));
+      const body = key === "GET /setup/status" ? { initialized: false } : key === "POST /setup" ? { id: "u1", username: "admin", role: "admin", csrf_token: "c" } : {};
+      return { ok: true, status: 200, json: async () => body } as Response;
+    }));
+    wrap();
+    const u = userEvent.setup();
+    await u.type(await screen.findByLabelText("Jeton d'initialisation"), " tok-123 ");
+    await u.type(screen.getByLabelText("Nom d'utilisateur"), "admin");
+    await u.type(screen.getByLabelText("Mot de passe"), "Un-mot-de-passe-solide1");
+    await u.type(screen.getByLabelText("Confirmation"), "Un-mot-de-passe-solide1");
+    await u.click(screen.getByRole("button", { name: "Créer le compte" }));
+    await waitFor(() => expect(sent.setup_token).toBe("tok-123"));
+  });
+
   it("bloque la création si les mots de passe diffèrent", async () => {
     mockFetch({ "GET /setup/status": () => ({ body: { initialized: false } }) });
     wrap();
