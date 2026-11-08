@@ -1,4 +1,4 @@
-.PHONY: dev test lint build web docker
+.PHONY: dev test lint build web docker e2e
 VERSION ?= $(shell git describe --tags --always 2>/dev/null || echo dev)
 
 # Backend + Vite (proxy API vers :8080). Clé maître de développement générée une fois dans .dev/.
@@ -17,10 +17,13 @@ test:
 	go test ./...
 	cd web && npm test
 
+GOLANGCI_LINT ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4
+
 lint:
 	go vet ./...
 	test -z "$$(gofmt -l .)"
-	cd web && npm run typecheck
+	go run $(GOLANGCI_LINT) run ./...
+	cd web && npm run typecheck && npm run lint
 
 build: web
 	CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$(VERSION)" -o bin/leassh ./cmd/leassh
@@ -28,3 +31,7 @@ build: web
 # Image multi-arch ; ajoutez --push (ou --load pour une seule plateforme).
 docker:
 	docker buildx build --platform linux/amd64,linux/arm64 --build-arg VERSION=$(VERSION) -t leassh:$(VERSION) .
+
+# Parcours de bout en bout (Playwright, Chromium) sur le vrai binaire et une base neuve.
+e2e: build
+	cd web && npx playwright install --with-deps chromium && npm run e2e

@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"strings"
 
@@ -134,6 +135,9 @@ func CheckPassword(pw, encoded string) bool {
 	if err1 != nil || err2 != nil {
 		return false
 	}
-	got := argon2.IDKey([]byte(pw), salt, t, m, th, uint32(len(want)))
+	if len(want) == 0 || len(want) > math.MaxInt32 {
+		return false
+	}
+	got := argon2.IDKey([]byte(pw), salt, t, m, th, uint32(len(want))) //nolint:gosec // borné ci-dessus
 	return subtle.ConstantTimeCompare(got, want) == 1
 }

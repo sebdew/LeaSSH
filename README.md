@@ -134,14 +134,16 @@ Go ≥ 1.23, Node ≥ 20.
 ```bash
 make dev     # backend avec rechargement + Vite (proxy API)
 make test    # tests Go (dont corpus d'injection) + tests Vitest
-make lint    # go vet, gofmt, tsc --noEmit
+make lint    # go vet, gofmt, golangci-lint (dont gosec), tsc --noEmit, eslint
+make e2e     # parcours Playwright (Chromium) sur le binaire réel, base neuve
 make build   # build du frontend puis binaire unique (bin/leassh)
 make docker  # image Docker
+go test -tags integration ./internal/sshexec -run Integration  # vrai sshd via Docker
 ```
 
 ### Intégration continue
 
-Le workflow `.gitea/workflows/ci.yml` (Gitea Actions) s'exécute sur chaque merge request et sur `main` : `make lint`, `make test`, gitleaks (secrets, historique complet), Trivy (`fs`, sévérités HIGH et CRITICAL), `govulncheck ./...` et `npm audit`. Rien n'est fusionné sans CI verte ; `main` doit être protégée (merge request obligatoire, jobs `qualite` et `securite` requis).
+Le workflow `.gitea/workflows/ci.yml` (Gitea Actions) s'exécute sur chaque merge request et sur `main` : `make lint`, `make test`, les tests d'intégration SSH contre `openssh-server` (job `integration-ssh`), les parcours Playwright (job `e2e`), gitleaks (secrets, historique complet), Trivy (`fs`, sévérités HIGH et CRITICAL), `govulncheck ./...` et `npm audit`. Rien n'est fusionné sans CI verte ; `main` doit être protégée (merge request obligatoire, jobs `qualite`, `integration-ssh`, `e2e` et `securite` requis).
 
 ## Documentation
 

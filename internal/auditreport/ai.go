@@ -23,7 +23,7 @@ const (
 	keyAIEnabled = "audit_ai.enabled"
 	keyAIURL     = "audit_ai.url"
 	keyAIModel   = "audit_ai.model"
-	KeyAISecret  = "audit_ai.key_enc" // aussi réécrit par la rotation de la clé maître
+	KeyAISecret  = "audit_ai.key_enc" //nolint:gosec // nom de clé de configuration, pas un secret // aussi réécrit par la rotation de la clé maître
 )
 
 type AIConfig struct {

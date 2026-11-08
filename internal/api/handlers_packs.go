@@ -155,7 +155,7 @@ func (s *Server) exportPack(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/yaml; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+meta.ID+`.yaml"`)
-	_, _ = w.Write(data)
+	_, _ = w.Write(data) //nolint:gosec // YAML servi en téléchargement (application/yaml), jamais interprété comme HTML
 }
 
 // ---- webhook ----

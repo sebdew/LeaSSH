@@ -30,14 +30,13 @@ type target struct {
 }
 
 type connector struct {
-	base      *url.URL
-	token     string
-	sshHost   string
-	sshPort   int
-	user      string
-	fprint    string
-	client    *http.Client
-	targetsAt string
+	base    *url.URL
+	token   string
+	sshHost string
+	sshPort int
+	user    string
+	fprint  string
+	client  *http.Client
 }
 
 // Type est à inscrire avec provisioning.Register.

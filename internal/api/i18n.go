@@ -9,7 +9,7 @@ import (
 
 // Messages d'erreur de l'API traduits à la demande (en-tête Accept-Language: en). Le code d'erreur ne change jamais;
 // un message absent du catalogue reste en français. Les clés sont les messages français exacts, ou un préfixe suivi d'une partie dynamique.
-var errEN = map[string]string{
+var errEN = map[string]string{ //nolint:gosec // messages d'erreur, aucun identifiant
 	"l'instance est déjà initialisée":                   "this instance is already initialized",
 	"origine refusée":                                   "origin refused",
 	"corps JSON invalide":                               "invalid JSON body",
@@ -190,7 +190,7 @@ func (l *langWriter) finish() {
 			}
 		}
 	}
-	h := l.ResponseWriter.Header()
+	h := l.Header()
 	h.Del("Content-Length")
 	l.ResponseWriter.WriteHeader(l.code)
 	_, _ = l.ResponseWriter.Write(body)
