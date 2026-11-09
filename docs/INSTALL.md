@@ -370,3 +370,8 @@ Sauvegardez (§8), puis `docker pull` + recréation du conteneur (ou remplacemen
 | Le bouton SSO renvoie une erreur ou un compte SSO est refusé | Voir §12 (« Problèmes courants »); le motif exact est dans le journal d'administration (`user.sso_login_failed`). Le compte admin local reste utilisable. |
 | Serveur « clé d'hôte divergente » | Réinstallation ou attaque : vérifiez l'empreinte puis *Accepter la nouvelle clé*. |
 | Un agent reçoit « serveur ou commande indisponible » | Volontairement générique ; utilisez le **Simulateur d'accès** et consultez le journal (la raison exacte du refus y figure). |
+
+## Points de vigilance : sorties et URL sortantes
+
+- **Sorties de commandes** : l'agent reçoit la sortie telle quelle. Si elle contient du texte contrôlé par un tiers (journaux d'une application publique, pages web), il peut y trouver des instructions. Ne rendez pas une telle commande `read` accessible sans validation à une clé sans en mesurer l'effet.
+- **URL sortantes** : webhook, IA, connecteurs et issuer OIDC acceptent des adresses privées, car ils sont réservés aux administrateurs et sont souvent internes. Ne donnez le rôle administrateur qu'à des personnes de confiance.
