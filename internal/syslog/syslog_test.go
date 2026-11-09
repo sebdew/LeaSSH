@@ -158,9 +158,9 @@ func TestFilters(t *testing.T) {
 	r.f.OnExecution("execution.finished", exec("succeeded"))     // info: filtré par le niveau
 	r.f.OnProposal("proposal.created", store.Proposal{ID: "P1"}) // type exclu
 	r.f.OnExecution("execution.denied", exec("denied"))          // warning: passe
-	got := srv.WaitFor(1)
+	srv.WaitFor(1)
 	time.Sleep(150 * time.Millisecond)
-	if got = srv.Messages(); len(got) != 1 || !strings.Contains(got[0], "execution.denied") {
+	if got := srv.Messages(); len(got) != 1 || !strings.Contains(got[0], "execution.denied") {
 		t.Fatalf("messages: %q", got)
 	}
 }
@@ -314,9 +314,9 @@ func TestAuditEventsAreForwardedWithoutSecrets(t *testing.T) {
 	rec(audit.Event{ActorType: "user", ActorID: "u1", ActorName: "sd", Action: "identity.create", TargetType: "identity", TargetName: "ssh-prod", IP: "10.0.0.9",
 		Diff: map[string]any{"password": "hunter2", "name": "ssh-prod", "private_key": "-----BEGIN"}})
 	rec(audit.Event{ActorType: "system", Action: "host_key.mismatch", TargetType: "server", TargetName: "web-01"})
-	got := srv.WaitFor(2)
+	srv.WaitFor(2)
 	time.Sleep(100 * time.Millisecond)
-	got = srv.Messages()
+	got := srv.Messages()
 	if len(got) != 2 {
 		t.Fatalf("messages: %q", got)
 	}

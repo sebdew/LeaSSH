@@ -147,7 +147,7 @@ func (s *Server) htmlAuditReport(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Disposition", `attachment; filename="`+reportFileName(rep, "html")+`"`)
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	_, _ = w.Write(page)
+	_, _ = w.Write(page) //nolint:gosec // page produite par html/template (échappement automatique)
 }
 
 func (s *Server) jsonAuditReport(w http.ResponseWriter, r *http.Request) {

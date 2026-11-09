@@ -23,7 +23,7 @@ func TestOpenMigrates(t *testing.T) {
 	if fk != 1 {
 		t.Fatal("clés étrangères désactivées")
 	}
-	if NewID() == NewID() {
+	if a, b := NewID(), NewID(); a == b {
 		t.Fatal("ULID non uniques")
 	}
 }

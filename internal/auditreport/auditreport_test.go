@@ -154,7 +154,7 @@ func TestFindingsRules(t *testing.T) {
 	if _, ok := f["integrity_failed"]; ok {
 		t.Fatal("pas de rupture d'intégrité attendue")
 	}
-	if !(s.Findings[0].Severity == High) { // tri: gravité d'abord
+	if s.Findings[0].Severity != High { // tri: gravité d'abord
 		t.Fatalf("tri: %+v", s.Findings[0])
 	}
 	// base saine à 365 jours: la rétention n'est plus signalée

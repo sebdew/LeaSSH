@@ -178,7 +178,7 @@ func healthcheck() error {
 		addr = "127.0.0.1" + addr
 	}
 	c := http.Client{Timeout: 3 * time.Second}
-	resp, err := c.Get("http://" + addr + "/health")
+	resp, err := c.Get("http://" + addr + "/health") //nolint:gosec // adresse locale issue de LEASSH_LISTEN, pas d'entrée utilisateur
 	if err != nil {
 		return err
 	}

@@ -51,11 +51,21 @@ func typeCases() []typeCase {
 	}
 }
 
+// La taille du corpus est vérifiée indépendamment de l'exécution (CLAUDE.md: ≥ 300 combinaisons).
+func TestInjectionCorpusSize(t *testing.T) {
+	n := len(typeCases()) * len(payloads("/tmp/marker"))
+	t.Logf("corpus: %d types × %d charges = %d combinaisons", len(typeCases()), len(payloads("/tmp/marker")), n)
+	if n < 300 {
+		t.Fatalf("corpus trop petit: %d combinaisons (≥ 300 requis)", n)
+	}
+}
+
 // Les valeurs acceptées sont rendues puis exécutées dans un vrai `sh -c` pour prouver
 // qu'aucune n'est interprétée: la sortie doit être exactement la valeur et aucun fichier-témoin ne doit exister.
 func TestInjectionCorpus(t *testing.T) {
+	// Un test de sécurité ne doit jamais être ignoré en silence: sans sh, il échoue.
 	if _, err := exec.LookPath("sh"); err != nil {
-		t.Skip("sh indisponible")
+		t.Fatal("sh indisponible: le corpus d'injection ne peut pas prouver l'absence d'interprétation")
 	}
 	dir := t.TempDir()
 	marker := filepath.Join(dir, "PWNED")

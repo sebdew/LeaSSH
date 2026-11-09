@@ -124,7 +124,7 @@ func New(set *settings.Service, st *store.Store, log *slog.Logger, static http.H
 func (s *Server) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Use(s.securityHeaders)
-	health := func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) }
+	health := func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok")) }
 	r.Get("/health", health)
 	r.Get("/healthz", health) // ancien nom, conservé pour les sondes déjà en place
 	r.Get("/metrics", s.metricsHandler)

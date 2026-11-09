@@ -179,7 +179,7 @@ describe("propositions", () => {
 
   it("« Modifier puis approuver » : éditeur prérempli, linter strict, envoi de la version corrigée", async () => {
     let approved: { edited: { template: string; risk: string } } | undefined;
-    let lintBodies: { template: string }[] = [];
+    const lintBodies: { template: string }[] = [];
     mockApi({
       "GET /proposals/P1": () => ({ body: proposal({ status: "invalid", payload: { ...proposal().payload, template: "uptime; id" } }) }),
       "GET /commands": () => ({ body: { items: [] } }),

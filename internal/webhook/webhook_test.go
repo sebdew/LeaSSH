@@ -98,7 +98,7 @@ func TestRedirectsAreNotFollowed(t *testing.T) {
 	target := &recv{}
 	tsT := httptest.NewServer(target)
 	defer tsT.Close()
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, tsT.URL, 302) }))
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, tsT.URL, http.StatusFound) }))
 	defer ts.Close()
 	if res := d.Send(context.Background(), ts.URL, "s", "e", nil, "", 1); res.OK || res.Status != 302 || len(target.hits) != 0 {
 		t.Fatalf("redirection suivie: %+v", res)

@@ -234,10 +234,6 @@ func parseRunArgs(raw json.RawMessage) runIn {
 	return in
 }
 
-func text(s string) *mcp.CallToolResult {
-	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: s}}}
-}
-
 func (s *Server) newMCPServer(cc callCtx) *mcp.Server {
 	srv := mcp.NewServer(&mcp.Implementation{Name: "leassh", Version: s.cfg.Version}, &mcp.ServerOptions{
 		Instructions: "Leassh donne un accès contrôlé à des serveurs. Tu ne tapes jamais de commande: tu choisis dans un catalogue. " +

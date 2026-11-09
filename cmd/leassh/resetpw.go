@@ -78,7 +78,7 @@ func resetPassword(args []string) error {
 }
 
 func readPassword() (string, error) {
-	fd := int(os.Stdin.Fd())
+	fd := int(os.Stdin.Fd()) //nolint:gosec // un descripteur de fichier tient toujours dans un int
 	if term.IsTerminal(fd) {
 		fmt.Fprint(os.Stderr, "Nouveau mot de passe: ")
 		b, err := term.ReadPassword(fd)

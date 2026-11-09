@@ -352,22 +352,6 @@ func (c Claims) Strings(path string) []string {
 	return nil
 }
 
-func audiences(v any) []string {
-	switch x := v.(type) {
-	case string:
-		return []string{x}
-	case []any:
-		var out []string
-		for _, e := range x {
-			if s, ok := e.(string); ok {
-				out = append(out, s)
-			}
-		}
-		return out
-	}
-	return nil
-}
-
 func numDate(v any) (time.Time, bool) {
 	f, ok := v.(float64)
 	if !ok {
