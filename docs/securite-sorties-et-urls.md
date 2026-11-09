@@ -4,9 +4,9 @@ Note d'investigation du ticket #10. Source : `docs/revues/2026-11-07-revue.md`. 
 
 | Question | Décision |
 |---|---|
-| SEC-07 · injection de prompt par une sortie de commande | **Accepté**, avec documentation |
-| SEC-08 · webhook, IA, bastion vers des adresses privées | **Accepté** (aveugle, aucun gain pour un administrateur) |
-| SEC-08 · test OIDC qui renvoie le corps d'une réponse distante | **Démontré** → ticket de correction (voir §3) |
+| SEC-07 · injection de prompt par une sortie de commande | **Risque retenu** → ticket [#36](https://gitea.dewarlez.fr/sebastien/Leassh/issues/36) |
+| SEC-08 · webhook, IA, bastion vers des adresses privées | **Accepté** : les adresses privées sont le cas d'usage de l'outil |
+| SEC-08 · test OIDC qui renvoie le corps d'une réponse distante | **Démontré** → ticket [#35](https://gitea.dewarlez.fr/sebastien/Leassh/issues/35) |
 
 ## 1. SEC-07 : la sortie des commandes est renvoyée à l'agent
 
@@ -20,9 +20,7 @@ Note d'investigation du ticket #10. Source : `docs/revues/2026-11-07-revue.md`. 
 
 **Dommage résiduel.** Il se limite aux commandes que la clé peut lancer sans validation : les commandes `read` autorisées, et les écritures des règles « sans validation ». Une injection peut faire lancer une commande de lecture inutile ou en lire la sortie. Cela ne sort pas du périmètre accordé à la clé. Le risque dépend donc du contenu des commandes `read` activées. Il n'est pas démontrable au-delà.
 
-**Décision : accepté.** Le périmètre est déjà borné par le catalogue, les droits de la clé et la validation humaine. Un cadre « sortie non fiable » dans le résultat MCP n'est pas une barrière : il aide le modèle mais ne garantit rien, et change le format de sortie des outils. Il n'est pas retenu pour l'instant.
-
-**Mesures.** Le risque est documenté dans `SPEC.md` (§ sécurité) et `INSTALL.md` : ne pas activer, sur une clé en lecture sans validation, une commande qui renvoie du contenu non maîtrisé sans en mesurer l'effet ; préférer la validation humaine pour ces cas.
+**Décision : à traiter.** Le périmètre borné limite les dégâts, mais une sortie de log qui contient un prompt reste dangereuse : on ne s'en remet pas à lui. Le ticket #36 prévoit un cadre « sortie non fiable » avec neutralisation des faux délimiteurs, et un indicateur de catalogue pour les commandes à sortie non maîtrisée. En attendant, ne pas activer sans validation une commande `read` qui renvoie du contenu non maîtrisé.
 
 ## 2. SEC-08 : URL sortantes vers des adresses privées
 
@@ -35,7 +33,7 @@ Note d'investigation du ticket #10. Source : `docs/revues/2026-11-07-revue.md`. 
 
 **Analyse.** Un administrateur peut déjà déclarer un serveur SSH sur n'importe quelle adresse et port, et lire l'erreur de connexion : il sonde déjà le réseau interne. Le webhook et l'IA ne lui apprennent rien de plus : la réponse n'est pas renvoyée, seulement un code. Aucune de ces fonctions ne suit de redirection.
 
-**Décision : accepté** pour un usage interne (N2). Un filtre de plages privées casserait des cas légitimes (webhook Mattermost interne, Ollama ou LiteLLM sur le réseau local, Warpgate interne). Si l'outil est exposé ou repris en entreprise (N3), une option de blocage des plages privées sera à étudier.
+**Décision : accepté.** L'outil sert à joindre des machines en adresse privée (serveurs SSH, bastion, Mattermost, Ollama ou LiteLLM internes) : un blocage des plages privées le rendrait inutilisable. L'outil peut être exposé sur un réseau interne, jamais sur Internet. Le rôle administrateur reste réservé à des personnes de confiance.
 
 ## 3. Écart démontré : le test OIDC renvoie le corps distant
 
@@ -47,4 +45,4 @@ découverte impossible: 500 Internal Server Error: SECRET-INTERNAL-BODY
 
 `go-oidc` cite le corps de la réponse dans son erreur. Le gestionnaire du test OIDC (`internal/api/handlers_oidc.go`, `res["error"] = err.Error()`) renvoie ce message à l'administrateur et l'écrit dans le diff d'audit. Un administrateur peut donc **lire le corps d'une réponse non 2xx** d'un service interne, ce que ni SSH, ni le webhook, ni l'IA ne permettent. Ce gain est limité (réponses d'erreur), mais il dépasse la sonde aveugle.
 
-**Décision : traité** par un ticket de correction : ne renvoyer et ne journaliser ni le corps distant ni l'erreur brute (code HTTP et message générique), avec un test de non-régression. Voir le ticket lié depuis #10.
+**Décision : traité** par le ticket #35 : ne renvoyer et ne journaliser ni le corps distant ni l'erreur brute (code HTTP et message générique), avec un test de non-régression.
