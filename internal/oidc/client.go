@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	gooidc "github.com/coreos/go-oidc/v3/oidc"
@@ -164,6 +165,21 @@ func (t *jwksThrottle) RoundTrip(req *http.Request) (*http.Response, error) {
 	return t.base.RoundTrip(req)
 }
 
+// statusRecorder retient le dernier code HTTP reçu: go-oidc cite le corps de la réponse dans ses erreurs,
+// on ne garde donc que le code pour construire un message qui ne relaie rien du serveur distant.
+type statusRecorder struct {
+	base   http.RoundTripper
+	status atomic.Int64
+}
+
+func (t *statusRecorder) RoundTrip(req *http.Request) (*http.Response, error) {
+	res, err := t.base.RoundTrip(req)
+	if res != nil {
+		t.status.Store(int64(res.StatusCode))
+	}
+	return res, err
+}
+
 func httpURL(s string) bool {
 	u, err := url.Parse(s)
 	return err == nil && (u.Scheme == "https" || u.Scheme == "http") && u.Host != ""
@@ -185,11 +201,15 @@ func (c *Client) provider(ctx context.Context, issuer string) (*cached, error) {
 	}
 	thr := &jwksThrottle{base: base, now: c.Now}
 	hc := *c.HTTP
-	hc.Transport = thr
+	rec := &statusRecorder{base: thr}
+	hc.Transport = rec
 	// NewProvider lit le document de découverte et vérifie que l'issuer annoncé est celui configuré.
 	prov, err := gooidc.NewProvider(gooidc.ClientContext(ctx, &hc), issuer)
 	if err != nil {
-		return nil, fail(ReasonDiscovery, "découverte impossible: %v", err)
+		if st := rec.status.Load(); st >= 300 {
+			return nil, fail(ReasonDiscovery, "découverte impossible: le serveur a répondu HTTP %d", st)
+		}
+		return nil, fail(ReasonDiscovery, "découverte impossible: serveur injoignable ou document invalide")
 	}
 	var d Discovery
 	if err := prov.Claims(&d); err != nil {

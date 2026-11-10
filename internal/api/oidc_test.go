@@ -379,6 +379,29 @@ func TestSSOLogoutEndSession(t *testing.T) {
 	}
 }
 
+// Le test de configuration ne doit jamais relayer (ni journaliser) le corps de la réponse d'une URL distante.
+func TestSSOTestDoesNotLeakRemoteBody(t *testing.T) {
+	const sentinel = "SECRET-INTERNAL-BODY"
+	e := newEnv(t)
+	internal := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, sentinel, http.StatusInternalServerError)
+	}))
+	defer internal.Close()
+	res := e.must("POST", "/settings/oidc/test", map[string]any{"issuer": internal.URL}, 200)
+	if res["ok"] != false || str(res, "error") == "" {
+		t.Fatalf("test en échec attendu: %v", res)
+	}
+	if strings.Contains(toJSON(res), sentinel) {
+		t.Fatalf("corps distant renvoyé à l'administrateur: %v", res)
+	}
+	if !strings.Contains(str(res, "error"), "500") {
+		t.Fatalf("le code HTTP devrait figurer dans le message: %v", res)
+	}
+	if d := e.lastDiff("oidc.test"); strings.Contains(d, sentinel) {
+		t.Fatalf("corps distant écrit dans le journal d'audit: %s", d)
+	}
+}
+
 func TestSSOSettings(t *testing.T) {
 	e := newEnv(t)
 	idp := oidctest.New(t)
