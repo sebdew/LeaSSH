@@ -3,12 +3,16 @@
 package mcpserver
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +24,7 @@ import (
 	"github.com/leassh-dev/leassh/internal/executions"
 	"github.com/leassh-dev/leassh/internal/proposals"
 	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -83,14 +88,42 @@ func (s *Server) Handler() http.Handler {
 			unauthorized(w)
 			return
 		}
-		if !s.limiter.allow(key.ID) {
-			w.Header().Set("Retry-After", "60")
-			http.Error(w, `{"error":"rate_limited"}`, http.StatusTooManyRequests)
+		// Le client rejoue initialize + notifications + tools/list avant chaque appel (mode sans état): seuls les
+		// appels d'outils comptent dans la limite, sinon un appel en consomme jusqu'à 3.
+		r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, `{"error":{"code":"request_too_large","message":"requête trop volumineuse"}}`, http.StatusRequestEntityTooLarge)
 			return
+		}
+		r.Body = io.NopCloser(bytes.NewReader(body))
+		if countsTowardLimit(body) {
+			if ok, wait := s.limiter.allow(key.ID); !ok {
+				secs := int(math.Ceil(wait.Seconds()))
+				s.cfg.Log.Warn("limite de débit MCP atteinte", "key", key.Prefix, "ip", ip, "limit_per_minute", s.cfg.RateLimit, "retry_after_seconds", secs)
+				w.Header().Set("Retry-After", strconv.Itoa(secs))
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusTooManyRequests)
+				fmt.Fprintf(w, `{"error":{"code":"rate_limited","message":"limite de %d appels d'outils par minute et par clé atteinte, réessayez dans %d s","retry_after_seconds":%d}}`, s.cfg.RateLimit, secs, secs)
+				return
+			}
 		}
 		cc := callCtx{key: key, ip: ip, userAgent: r.UserAgent(), sessionID: r.Header.Get("Mcp-Session-Id")}
 		h.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, cc)))
 	})
+}
+
+const maxBodyBytes = 1 << 20
+
+// countsTowardLimit: vrai pour un appel d'outil, et aussi pour tout corps illisible (batch, JSON invalide) afin que la
+// limite ne soit pas contournable.
+func countsTowardLimit(body []byte) bool {
+	msg, err := jsonrpc.DecodeMessage(body)
+	if err != nil {
+		return true
+	}
+	req, ok := msg.(*jsonrpc.Request)
+	return !ok || req.Method == "tools/call"
 }
 
 func unauthorized(w http.ResponseWriter) {
@@ -100,7 +133,7 @@ func unauthorized(w http.ResponseWriter) {
 
 // authFailed journalise l'échec (préfixe du jeton seulement, jamais le jeton entier).
 func (s *Server) authFailed(r *http.Request, ip, token, reason string) {
-	if !s.authLog.allow(ip) {
+	if ok, _ := s.authLog.allow(ip); !ok {
 		return
 	}
 	prefix := token
@@ -406,7 +439,8 @@ func newRateLimiter(max int, win time.Duration) *rateLimiter {
 	return &rateLimiter{max: max, win: win, hits: map[string][]time.Time{}}
 }
 
-func (l *rateLimiter) allow(k string) bool {
+// allow dit si l'appel passe; sinon, wait est le délai avant que le plus ancien appel sorte de la fenêtre.
+func (l *rateLimiter) allow(k string) (ok bool, wait time.Duration) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	now := time.Now()
@@ -418,10 +452,10 @@ func (l *rateLimiter) allow(k string) bool {
 	}
 	if len(keep) >= l.max {
 		l.hits[k] = keep
-		return false
+		return false, l.win - now.Sub(keep[0])
 	}
 	l.hits[k] = append(keep, now)
-	return true
+	return true, 0
 }
 
 func (s *Server) logf(msg string, args ...any) { s.cfg.Log.Warn(msg, args...) }

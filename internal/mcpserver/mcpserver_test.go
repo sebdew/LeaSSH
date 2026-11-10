@@ -2,9 +2,11 @@ package mcpserver
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -297,3 +299,67 @@ func (s *syncBuffer) Write(p []byte) (int, error) {
 	return s.b.Write(p)
 }
 func (s *syncBuffer) String() string { s.mu.Lock(); defer s.mu.Unlock(); return s.b.String() }
+
+// #16: seuls les appels d'outils comptent dans la limite de débit; la poignée de main du protocole
+// (initialize, notifications, tools/list) que les clients rejouent à chaque appel en mode sans état n'en fait pas partie.
+func TestRateLimitCountsToolCallsOnly(t *testing.T) {
+	k := testkit.New(t, "RO", true, time.Hour)
+	s := New(Config{Store: k.St, Access: k.Acc, Executions: k.Exec, Proposals: k.Props, Version: "test", RateLimit: 5,
+		ClientIP: func(r *http.Request) string { return "10.1.1.1" }})
+	ts := httptest.NewServer(s.Handler())
+	t.Cleanup(ts.Close)
+	post := func(body string) *http.Response {
+		req, _ := http.NewRequest("POST", ts.URL, strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer "+k.Token)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json, text/event-stream")
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		return res
+	}
+	const init = `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}`
+	const notif = `{"jsonrpc":"2.0","method":"notifications/initialized"}`
+	const list = `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`
+	const callList = `{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"list_servers","arguments":{}}}`
+	for i := 0; i < 10; i++ {
+		for _, b := range []string{init, notif, list} {
+			if r := post(b); r.StatusCode == http.StatusTooManyRequests {
+				t.Fatalf("la poignée de main ne doit pas être comptée (rejet à l'itération %d)", i)
+			}
+		}
+	}
+	for i := 0; i < 5; i++ {
+		if r := post(callList); r.StatusCode == http.StatusTooManyRequests {
+			t.Fatalf("appel %d/5 refusé", i+1)
+		}
+	}
+	req, _ := http.NewRequest("POST", ts.URL, strings.NewReader(callList))
+	req.Header.Set("Authorization", "Bearer "+k.Token)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("6e appel: 429 attendu, reçu %d", res.StatusCode)
+	}
+	if ra, _ := strconv.Atoi(res.Header.Get("Retry-After")); ra < 1 || ra > 60 {
+		t.Errorf("Retry-After doit être le délai réel (1–60 s), reçu %q", res.Header.Get("Retry-After"))
+	}
+	var body struct {
+		Error struct {
+			Code              string `json:"code"`
+			Message           string `json:"message"`
+			RetryAfterSeconds int    `json:"retry_after_seconds"`
+		} `json:"error"`
+	}
+	json.NewDecoder(res.Body).Decode(&body)
+	if body.Error.Code != "rate_limited" || body.Error.Message == "" || body.Error.RetryAfterSeconds < 1 {
+		t.Errorf("corps JSON explicite attendu, reçu %+v", body)
+	}
+}
