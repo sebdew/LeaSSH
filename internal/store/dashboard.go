@@ -7,7 +7,7 @@ import (
 
 // DashboardStats: chiffres de la page d'accueil, calculés en quelques requêtes indexées.
 type DashboardStats struct {
-	Executions24h    map[string]int `json:"executions_24h"` // succeeded / failed / denied / pending / other
+	Executions24h    map[string]int `json:"executions_24h"` // succeeded / failed / denied (dont rejected) / pending / other
 	ActiveAgents24h  int            `json:"active_agents_24h"`
 	PendingApprovals int            `json:"pending_approvals"`
 	PendingProposals int            `json:"pending_proposals"`
@@ -45,6 +45,8 @@ func Dashboard(ctx context.Context, q Q, now time.Time) (DashboardStats, error) 
 		switch s {
 		case "succeeded", "failed", "denied":
 			st.Executions24h[s] += n
+		case "rejected": // refusée par l'approbateur: un refus comme les autres
+			st.Executions24h["denied"] += n
 		case "pending_approval":
 			st.Executions24h["pending"] += n
 		default:
