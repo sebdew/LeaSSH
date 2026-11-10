@@ -157,6 +157,9 @@ func TestSecurityHeadersAndErrorFormat(t *testing.T) {
 	if r.StatusCode != 404 || out["error"].(map[string]any)["code"] != "not_found" {
 		t.Fatalf("format d'erreur: %v", out)
 	}
+	if strings.Contains(r.Header.Get("Content-Security-Policy"), "unsafe-inline") {
+		t.Fatal("la CSP ne doit pas autoriser 'unsafe-inline' (SEC-05)")
+	}
 	if !strings.Contains(r.Header.Get("Content-Security-Policy"), "default-src 'self'") {
 		t.Fatal("CSP absente")
 	}
@@ -329,5 +332,30 @@ func TestHSTSLeftToTrustedProxy(t *testing.T) {
 	h.ServeHTTP(rec, req)
 	if rec.Header().Get("Strict-Transport-Security") == "" {
 		t.Fatal("hors proxy de confiance, Leassh doit poser HSTS")
+	}
+}
+
+// SEC-04 (#30): un redémarrage du serveur ne remet pas à zéro les échecs de connexion.
+func TestLoginLockoutSurvivesRestart(t *testing.T) {
+	ts, st := newTest(t)
+	base := ts.URL + "/api/v1"
+	do(t, client(), "POST", base+"/setup", setupBody("admin", "un-mot-de-passe-solide"), nil)
+	for i := 0; i < maxFailures; i++ {
+		do(t, client(), "POST", base+"/auth/login", credentials{Username: "admin", Password: "x"}, nil)
+	}
+	// « redémarrage »: nouveau serveur sur la même base, compteurs en mémoire perdus.
+	set, err := settings.New(context.Background(), st, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s2, err := New(set, st, slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts2 := httptest.NewServer(s2.Handler())
+	t.Cleanup(ts2.Close)
+	r, _ := do(t, client(), "POST", ts2.URL+"/api/v1/auth/login", credentials{Username: "admin", Password: "un-mot-de-passe-solide"}, nil)
+	if r.StatusCode != 429 {
+		t.Fatalf("compte verrouillé attendu après redémarrage, obtenu %d", r.StatusCode)
 	}
 }

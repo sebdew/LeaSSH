@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"net/netip"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -118,7 +117,7 @@ func (s *Server) ClientIP(r *http.Request) string { return s.clientIP(r) }
 
 // New construit le routeur. static sert l'interface (SPA); peut être nil.
 func New(set *settings.Service, st *store.Store, log *slog.Logger, static http.Handler) (*Server, error) {
-	return &Server{set: set, st: st, accounts: accounts.New(st), log: log, lim: newLimiter(maxFailures, failWindow), limIP: newLimiter(maxFailuresPerIP, failWindow), static: static, oidc: oidc.New()}, nil
+	return &Server{set: set, st: st, accounts: accounts.New(st), log: log, lim: newLimiter(st, "account", maxFailures, failWindow), limIP: newLimiter(st, "ip", maxFailuresPerIP, failWindow), static: static, oidc: oidc.New()}, nil
 }
 
 func (s *Server) Handler() http.Handler {
@@ -182,7 +181,7 @@ func decode(w http.ResponseWriter, r *http.Request, v any) bool {
 func (s *Server) securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
-		h.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
+		h.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Referrer-Policy", "same-origin")
@@ -266,49 +265,32 @@ func randToken() (string, error) {
 
 // ---- limiteur de tentatives ----
 
+// limiter compte les échecs en base (SQLite) pour que les verrouillages survivent à un redémarrage (SEC-04).
+// scope sépare les compteurs par compte et par adresse.
 type limiter struct {
-	mu    sync.Mutex
+	st    *store.Store
+	scope string
 	max   int
 	win   time.Duration
-	fails map[string][]time.Time
 }
 
-func newLimiter(max int, win time.Duration) *limiter {
-	return &limiter{max: max, win: win, fails: map[string][]time.Time{}}
+func newLimiter(st *store.Store, scope string, max int, win time.Duration) *limiter {
+	return &limiter{st: st, scope: scope, max: max, win: win}
 }
 
-func (l *limiter) prune(k string, now time.Time) []time.Time {
-	var keep []time.Time
-	for _, t := range l.fails[k] {
-		if now.Sub(t) < l.win {
-			keep = append(keep, t)
-		}
-	}
-	if len(keep) == 0 {
-		delete(l.fails, k)
-	} else {
-		l.fails[k] = keep
-	}
-	return keep
-}
-
+// blocked: en cas d'erreur de base, on refuse (fail closed) plutôt que de laisser passer des essais illimités.
 func (l *limiter) blocked(k string) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return len(l.prune(k, time.Now())) >= l.max
+	n, err := store.CountLoginFailures(context.Background(), l.st.DB, l.scope, k, time.Now().Add(-l.win))
+	return err != nil || n >= l.max
 }
 
 func (l *limiter) fail(k string) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	l.prune(k, time.Now())
-	l.fails[k] = append(l.fails[k], time.Now())
+	now := time.Now()
+	_ = store.AddLoginFailure(context.Background(), l.st.DB, l.scope, k, now, now.Add(-l.win))
 }
 
 func (l *limiter) reset(k string) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	delete(l.fails, k)
+	_ = store.ResetLoginFailures(context.Background(), l.st.DB, l.scope, k)
 }
 
 // ---- sessions ----
