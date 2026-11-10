@@ -46,7 +46,7 @@ type Insights struct {
 	Risk           map[string]int `json:"risk"`
 }
 
-const execOutcome = `CASE WHEN status='succeeded' THEN 'ok' WHEN status IN ('failed','timeout','error') THEN 'ko' WHEN status='denied' THEN 'denied' ELSE 'other' END`
+const execOutcome = `CASE WHEN status='succeeded' THEN 'ok' WHEN status IN ('failed','timeout','error') THEN 'ko' WHEN status IN ('denied','rejected') THEN 'denied' ELSE 'other' END`
 
 func top(ctx context.Context, q Q, query string, args ...any) ([]TopItem, error) {
 	rows, err := q.QueryContext(ctx, query, args...)
