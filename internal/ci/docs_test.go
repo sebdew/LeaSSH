@@ -157,3 +157,82 @@ func TestREADMEDocsExpliqueLaStructure(t *testing.T) {
 		}
 	}
 }
+
+// DOC-13 : références périmées dans le dépôt.
+func TestReferencesDocumentairesAJour(t *testing.T) {
+	if strings.Contains(lire(t, "docs/openapi.json"), "docs/SPEC.md") {
+		t.Error("docs/openapi.json cite docs/SPEC.md, déplacé en docs/specs/SPEC.md")
+	}
+	for _, f := range []string{"README.md", "README.en.md"} {
+		for _, l := range strings.Split(lire(t, f), "\n") {
+			if strings.Contains(l, "webhook") && regexp.MustCompile(`(?i)signé HMAC|HMAC-signed`).MatchString(l) {
+				t.Errorf("%s : le secret de signature du webhook est facultatif, ne pas annoncer « signé » sans réserve : %s", f, l)
+			}
+		}
+	}
+}
+
+// dossierWiki renvoie le clone local du wiki (LEASSH_WIKI_DIR ou ../leassh-wiki) ou saute le test.
+func dossierWiki(t *testing.T) string {
+	t.Helper()
+	d := os.Getenv("LEASSH_WIKI_DIR")
+	if d == "" {
+		d = filepath.Join(racine, "..", "leassh-wiki")
+	}
+	if _, err := os.Stat(filepath.Join(d, "FR-Architecture.md")); err != nil {
+		t.Skip("wiki absent (définir LEASSH_WIKI_DIR pour le contrôler)")
+	}
+	return d
+}
+
+func pagesWiki(t *testing.T, d string) map[string]string {
+	t.Helper()
+	fichiers, _ := filepath.Glob(filepath.Join(d, "*.md"))
+	pages := map[string]string{}
+	for _, f := range fichiers {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pages[filepath.Base(f)] = string(b)
+	}
+	return pages
+}
+
+// DOC-11, DOC-12, DOC-15 : le wiki ne contient ni commande inexécutable, ni URL factice, ni adresse privée.
+func TestWikiSansCommandesInexecutablesNiAdressePrivee(t *testing.T) {
+	interdits := map[string]*regexp.Regexp{
+		"docker exec … leassh <sous-commande> (l'exécutable de l'image est /leassh, hors PATH)": regexp.MustCompile(`docker exec\b[^\n]*?\bleassh leassh `),
+		"URL de binaire factice (aucune release publiée)":                                       regexp.MustCompile(`https://…/`),
+		"adresse du réseau local (utiliser 192.0.2.0/24)":                                       regexp.MustCompile(`\b(192\.168|10\.\d+|172\.(1[6-9]|2\d|3[01]))\.\d+\.\d+`),
+	}
+	for nom, page := range pagesWiki(t, dossierWiki(t)) {
+		for motif, re := range interdits {
+			if re.MatchString(page) {
+				t.Errorf("%s : %s", nom, motif)
+			}
+		}
+	}
+}
+
+// DOC-14 : docs/architecture.md et la page du wiki restent identiques (liens relatifs mis à part).
+func TestArchitectureWikiIdentiqueADocs(t *testing.T) {
+	d := dossierWiki(t)
+	corps := func(s string) string {
+		if i := strings.Index(s, "\n## "); i >= 0 {
+			s = s[i:]
+		}
+		if i := strings.LastIndex(s, "\n---\n"); i >= 0 { // pied de navigation du wiki
+			s = s[:i]
+		}
+		return strings.TrimSpace(s)
+	}
+	wiki, err := os.ReadFile(filepath.Join(d, "FR-Architecture.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := strings.ReplaceAll(string(wiki), "https://gitea.dewarlez.fr/sebastien/Leassh/src/branch/main/docs/", "")
+	if corps(w) != corps(lire(t, "docs/architecture.md")) {
+		t.Error("docs/architecture.md et FR-Architecture.md (wiki) divergent : resynchroniser la copie")
+	}
+}
