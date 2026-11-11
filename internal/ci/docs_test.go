@@ -236,3 +236,22 @@ func TestArchitectureWikiIdentiqueADocs(t *testing.T) {
 		t.Error("docs/architecture.md et FR-Architecture.md (wiki) divergent : resynchroniser la copie")
 	}
 }
+
+// DOC-10 : la note SEC-08 doit suivre le niveau du README (N3) et la décision sur les
+// adresses privées doit être assumée par un ADR.
+func TestNiveauCoherentEtDecisionSEC08(t *testing.T) {
+	note := lire(t, "docs/securite-sorties-et-urls.md")
+	if regexp.MustCompile(`N2|jamais sur Internet`).MatchString(note) {
+		t.Error("docs/securite-sorties-et-urls.md déclare N2 / « jamais sur Internet » alors que le projet est N3")
+	}
+	m, _ := filepath.Glob(filepath.Join(racine, "docs/adr/*adresses-privees*"))
+	if len(m) == 0 {
+		t.Fatal("ADR manquant sur les adresses privées des URL sortantes (docs/adr/*adresses-privees*)")
+	}
+	if !strings.Contains(note, filepath.Base(m[0])) {
+		t.Error("la note SEC-08 doit renvoyer vers l'ADR des adresses privées")
+	}
+	if !strings.Contains(lire(t, "docs/adr/README.md"), filepath.Base(m[0])) {
+		t.Error("docs/adr/README.md doit lister l'ADR des adresses privées")
+	}
+}
