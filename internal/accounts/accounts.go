@@ -17,6 +17,9 @@ import (
 // MinPassword: longueur minimale d'un mot de passe local.
 const MinPassword = 10
 
+// MaxUsername: longueur maximale (en octets) d'un nom d'utilisateur, aussi appliquée à la connexion (SEC-09).
+const MaxUsername = 64
+
 var (
 	ErrInvalidUsername    = errors.New("nom d'utilisateur requis (64 caractères max)")
 	ErrWeakPassword       = errors.New("le mot de passe doit faire au moins 10 caractères")
@@ -36,7 +39,7 @@ type InitAdminInput struct {
 // partagent la même transaction: deux appels concurrents ne produisent pas deux administrateurs.
 func (s *Service) InitializeAdmin(ctx context.Context, in InitAdminInput) (store.User, error) {
 	in.Username = strings.TrimSpace(in.Username)
-	if in.Username == "" || len(in.Username) > 64 {
+	if in.Username == "" || len(in.Username) > MaxUsername {
 		return store.User{}, ErrInvalidUsername
 	}
 	if len(in.Password) < MinPassword {

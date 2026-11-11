@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/leassh-dev/leassh/internal/oidc/oidctest"
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 // ssoEnv: instance Leassh + fournisseur OIDC factice en mémoire (aucun vrai identifiant).
@@ -579,4 +581,46 @@ func TestSSOLocalLoginDisabled(t *testing.T) {
 	// on ne peut pas couper le SSO tout en gardant le local désactivé
 	cfg["enabled"] = false
 	e.must("PUT", "/settings/oidc", cfg, 400)
+}
+
+// SEC-09: /auth/login non authentifié ne doit ni accepter un nom démesuré ni laisser écrire sans limite en audit.
+func TestLoginRejectsOversizedUsername(t *testing.T) {
+	e := newEnv(t)
+	r, _ := do(t, client(), "POST", e.ts.URL+"/api/v1/auth/login", credentials{Username: strings.Repeat("a", 65), Password: "x"}, nil)
+	if r.StatusCode != 400 {
+		t.Fatalf("nom de 65 caractères: %d (400 attendu)", r.StatusCode)
+	}
+	var n int
+	_ = e.st.DB.QueryRow(`SELECT count(*) FROM audit_events WHERE action='user.login_failed'`).Scan(&n)
+	if n != 0 {
+		t.Fatalf("un refus pour taille ne doit rien écrire en audit: %d événements", n)
+	}
+}
+
+func TestLoginLocalDisabledIsRateLimited(t *testing.T) {
+	e, _ := ssoEnv(t, nil)
+	oc, err := store.GetOIDCConfig(context.Background(), e.st.DB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oc.LocalLoginDisabled = true
+	if err := store.SaveOIDCConfig(context.Background(), e.st.DB, oc); err != nil {
+		t.Fatal(err)
+	}
+	got429 := false
+	for i := 0; i < maxFailuresPerIP+5; i++ {
+		r, _ := do(t, client(), "POST", e.ts.URL+"/api/v1/auth/login", credentials{Username: "admin", Password: "x"}, nil)
+		if r.StatusCode == 429 {
+			got429 = true
+			break
+		}
+	}
+	if !got429 {
+		t.Fatal("les refus local_login_disabled doivent être comptés par IP (429 attendu)")
+	}
+	var n int
+	_ = e.st.DB.QueryRow(`SELECT count(*) FROM audit_events WHERE action='user.login_failed'`).Scan(&n)
+	if n > maxFailuresPerIP {
+		t.Fatalf("audit non borné: %d événements", n)
+	}
 }
