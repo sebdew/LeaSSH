@@ -1,11 +1,11 @@
 # Sorties de commandes et URL sortantes (SEC-07, SEC-08)
 
-Note d'investigation du ticket #10. Source : `docs/revues/2026-11-07-revue.md`. Niveau du projet : N2 (usage interne).
+Note d'investigation du ticket #10. Source : `docs/revues/2026-11-07-revue.md`. Niveau du projet : N3 (exposé ou destiné à l'entreprise).
 
 | Question | Décision |
 |---|---|
 | SEC-07 · injection de prompt par une sortie de commande | **Risque retenu** → ticket [#36](https://gitea.dewarlez.fr/sebastien/Leassh/issues/36) |
-| SEC-08 · webhook, IA, bastion vers des adresses privées | **Accepté** : les adresses privées sont le cas d'usage de l'outil |
+| SEC-08 · webhook, IA, bastion vers des adresses privées | **Accepté** : les adresses privées sont le cas d'usage de l'outil, décision assumée par l'[ADR 0006](adr/0006-adresses-privees-urls-sortantes.md) |
 | SEC-08 · test OIDC qui renvoie le corps d'une réponse distante | **Démontré** → ticket [#35](https://gitea.dewarlez.fr/sebastien/Leassh/issues/35) |
 
 ## 1. SEC-07 : la sortie des commandes est renvoyée à l'agent
@@ -33,7 +33,7 @@ Note d'investigation du ticket #10. Source : `docs/revues/2026-11-07-revue.md`. 
 
 **Analyse.** Un administrateur peut déjà déclarer un serveur SSH sur n'importe quelle adresse et port, et lire l'erreur de connexion : il sonde déjà le réseau interne. Le webhook et l'IA ne lui apprennent rien de plus : la réponse n'est pas renvoyée, seulement un code. Aucune de ces fonctions ne suit de redirection.
 
-**Décision : accepté.** L'outil sert à joindre des machines en adresse privée (serveurs SSH, bastion, Mattermost, Ollama ou LiteLLM internes) : un blocage des plages privées le rendrait inutilisable. L'outil peut être exposé sur un réseau interne, jamais sur Internet. Le rôle administrateur reste réservé à des personnes de confiance.
+**Décision : accepté.** L'outil sert à joindre des machines en adresse privée (serveurs SSH, bastion, Mattermost, Ollama ou LiteLLM internes) : un blocage des plages privées le rendrait inutilisable. Le projet est de niveau N3 et peut être exposé derrière un reverse proxy TLS : le risque résiduel est celui d'un compte administrateur compromis, détaillé dans l'[ADR 0006](adr/0006-adresses-privees-urls-sortantes.md) avec les mesures de réseau recommandées. Le rôle administrateur reste réservé à des personnes de confiance.
 
 ## 3. Écart démontré : le test OIDC renvoie le corps distant
 
