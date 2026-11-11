@@ -3,17 +3,15 @@
 > **Donnez à vos agents IA un accès SSH… en laisse.**
 > Un catalogue de commandes validées, des droits clairs, et un journal de tout ce qui a été lancé, par qui et où.
 
-Leassh est un serveur **MCP** (Model Context Protocol) open source qui permet à des agents IA d'agir sur vos serveurs **sans jamais leur donner de shell**. L'agent ne tape pas de commandes : il **choisit** dans un catalogue que vous avez écrit ou approuvé, avec des paramètres typés et validés. Chaque demande — autorisée, refusée ou en attente de validation — est journalisée.
+**Niveau : N3** (exposé ou destiné à l'entreprise) — règles de la [constitution](docs/standards/constitution.md) et de la [checklist de revue](docs/standards/checklist-revue.md) dans [`docs/standards/`](docs/standards/). · [English version](README.en.md)
 
-> ⚠️ *Leassh* (interface : *LeaSSH*) est un nom de travail. Les jalons M1 à M8 sont implémentés, suivis du provisioning, de l'export syslog, du SSO et de l'interface bilingue ; voir [`CLAUDE.md`](CLAUDE.md) pour les consignes de développement.
+![Tableau de bord de Leassh](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/raw/images/fr/01-dashboard.png)
 
----
+## Présentation
 
-## Pourquoi Leassh ?
+Leassh est un serveur **MCP** (Model Context Protocol) open source qui permet à des agents IA d'agir sur vos serveurs **sans jamais leur donner de shell**. L'agent ne tape pas de commandes : il **choisit** dans un catalogue que vous avez écrit ou approuvé, avec des paramètres typés et validés. Chaque demande — autorisée, refusée ou en attente de validation humaine — est journalisée.
 
-Donner un accès SSH à un agent IA, c'est lui donner un shell. Filtrer les commandes après coup (listes noires, regex sur la ligne de commande) est contournable : `rm` bloqué, mais `find -delete`, `python -c`, `truncate` ou `$( )` passent.
-
-Leassh inverse la logique :
+Filtrer les commandes d'un agent après coup (liste noire, regex) est contournable : `rm` bloqué, mais `find -delete`, `python -c`, `truncate` ou `$( )` passent. Leassh inverse la logique :
 
 | Approche classique | Leassh |
 |---|---|
@@ -24,48 +22,58 @@ Leassh inverse la logique :
 
 ## Fonctionnalités
 
-- 🗂️ **Catalogue de commandes** avec templates, paramètres typés (`enum`, `int`, `service`, `path`, `identifier`…), niveau de risque (`read` / `write` / `destructive`) et description destinée à l'IA.
-- 🖥️ **Serveurs et identités SSH** : génération de clés depuis l'interface, épinglage de la clé d'hôte.
+- 🗂️ **Catalogue de commandes** avec modèles, paramètres typés (`enum`, `int`, `service`, `path`, `identifier`, `regex`), niveau de risque (`read` / `write` / `destructive`) et description destinée à l'IA, éditeur avec aperçu et test.
+- 🖥️ **Serveurs et identités SSH** : génération de clés ed25519 depuis l'interface, **épinglage strict de la clé d'hôte**.
 - 👥 **Groupes** de serveurs et de commandes.
-- 🔑 **Clés MCP** par agent (N1, N2, assistant perso…), jamais stockées en clair.
-- 🛡️ **Règles d'accès** : un groupe de serveurs + un groupe de commandes + des clés + un profil (`RO`, `RW`).
-- ✋ **Validation humaine** des commandes sensibles, depuis l'interface (y compris sur mobile).
-- 💡 **Propositions** : l'agent peut proposer une nouvelle commande ; un linter rejette les templates dangereux, vous validez.
-- 📜 **Journal complet** : qui a lancé quoi, où, quand, pourquoi, avec quel résultat — y compris les tentatives refusées.
-- 📦 **Packs de commandes** en YAML (système, MySQL, PostgreSQL, nginx, Docker…), importables et partageables.
-- 🔐 **SSO OpenID Connect** (Keycloak, Entra ID, Authentik, Google…) : Authorization Code + PKCE, rôles issus des groupes, compte local réservé à la première connexion, désactivable une fois le SSO en place ([ADR 0001](docs/adr/0001-authentification-sso-et-compte-local.md)). Guide pas à pas : [`docs/INSTALL.md`](docs/INSTALL.md) §12.
-- 🔄 **Provisioning** : synchronisation automatique des serveurs depuis un bastion (Warpgate).
-- 📡 **Export syslog** (UDP/TCP/TLS, RFC 5424, formats texte/JSON/CEF) et **webhook** signé HMAC.
-- 🧾 **Rapport d'audit** (ISO 27001, HDS) généré à partir de la base, avec synthèse IA facultative.
-- 🌍 **Interface en français et en anglais**, claire et sombre, simple et moderne.
-- 📦 **Un seul binaire** (ou une image Docker), SQLite par défaut.
+- 🔑 **Clés MCP** par agent, jamais stockées en clair, avec expiration et limite de débit.
+- 🛡️ **Règles d'accès** : groupes de serveurs + groupes de commandes + clés + profil (`RO`, `RW`), et **simulateur d'accès**.
+- ✋ **Validation humaine** des commandes sensibles, depuis l'interface (mobile compris).
+- 💡 **Propositions** : l'agent peut proposer une commande ; un linter rejette les modèles dangereux, vous validez.
+- 📜 **Journal complet** (exécutions et administration) à **chaîne d'intégrité** : filtres, direct, export CSV/NDJSON, rétention.
+- 📦 **Packs de commandes** en YAML (système, systemd, MySQL, PostgreSQL, nginx, Docker, pfSense, Proxmox, UniFi), importables et partageables.
+- 🔐 **SSO OpenID Connect** (Keycloak, Entra ID, Authentik, Google…), PKCE, rôles issus des groupes ([ADR 0001](docs/adr/0001-authentification-sso-et-compte-local.md)).
+- 🔄 **Provisioning** : synchronisation des serveurs depuis un bastion Warpgate.
+- 📡 **Export syslog** (UDP/TCP/TLS, RFC 5424, texte/JSON/CEF) et **webhook** signé HMAC (compatible Mattermost, Slack).
+- 🧾 **Rapport d'audit** ISO 27001 / HDS, synthèse IA facultative.
+- 🌍 Interface en **français et en anglais**, thèmes clair et sombre, utilisable sur mobile pour les validations et le journal.
+- 📦 **Un seul binaire** (ou une image Docker), SQLite par défaut, `/health` et `/metrics`.
 
 ## Démarrage rapide
 
+Prérequis : Docker, un reverse proxy TLS devant Leassh (Caddy, nginx…) et un accès SSH aux serveurs à piloter.
+
 ```bash
-docker run -d --name leassh \
-  -p 8080:8080 \
+export LEASSH_MASTER_KEY="$(openssl rand -base64 32)"
+echo "$LEASSH_MASTER_KEY"   # conservez-la dans un gestionnaire de mots de passe
+
+docker run -d --name leassh --restart unless-stopped \
+  -p 127.0.0.1:8080:8080 \
   -v leassh-data:/data \
-  -e LEASSH_MASTER_KEY="$(openssl rand -base64 32)" \
+  -e LEASSH_MASTER_KEY \
   gitea.dewarlez.fr/sebastien/leassh:latest
+
+docker logs leassh   # jeton d'initialisation, affiché une seule fois
 ```
 
-Ouvrez `http://localhost:8080`, créez le compte administrateur, puis suivez la checklist d'accueil :
+Ouvrez l'URL, créez le compte administrateur avec le jeton d'initialisation, puis suivez la checklist d'accueil : identité SSH → serveur et empreinte → pack de commandes → règle d'accès → clé MCP → configuration de l'agent.
 
-1. Créer une **identité SSH** (ou générer une paire de clés et copier la clé publique sur vos serveurs).
-2. Ajouter un **serveur** et valider son empreinte de clé d'hôte.
-3. Importer un **pack** de commandes (ex. `system`).
-4. Créer une **règle d'accès** (groupe de serveurs + groupe de commandes + profil).
-5. Créer une **clé MCP** et l'associer à la règle.
-6. Copier la configuration MCP dans votre agent.
+> **Conservez `LEASSH_MASTER_KEY`** (hors de la sauvegarde de la base) : elle chiffre les clés privées SSH. Sans elle, ces secrets sont irrécupérables.
 
-> **Conservez `LEASSH_MASTER_KEY`** : elle chiffre les secrets SSH. Sans elle, ils sont irrécupérables.
->
-> Installation complète (binaire, systemd, reverse proxy TLS, sauvegarde, métriques) : [`docs/INSTALL.md`](docs/INSTALL.md).
+## Documentation complète : le wiki
+
+Toute la documentation est dans le **[wiki du projet](https://gitea.dewarlez.fr/sebastien/Leassh/wiki)**, en français et en anglais (sélecteur de langue en haut de chaque page) :
+
+| | |
+|---|---|
+| [Présentation et concepts](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Presentation) | [Installation détaillée](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Installation) |
+| [Premiers pas](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Premiers-pas) | [Manuel utilisateur, écran par écran](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Manuel-utilisateur) |
+| [Agents et outils MCP](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Agents-MCP) | [Sécurité](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Securite) |
+| [SSO (Keycloak pas à pas)](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-SSO) | [Exploitation : sauvegarde, mise à jour, supervision](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Exploitation) |
+| [Architecture](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Architecture) | [Référence de l'API](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-API) |
 
 ## Connecter un agent
 
-Leassh expose un endpoint MCP en HTTP streamable : `https://leassh.example.com/mcp`, authentifié par `Authorization: Bearer <clé MCP>`.
+Endpoint MCP en HTTP streamable `https://leassh.example.com/mcp`, authentifié par `Authorization: Bearer <clé MCP>`.
 
 ```json
 {
@@ -79,57 +87,21 @@ Leassh expose un endpoint MCP en HTTP streamable : `https://leassh.example.com/m
 }
 ```
 
-### Outils exposés
+Cinq outils : `list_servers`, `list_commands`, `run_command`, `get_execution`, `propose_command` ([détail](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Agents-MCP)).
 
-| Outil | Rôle |
-|---|---|
-| `list_servers` | Serveurs visibles pour cette clé |
-| `list_commands` | Commandes autorisées sur un serveur, avec leurs paramètres |
-| `run_command` | Exécute une commande du catalogue (ou la met en attente de validation) |
-| `get_execution` | Statut et résultat d'une exécution |
-| `propose_command` | Propose une nouvelle commande au catalogue |
+## Sécurité en bref
 
-## Concepts
-
-```
- Identité SSH ──┐
-                ▼
-            Serveur ──► Groupe de serveurs ──┐
-                                             ├──► Règle d'accès (profil RO/RW) ◄── Clés MCP
-            Commande ─► Groupe de commandes ─┘
-```
-
-- **Profil `RO`** : commandes `read` uniquement.
-- **Profil `RW`** : `read` + `write` (validation requise par défaut pour `write`).
-- **`destructive`** : validation humaine **toujours** requise, quel que soit le profil.
-
-## Exemple de commande
-
-```yaml
-- id: systemd.restart
-  name: Redémarrer un service
-  description: >
-    Redémarre un service systemd. Provoque une coupure de quelques secondes.
-    À utiliser après avoir vérifié l'état du service avec systemd.status.
-  risk: write
-  template: systemctl restart {{service}}
-  params:
-    service: { type: service, description: "Nom de l'unité systemd" }
-```
-
-## Sécurité
-
-- Pas de PTY, pas de shell interactif : uniquement des canaux `exec`.
+- Pas de PTY, pas de shell interactif : uniquement des canaux SSH `exec`.
 - Aucun paramètre en texte libre ; chaque valeur est validée puis échappée.
 - Les clés MCP ne peuvent ni modifier la configuration, ni approuver quoi que ce soit.
-- Secrets chiffrés au repos (AES-256-GCM), jamais journalisés.
+- Secrets chiffrés au repos (AES-256-GCM), jamais journalisés ; mots de passe en argon2id.
 - Clés d'hôte épinglées ; toute divergence bloque le serveur.
 
-Voir [`docs/SPEC.md`](docs/SPEC.md) pour le détail.
+Voir [Sécurité](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Securite) et [`docs/SPEC.md`](docs/SPEC.md).
 
 ## Développement
 
-Go ≥ 1.23, Node ≥ 20.
+Go ≥ 1.26, Node ≥ 20.
 
 ```bash
 make dev     # backend avec rechargement + Vite (proxy API)
@@ -137,20 +109,23 @@ make test    # tests Go (dont corpus d'injection) + tests Vitest
 make lint    # go vet, gofmt, golangci-lint (dont gosec), tsc --noEmit, eslint
 make e2e     # parcours Playwright (Chromium) sur le binaire réel, base neuve
 make build   # build du frontend puis binaire unique (bin/leassh)
-make docker  # image Docker
+make docker  # image Docker multi-architecture
 go test -tags integration ./internal/sshexec -run Integration  # vrai sshd via Docker
 ```
 
+Contribution : [`CONTRIBUTING.md`](CONTRIBUTING.md) (ticket, branche, merge request, revue). Historique : [`CHANGELOG.md`](CHANGELOG.md). Versions : [SemVer](https://semver.org/lang/fr/), tags `vMAJEUR.MINEUR.CORRECTIF`.
+
 ### Intégration continue
 
-Le workflow `.gitea/workflows/ci.yml` (Gitea Actions) s'exécute sur chaque merge request et sur `main` : `make lint`, `make test`, les tests d'intégration SSH contre `openssh-server` (job `integration-ssh`), les parcours Playwright (job `e2e`), gitleaks (secrets, historique complet), Trivy (`fs`, sévérités HIGH et CRITICAL), `govulncheck ./...` et `npm audit`. Rien n'est fusionné sans CI verte ; `main` doit être protégée (merge request obligatoire, jobs `qualite`, `integration-ssh`, `e2e` et `securite` requis).
+Le workflow `.gitea/workflows/ci.yml` (Gitea Actions) s'exécute sur chaque merge request et sur `main` : `make lint`, `make test`, tests d'intégration SSH contre `openssh-server`, parcours Playwright, gitleaks (historique complet), Trivy, `govulncheck ./...` et `npm audit`. Rien n'est fusionné sans CI verte ; `main` doit être protégée (merge request obligatoire, jobs `qualite`, `integration-ssh`, `e2e` et `securite` requis).
 
-## Documentation
+## Documents du dépôt
 
-- [`docs/SPEC.md`](docs/SPEC.md) — cahier des charges fonctionnel et technique
-- [`docs/INSTALL.md`](docs/INSTALL.md) — installation, exploitation, sauvegarde
-- [`docs/UX.md`](docs/UX.md) — guide UX/UI et design system
-- [`CLAUDE.md`](CLAUDE.md) — consignes de développement
+- [`docs/SPEC.md`](docs/SPEC.md) — cahier des charges fonctionnel et technique (référence normative)
+- [`docs/architecture.md`](docs/architecture.md) et [`docs/exploitation.md`](docs/exploitation.md) — architecture (schéma, données, conservation) et exploitation (retour arrière, test de restauration)
+- [`docs/adr/`](docs/adr/README.md) — décisions d'architecture · [`specs/`](specs/README.md) — spécifications par fonctionnalité
+- [`docs/UX.md`](docs/UX.md) — guide UX/UI et design system · [`docs/openapi.json`](docs/openapi.json) — API
+- [`docs/standards/`](docs/standards/) — constitution et checklist de revue · [`CLAUDE.md`](CLAUDE.md) — consignes de développement
 - [`packs/`](packs/) — packs de commandes fournis
 
 ## Licence

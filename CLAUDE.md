@@ -1,15 +1,16 @@
 # CLAUDE.md — consignes de développement
 
 Projet : **Leassh**, serveur MCP open source qui donne à des agents IA un accès SSH limité à un catalogue de commandes validées.
-Lire d'abord : `README.md`, `docs/SPEC.md` (fonctionnel, référence), `docs/UX.md` (interface).
+Niveau du projet : **N3** (voir `docs/standards/constitution.md` et `CONTRIBUTING.md`).
+Lire d'abord : `README.md`, `docs/SPEC.md` (fonctionnel, référence), `docs/UX.md` (interface), `docs/architecture.md`. La documentation utilisateur vit dans le **wiki** du dépôt (français et anglais).
 
 ## Stack
 
-**Backend (Go ≥ 1.23)**
+**Backend (Go ≥ 1.26)**
 - HTTP : `net/http` + `go-chi/chi`
 - MCP : SDK officiel `github.com/modelcontextprotocol/go-sdk`, transport HTTP streamable sur `/mcp`
 - SSH : `golang.org/x/crypto/ssh`
-- Base : SQLite via `modernc.org/sqlite` (pur Go, pas de CGO), migrations `pressly/goose`, requêtes `sqlc`
+- Base : SQLite via `modernc.org/sqlite` (pur Go, pas de CGO), migrations `pressly/goose`, requêtes SQL paramétrées écrites à la main dans `internal/store` ([ADR 0003](docs/adr/0003-choix-de-la-stack-go-sqlite.md) ; `sqlc` écarté pour l'instant)
 - Chiffrement secrets : AES-256-GCM (`crypto/cipher`), clé maître depuis `LEASSH_MASTER_KEY`
 - Mots de passe : argon2id (`golang.org/x/crypto/argon2`)
 - Logs applicatifs : `log/slog` en JSON
@@ -29,7 +30,7 @@ Lire d'abord : `README.md`, `docs/SPEC.md` (fonctionnel, référence), `docs/UX.
 cmd/leassh/            point d'entrée (serve, rotate-master-key, version)
 internal/
   config/             variables d'environnement
-  store/              accès base (sqlc), migrations
+  store/              accès base (SQL écrit à la main, voir ADR 0003), migrations
   crypto/             chiffrement des secrets, hash des jetons
   authz/              évaluation des droits (fonction unique, cf. SPEC §5)
   catalog/            commandes, paramètres typés, rendu, linter
@@ -49,9 +50,11 @@ docs/
 
 - `make dev` : backend avec rechargement + Vite en mode dev (proxy API)
 - `make test` : tests Go (dont corpus d'injection) + tests frontend (Vitest)
-- `make lint` : `golangci-lint`, `eslint`, `tsc --noEmit`
+- `make lint` : `go vet`, `gofmt`, `golangci-lint` v2 (version figée dans le Makefile, dont `gosec`), `eslint`, `tsc --noEmit`
 - `make build` : build frontend puis binaire unique
-- `make docker` : image multi-arch (amd64/arm64), base distroless
+- `make e2e` : parcours Playwright sur le binaire réel
+- `make docker` : image multi-arch (amd64/arm64), base distroless, publiée dans le registre Gitea `gitea.dewarlez.fr/sebastien/leassh:<version>`
+- Version : SemVer (`vMAJEUR.MINEUR.CORRECTIF`), tag Git et entrée de `CHANGELOG.md` ; `make build` injecte `git describe` (`dev` sans tag)
 
 ## Invariants de sécurité — ne jamais enfreindre
 
