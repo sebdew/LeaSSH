@@ -197,7 +197,7 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// setTheme: préférence de thème mémorisée côté serveur, par utilisateur (docs/UX.md §4.2).
+// setTheme: préférence de thème mémorisée côté serveur, par utilisateur (docs/specs/UX.md §4.2).
 func (s *Server) setTheme(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Theme string `json:"theme"`

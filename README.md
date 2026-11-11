@@ -97,7 +97,7 @@ Cinq outils : `list_servers`, `list_commands`, `run_command`, `get_execution`, `
 - Secrets chiffrés au repos (AES-256-GCM), jamais journalisés ; mots de passe en argon2id.
 - Clés d'hôte épinglées ; toute divergence bloque le serveur.
 
-Voir [Sécurité](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Securite) et [`docs/SPEC.md`](docs/SPEC.md).
+Voir [Sécurité](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Securite) et [`docs/specs/SPEC.md`](docs/specs/SPEC.md).
 
 ## Développement
 
@@ -121,10 +121,10 @@ Le workflow `.gitea/workflows/ci.yml` (Gitea Actions) s'exécute sur chaque merg
 
 ## Documents du dépôt
 
-- [`docs/SPEC.md`](docs/SPEC.md) — cahier des charges fonctionnel et technique (référence normative)
+- [`docs/specs/SPEC.md`](docs/specs/SPEC.md) — cahier des charges fonctionnel et technique (référence normative)
 - [`docs/architecture.md`](docs/architecture.md) et [`docs/exploitation.md`](docs/exploitation.md) — architecture (schéma, données, conservation) et exploitation (retour arrière, test de restauration)
-- [`docs/adr/`](docs/adr/README.md) — décisions d'architecture · [`specs/`](specs/README.md) — spécifications par fonctionnalité
-- [`docs/UX.md`](docs/UX.md) — guide UX/UI et design system · [`docs/openapi.json`](docs/openapi.json) — API
+- [`docs/adr/`](docs/adr/README.md) — décisions d'architecture · [`docs/specs/`](docs/specs/README.md) — spécifications par fonctionnalité
+- [`docs/specs/UX.md`](docs/specs/UX.md) — guide UX/UI et design system · [`docs/openapi.json`](docs/openapi.json) — API
 - [`docs/standards/`](docs/standards/) — constitution et checklist de revue · [`CLAUDE.md`](CLAUDE.md) — consignes de développement
 - [`packs/`](packs/) — packs de commandes fournis
 

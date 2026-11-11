@@ -2,7 +2,7 @@
 
 Projet : **Leassh**, serveur MCP open source qui donne à des agents IA un accès SSH limité à un catalogue de commandes validées.
 Niveau du projet : **N3** (voir `docs/standards/constitution.md` et `CONTRIBUTING.md`).
-Lire d'abord : `README.md`, `docs/SPEC.md` (fonctionnel, référence), `docs/UX.md` (interface), `docs/architecture.md`. La documentation utilisateur vit dans le **wiki** du dépôt (français et anglais).
+Lire d'abord : `README.md`, `docs/specs/SPEC.md` (fonctionnel, référence), `docs/specs/UX.md` (interface), `docs/architecture.md`. La documentation utilisateur vit dans le **wiki** du dépôt (français et anglais).
 
 ## Stack
 
@@ -83,7 +83,7 @@ docs/
 - Go : erreurs enveloppées (`fmt.Errorf("…: %w", err)`), pas de panic hors init, contexte propagé partout, pas de variables globales mutables.
 - API JSON : `/api/v1/...`, erreurs au format `{ "error": { "code": "…", "message": "…" } }`, pagination par curseur.
 - Toute mutation de configuration passe par une fonction qui écrit l'`audit_event` dans la même transaction.
-- Frontend : uniquement les tokens de couleur définis dans `docs/UX.md` (CSS variables), aucun hex en dur dans les composants.
+- Frontend : uniquement les tokens de couleur définis dans `docs/specs/UX.md` (CSS variables), aucun hex en dur dans les composants.
 - Textes de l'interface via i18n, jamais en dur.
 - Commits conventionnels (`feat:`, `fix:`, `docs:`…).
 

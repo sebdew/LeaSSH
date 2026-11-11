@@ -6,7 +6,7 @@ Règles de la [constitution](docs/standards/constitution.md) (principe 10) et de
 
 1. **Un ticket Gitea** décrit le besoin (constat, critère de clôture).
 2. **Une branche dédiée** depuis `main` à jour : `feat/12-nom-court`, `fix/15-nom-court`, `docs/11-nom-court`.
-3. **Le test d'abord** : pour un bug, un test qui reproduit le défaut et échoue ; pour une fonction, sa spécification dans `specs/<nom>/` (`spec.md`, `plan.md`, `tasks.md`) avant le code.
+3. **Le test d'abord** : pour un bug, un test qui reproduit le défaut et échoue ; pour une fonction, sa spécification dans `docs/specs/<nom>/` (`spec.md`, `plan.md`, `tasks.md`) avant le code.
 4. **Réutiliser plutôt que réinventer** (principe 2) : socle, bibliothèque standard, dépendance déjà présente, librairie reconnue, et seulement ensuite du code maison. Toute dépendance nouvelle est justifiée dans le plan.
 5. **Vérifier** : `make lint` et `make test` (et `make e2e` pour l'interface). Relire la modification au regard de l'OWASP Top 10 et des invariants de sécurité de [`CLAUDE.md`](CLAUDE.md).
 6. **Commits Conventional Commits citant le ticket** : `fix: ne relaie plus le corps distant (#35)`.
@@ -18,7 +18,7 @@ Règles de la [constitution](docs/standards/constitution.md) (principe 10) et de
 
 - Décision structurante → un [ADR](docs/adr/README.md) numéroté, avant le code.
 - Documentation utilisateur → le [wiki](https://gitea.dewarlez.fr/sebastien/Leassh/wiki), en français **et** en anglais (pages `FR-…` et `EN-…`).
-- Comportement normatif → [`docs/SPEC.md`](docs/SPEC.md).
+- Comportement normatif → [`docs/specs/SPEC.md`](docs/specs/SPEC.md).
 
 ## Sécurité
 

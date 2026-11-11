@@ -192,7 +192,7 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: 
   );
 }
 
-// Confirmation explicite pour les actions dangereuses: saisir le slug de l'objet (docs/UX.md §2.6).
+// Confirmation explicite pour les actions dangereuses: saisir le slug de l'objet (docs/specs/UX.md §2.6).
 export function ConfirmDialog({ open, onClose, onConfirm, title, body, confirmWord, busy }: {
   open: boolean; onClose: () => void; onConfirm: () => void; title: string; body: string; confirmWord?: string; busy?: boolean;
 }) {
