@@ -23,5 +23,6 @@ La constitution (principe 1) impose OpenID Connect via Keycloak, sans stockage l
 - Pour un déploiement exposé ou d'entreprise (N3), désactiver le mot de passe local dès que le SSO fonctionne.
 - Par défaut (réglage non posé), l'instance reste utilisable sans fournisseur d'identité : c'est la limite assumée pour un usage interne ou une première installation.
 - L'écran de connexion et l'écran d'initialisation restent dans le code : ils servent tant que le SSO n'est pas configuré. Aucun mot de passe local n'est créé pour un compte SSO.
-- Les refus de connexion locale sont journalisés (`user.login_failed`, motif `local_login_disabled`).
+- Les refus de connexion locale sont journalisés (`user.login_failed`, motif `local_login_disabled`). Ils comptent dans le plafond par IP (50 échecs par 15 minutes), le nom saisi est refusé au-delà de 64 caractères et tronqué à 128 caractères en audit (SEC-09, #47).
+- Écart assumé (SEC-10) : le verrou par compte a pour clé `ip|identifiant` (5 échecs). Une attaque répartie sur plusieurs adresses n'est limitée que par le plafond de chaque IP. Pas de compteur par compte seul, pour ne pas permettre à un tiers de verrouiller un administrateur depuis Internet ; la parade est de désactiver le mot de passe local dès que le SSO fonctionne (décision 3). L'affichage des comptes bloqués relève de #28.
 - Reste hors périmètre : le remplacement du code JWT/OIDC maison par `coreos/go-oidc` (ticket #2).

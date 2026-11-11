@@ -442,6 +442,11 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
+	// SEC-09: borne la taille avant tout traitement (audit, hachage, clé du limiteur).
+	if len(in.Username) > accounts.MaxUsername {
+		writeErr(w, 400, "invalid_username", "nom d'utilisateur trop long")
+		return
+	}
 	ip := s.clientIP(r)
 	key := ip + "|" + strings.ToLower(in.Username)
 	if s.lim.blocked(key) || s.limIP.blocked(ip) {
@@ -450,6 +455,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	// SSO obligatoire: le mot de passe local est refusé pour tous les comptes, avant toute vérification.
 	if oc, err := store.GetOIDCConfig(r.Context(), s.st.DB); err == nil && oc.Enabled && oc.LocalLoginDisabled {
+		s.limIP.fail(ip) // SEC-09: ces refus comptent dans le plafond par IP (pas de remplissage illimité de l'audit)
 		_ = audit.RecordStandalone(r.Context(), s.st, audit.Event{ActorType: "system", ActorName: in.Username, Action: "user.login_failed",
 			TargetType: "user", TargetName: in.Username, Diff: map[string]any{"reason": "local_login_disabled"}, IP: ip})
 		writeErr(w, 403, "local_login_disabled", "la connexion par mot de passe est désactivée: utilisez le SSO")
