@@ -3,7 +3,7 @@
   "info": {
     "title": "Leassh — API d'administration",
     "version": "0.1.0",
-    "description": "API JSON de l'interface d'administration de Leassh (session par cookie + jeton CSRF `X-CSRF-Token` sur les mutations).\n\nLe transport MCP (`/mcp`) n'est pas décrit ici: il suit le protocole MCP.\n\nLes corps de requête et de réponse sont décrits comme des objets JSON; leurs champs détaillés sont dans `docs/SPEC.md`. Cette spécification est testée: chaque route du routeur doit y figurer (`internal/api/openapi_test.go`)."
+    "description": "API JSON de l'interface d'administration de Leassh (session par cookie + jeton CSRF `X-CSRF-Token` sur les mutations).\n\nLe transport MCP (`/mcp`) n'est pas décrit ici: il suit le protocole MCP.\n\nLes corps de requête et de réponse sont décrits comme des objets JSON; leurs champs détaillés sont dans `docs/specs/SPEC.md`. Cette spécification est testée: chaque route du routeur doit y figurer (`internal/api/openapi_test.go`)."
   },
   "servers": [
     {

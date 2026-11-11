@@ -33,7 +33,7 @@ Filtrer les commandes d'un agent après coup (liste noire, regex) est contournab
 - 📦 **Packs de commandes** en YAML (système, systemd, MySQL, PostgreSQL, nginx, Docker, pfSense, Proxmox, UniFi), importables et partageables.
 - 🔐 **SSO OpenID Connect** (Keycloak, Entra ID, Authentik, Google…), PKCE, rôles issus des groupes ([ADR 0001](docs/adr/0001-authentification-sso-et-compte-local.md)).
 - 🔄 **Provisioning** : synchronisation des serveurs depuis un bastion Warpgate.
-- 📡 **Export syslog** (UDP/TCP/TLS, RFC 5424, texte/JSON/CEF) et **webhook** signé HMAC (compatible Mattermost, Slack).
+- 📡 **Export syslog** (UDP/TCP/TLS, RFC 5424, texte/JSON/CEF) et **webhook** (signature HMAC facultative, compatible Mattermost, Slack).
 - 🧾 **Rapport d'audit** ISO 27001 / HDS, synthèse IA facultative.
 - 🌍 Interface en **français et en anglais**, thèmes clair et sombre, utilisable sur mobile pour les validations et le journal.
 - 📦 **Un seul binaire** (ou une image Docker), SQLite par défaut, `/health` et `/metrics`.

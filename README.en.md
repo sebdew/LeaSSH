@@ -33,7 +33,7 @@ Filtering an agent's commands after the fact (blacklists, regex) can be bypassed
 - 📦 **YAML command packs** (system, systemd, MySQL, PostgreSQL, nginx, Docker, pfSense, Proxmox, UniFi), importable and shareable.
 - 🔐 **OpenID Connect SSO** (Keycloak, Entra ID, Authentik, Google…), PKCE, roles from groups ([ADR 0001](docs/adr/0001-authentification-sso-et-compte-local.md), French).
 - 🔄 **Provisioning**: server synchronisation from a Warpgate bastion.
-- 📡 **Syslog export** (UDP/TCP/TLS, RFC 5424, text/JSON/CEF) and HMAC-signed **webhook** (Mattermost, Slack compatible).
+- 📡 **Syslog export** (UDP/TCP/TLS, RFC 5424, text/JSON/CEF) and **webhook** (optional HMAC signature, Mattermost and Slack compatible).
 - 🧾 **ISO 27001 / HDS audit report**, optional AI summary.
 - 🌍 **French and English** interface, light and dark themes, usable on mobile for approvals and the log.
 - 📦 **A single binary** (or a Docker image), SQLite by default, `/health` and `/metrics`.
