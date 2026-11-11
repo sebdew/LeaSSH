@@ -63,7 +63,7 @@ func TestADRRetroactifs(t *testing.T) { // DOC-02
 func TestSpecificationsAPosteriori(t *testing.T) { // DOC-03
 	for _, f := range []string{"sso", "rapport-audit", "provisioning"} {
 		for _, doc := range []string{"spec.md", "plan.md", "tasks.md"} {
-			lire(t, filepath.Join("specs", f, doc))
+			lire(t, filepath.Join("docs/specs", f, doc))
 		}
 	}
 }
@@ -122,8 +122,8 @@ func TestStandardsVersionnes(t *testing.T) { // DOC-08
 func TestLiensRelatifsValides(t *testing.T) {
 	lien := regexp.MustCompile(`\]\(([^)#\s]+)(#[^)]*)?\)`)
 	fichiers := []string{"README.md", "README.en.md", "CHANGELOG.md", "CONTRIBUTING.md", "CLAUDE.md",
-		"docs/architecture.md", "docs/exploitation.md", "docs/INSTALL.md"}
-	for _, motif := range []string{"docs/adr/*.md", "specs/*/*.md"} {
+		"docs/architecture.md", "docs/exploitation.md", "docs/README.md", "docs/specs/README.md", "docs/specs/SPEC.md"}
+	for _, motif := range []string{"docs/adr/*.md", "docs/specs/*/*.md"} {
 		m, _ := filepath.Glob(filepath.Join(racine, motif))
 		for _, p := range m {
 			r, _ := filepath.Rel(racine, p)
@@ -139,6 +139,21 @@ func TestLiensRelatifsValides(t *testing.T) {
 			if _, err := os.Stat(filepath.Join(racine, filepath.Dir(f), cible)); err != nil {
 				t.Errorf("%s : lien relatif cassé vers %s", f, cible)
 			}
+		}
+	}
+}
+
+// DOC : le README du dossier docs explique la structure du dépôt et renvoie vers le wiki.
+func TestREADMEDocsExpliqueLaStructure(t *testing.T) {
+	d := lire(t, "docs/README.md")
+	for _, mot := range []string{"Structure du dépôt", "Repository layout", "/wiki", "specs/SPEC.md", "adr/"} {
+		if !strings.Contains(d, mot) {
+			t.Errorf("docs/README.md doit contenir : %s", mot)
+		}
+	}
+	for _, f := range []string{"docs/INSTALL.md", "specs/README.md"} {
+		if _, err := os.Stat(filepath.Join(racine, f)); err == nil && f == "docs/INSTALL.md" {
+			t.Errorf("%s est obsolète (migré vers le wiki)", f)
 		}
 	}
 }

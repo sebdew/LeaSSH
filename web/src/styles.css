@@ -2,7 +2,7 @@
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/jetbrains-mono";
 
-/* Tokens de docs/UX.md §4.2 — seule source de couleurs; aucun hex dans les composants. */
+/* Tokens de docs/specs/UX.md §4.2 — seule source de couleurs; aucun hex dans les composants. */
 :root {
   --bg: #f7f8fa;
   --surface: #ffffff;

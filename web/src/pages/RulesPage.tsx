@@ -38,7 +38,7 @@ export function RulesPage() {
                   <Button variant="ghost" className="h-8 px-2 text-destructive" onClick={() => setDeleting(r)}>{t("common.delete")}</Button>
                 </div>
               </div>
-              {/* règle lisible comme une phrase (docs/UX.md §5.9) */}
+              {/* règle lisible comme une phrase (docs/specs/UX.md §5.9) */}
               <p className="mt-2 text-[15px]" data-testid="rule-sentence">
                 {t("rules.sentence", {
                   keys: r.key_ids.filter((k) => { const key = keys.data?.find((x) => x.id === k); return !key || keyActive(key); }).map((k) => nameOf(keys.data?.map((x) => ({ id: x.id, name: x.name })), k)).join(", ") || t("rules.noActiveKey"),

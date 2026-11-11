@@ -1,6 +1,6 @@
 # Spécification — Provisioning des serveurs depuis un bastion
 
-Statut : livrée (écrite a posteriori). Détail normatif : `docs/SPEC.md`, annexe « Règles multi-groupes et auto-provisioning ».
+Statut : livrée (écrite a posteriori). Détail normatif : `docs/specs/SPEC.md`, annexe « Règles multi-groupes et auto-provisioning ».
 
 ## Quoi et pourquoi
 

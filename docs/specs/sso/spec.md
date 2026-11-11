@@ -1,6 +1,6 @@
 # Spécification — Connexion unique (SSO) OpenID Connect
 
-Statut : livrée (écrite a posteriori). Détail normatif : `docs/SPEC.md` §9bis. Décision : [ADR 0001](../../docs/adr/0001-authentification-sso-et-compte-local.md).
+Statut : livrée (écrite a posteriori). Détail normatif : `docs/specs/SPEC.md` §9bis. Décision : [ADR 0001](../../adr/0001-authentification-sso-et-compte-local.md).
 
 ## Quoi et pourquoi
 

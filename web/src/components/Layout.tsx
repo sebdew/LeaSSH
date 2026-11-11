@@ -24,7 +24,7 @@ const sections: { title?: string; items: NavItem[] }[] = [
 export function Layout({ user, onLogout }: { user: User; onLogout: () => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  // le Journal est le seul écran pleine largeur (docs/UX.md §3)
+  // le Journal est le seul écran pleine largeur (docs/specs/UX.md §3)
   const fullWidth = useRouterState({ select: (s) => s.location.pathname.startsWith("/journal") });
   const [drawer, setDrawer] = useState(false);
   const [palette, setPalette] = useState(false);

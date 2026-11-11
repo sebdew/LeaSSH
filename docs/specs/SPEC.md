@@ -611,5 +611,5 @@ Démarrage refusé si `LEASSH_MASTER_KEY` est absente ou invalide. Rotation de l
 
 ### Annexe — Sorties non fiables et URL sortantes (SEC-07, SEC-08)
 
-- **Sortie de commande** : renvoyée telle quelle à l'agent. Une sortie contrôlée par un tiers peut porter une injection de prompt; l'effet reste borné au catalogue, aux droits de la clé et à la validation humaine des écritures. Traitement suivi dans le ticket #36; détail dans [securite-sorties-et-urls.md](securite-sorties-et-urls.md).
+- **Sortie de commande** : renvoyée telle quelle à l'agent. Une sortie contrôlée par un tiers peut porter une injection de prompt; l'effet reste borné au catalogue, aux droits de la clé et à la validation humaine des écritures. Traitement suivi dans le ticket #36; détail dans [securite-sorties-et-urls.md](../securite-sorties-et-urls.md).
 - **URL sortantes** (webhook, IA, connecteurs, issuer OIDC) : `http(s)` seulement, adresses privées autorisées (usage interne), redirections non suivies pour le webhook et l'IA. Réservé aux administrateurs.

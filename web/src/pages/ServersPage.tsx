@@ -142,7 +142,7 @@ function ServerFields({ s, identities, onClose }: { s: SshServer | null; identit
   );
 }
 
-// Test de connexion → affichage de l'empreinte → « Faire confiance à cette clé » (docs/UX.md §5.7).
+// Test de connexion → affichage de l'empreinte → « Faire confiance à cette clé » (docs/specs/UX.md §5.7).
 function ProbeDialog({ server, onClose }: { server: SshServer | null; onClose: () => void }) {
   const { t } = useTranslation();
   const qc = useQueryClient();

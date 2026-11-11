@@ -1,6 +1,6 @@
 # Spécification — Rapport d'audit ISO 27001 / HDS
 
-Statut : livrée (écrite a posteriori). Détail normatif : `docs/SPEC.md`, annexe « Rapport d'audit ». Décisions : [ADR 0004](../../docs/adr/0004-chaine-integrite-du-journal.md) et [ADR 0005](../../docs/adr/0005-synthese-ia-configurable-en-base.md).
+Statut : livrée (écrite a posteriori). Détail normatif : `docs/specs/SPEC.md`, annexe « Rapport d'audit ». Décisions : [ADR 0004](../../adr/0004-chaine-integrite-du-journal.md) et [ADR 0005](../../adr/0005-synthese-ia-configurable-en-base.md).
 
 ## Quoi et pourquoi
 

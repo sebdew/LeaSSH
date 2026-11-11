@@ -97,7 +97,7 @@ Five tools: `list_servers`, `list_commands`, `run_command`, `get_execution`, `pr
 - Secrets encrypted at rest (AES-256-GCM), never logged; passwords in argon2id.
 - Pinned host keys; any mismatch blocks the server.
 
-See [Security](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/EN-Security) and [`docs/SPEC.md`](docs/SPEC.md) (French).
+See [Security](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/EN-Security) and [`docs/specs/SPEC.md`](docs/specs/SPEC.md) (French).
 
 ## Development
 
