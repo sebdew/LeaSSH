@@ -1,4 +1,4 @@
-# Exemple de déploiement. Créez un fichier .env à côté (voir docs/INSTALL.md) :
+# Exemple de déploiement. Créez un fichier .env à côté (voir le wiki, page Installation : https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Installation) :
 #   LEASSH_MASTER_KEY=<openssl rand -base64 32>
 #   LEASSH_SETUP_TOKEN=<openssl rand -base64 24>   (facultatif, instance neuve)
 # Le reste (URL publique, reverse proxies de confiance, rétention…) se règle dans l'interface : Réglages → Général.
