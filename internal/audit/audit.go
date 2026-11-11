@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"unicode/utf8"
 
 	"github.com/leassh-dev/leassh/internal/store"
 )
@@ -78,8 +79,19 @@ func eventFields(id, ts string, seq int64, e Event, diff string) []string {
 		e.TargetType, e.TargetID, e.TargetName, diff, e.IP}
 }
 
+// maxField borne les valeurs d'origine externe (nom saisi à la connexion, IP) écrites en audit (SEC-09).
+const maxField = 128
+
+func truncate(v string) string {
+	if utf8.RuneCountInString(v) <= maxField {
+		return v
+	}
+	return string([]rune(v)[:maxField])
+}
+
 // Record écrit l'événement dans la transaction de l'appelant (la mutation et son audit sont atomiques).
 func Record(ctx context.Context, tx *sql.Tx, e Event) error {
+	e.ActorName, e.TargetName, e.IP = truncate(e.ActorName), truncate(e.TargetName), truncate(e.IP)
 	var seq sql.NullInt64
 	var prev sql.NullString
 	err := tx.QueryRowContext(ctx, `SELECT seq, row_hash FROM audit_events ORDER BY seq DESC LIMIT 1`).Scan(&seq, &prev)
