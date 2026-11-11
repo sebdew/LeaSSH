@@ -45,7 +45,7 @@ La documentation **utilisateur** (installation, manuel écran par écran, SSO, e
 | [`securite-sorties-et-urls.md`](securite-sorties-et-urls.md) | Décisions sur les sorties de commandes non fiables et les URL sortantes |
 | [`standards/`](standards/) | Constitution et checklist de revue, **non modifiés ici** (modèle de dépôt) |
 | [`revues/`](revues/) | Rapports de revue (ex. revue du 2026-11-07) |
-| [`logo/`](logo/) | Sources des logos |
+| [`logo/`](logo/) | Logos PNG (logos, symboles, icônes, favicons) ; copies redimensionnées dans `web/public/` |
 
 ## Où maintenir quoi ?
 
@@ -85,7 +85,7 @@ La documentation **utilisateur** (installation, manuel écran par écran, SSO, e
 | [`securite-sorties-et-urls.md`](securite-sorties-et-urls.md) | Decisions on untrusted command output and outgoing URLs |
 | [`standards/`](standards/) | Constitution and review checklist, **not modified here** (template repository) |
 | [`revues/`](revues/) | Review reports |
-| [`logo/`](logo/) | Logo sources |
+| [`logo/`](logo/) | PNG logos (logos, symbols, icons, favicons); resized copies in `web/public/` |
 
 ### Where to maintain what
 

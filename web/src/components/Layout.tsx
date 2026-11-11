@@ -88,7 +88,7 @@ export function Layout({ user, onLogout }: { user: User; onLogout: () => void })
     <div className="min-h-screen">
       <a href="#main" className="sr-only focus:not-sr-only">{t("app.skip")}</a>
       <aside className={`fixed inset-y-0 left-0 z-30 w-60 overflow-y-auto border-r border-border bg-surface p-3 transition-transform md:translate-x-0 ${drawer ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="mb-4 px-3 py-2 text-fg"><Logo className="h-9 w-auto" title={t("app.name")} /></div>
+        <div className="mb-4 px-3 py-2 text-fg"><Logo compact className="h-9 w-auto" title={t("app.name")} /></div>
         {nav}
       </aside>
       {drawer && <div className="fixed inset-0 z-20 bg-black/40 md:hidden" onClick={() => setDrawer(false)} aria-hidden />}

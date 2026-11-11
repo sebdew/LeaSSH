@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="Leassh">
-  <rect width="320" height="320" rx="64" fill="#2f5bff"/>
-  <path d="M84 104 L160 160 L84 216" stroke="#fff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <!-- le curseur devient une laisse avec poignée -->
-  <path d="M184 216 H 224" stroke="#fff" stroke-width="26" stroke-linecap="round"/>
-  <path d="M224 216 C 270 216, 270 258, 240 262" stroke="#fff" stroke-width="10" stroke-linecap="round" fill="none"/>
-  <circle cx="232" cy="262" r="14" fill="none" stroke="#fff" stroke-width="8"/>
-</svg>

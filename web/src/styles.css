@@ -61,3 +61,12 @@ body { background: var(--bg); color: var(--text); font-family: var(--font-sans);
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; box-shadow: 0 0 0 4px var(--focus-ring); }
 * { transition: background-color 150ms, border-color 150ms; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* Logo : variante claire par défaut, variante sombre selon le thème (réglage de l'application ou du système). */
+.logo-sombre { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logo-clair { display: none; }
+  :root:not([data-theme="light"]) .logo-sombre { display: inline-block; }
+}
+:root[data-theme="dark"] .logo-clair { display: none; }
+:root[data-theme="dark"] .logo-sombre { display: inline-block; }
