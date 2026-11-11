@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="LeaSSH"><title>LeaSSH</title>
-<path fill="#4f46e5" d="M30 0H98A30 30 0 0 1 128 30V98A30 30 0 0 1 98 128H30A30 30 0 0 1 0 98V30A30 30 0 0 1 30 0Z"/>
-<path stroke-linecap="round" stroke-linejoin="round" fill="none" stroke="#e8ecf5" stroke-width="9" d="M28 54C16 44 13 24 23 18C33 12 40 34 28 54"/>
-<path stroke-linecap="round" stroke-linejoin="round" fill="none" stroke="#e8ecf5" stroke-width="9" d="M28 54C30 104 60 116 80 106"/>
-<path fill="#0f1420" d="M65 22H99A17 17 0 0 1 116 39V57A17 17 0 0 1 99 74H65A17 17 0 0 1 48 57V39A17 17 0 0 1 65 22Z"/>
-<circle fill="#5dd39e" cx="70" cy="48" r="7.5"/><circle fill="#5dd39e" cx="94" cy="48" r="7.5"/>
-<path fill="#e8ecf5" d="M60 80H104A6 6 0 0 1 110 86V86A6 6 0 0 1 104 92H60A6 6 0 0 1 54 86V86A6 6 0 0 1 60 80Z"/>
-<circle stroke-linecap="round" stroke-linejoin="round" fill="none" stroke="#e8ecf5" stroke-width="7" cx="82" cy="100" r="6.5"/>
-</svg>

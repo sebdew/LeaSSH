@@ -13,7 +13,7 @@ function Shell({ title, subtitle, children }: { title: string; subtitle?: string
   return (
     <main className="grid min-h-screen place-items-center p-4">
       <Card className="w-full max-w-sm">
-        <div className="mb-4 text-fg"><Logo className="h-10 w-auto" title={t("app.name")} /></div>
+        <div className="mb-4 text-fg"><Logo className="h-28 w-auto" title={t("app.name")} /></div>
         <h1 className="text-[24px] font-semibold">{title}</h1>
         {subtitle ? <p className="mb-4 mt-1 text-muted">{subtitle}</p> : <div className="mb-4" />}
         {children}
