@@ -8,6 +8,7 @@ import (
 	"crypto/elliptic"
 	"crypto/hmac"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -297,6 +298,40 @@ func TestNoHandWrittenJWTVerification(t *testing.T) {
 			if strings.Contains(string(src), banned) {
 				t.Errorf("%s appelle %s: vérification de signature maison", e.Name(), banned)
 			}
+		}
+	}
+}
+
+// Aucune erreur renvoyée par le client ne doit citer le corps d'une réponse distante (token, userinfo, JWKS):
+// ces erreurs finissent dans le journal d'audit et dans les logs.
+func TestErrorsNeverQuoteRemoteBody(t *testing.T) {
+	const sentinel = "SECRET-INTERNAL-BODY"
+	var ts *httptest.Server
+	ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/.well-known/openid-configuration" {
+			_ = json.NewEncoder(w).Encode(map[string]any{"issuer": ts.URL, "authorization_endpoint": ts.URL + "/authorize", "token_endpoint": ts.URL + "/token",
+				"jwks_uri": ts.URL + "/jwks", "userinfo_endpoint": ts.URL + "/userinfo", "code_challenge_methods_supported": []string{"S256"}})
+			return
+		}
+		http.Error(w, sentinel, http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+	c, ctx := oidc.New(), context.Background()
+	cfg := oidc.Config{Issuer: ts.URL, ClientID: "leassh", ClientSecret: "x", Scopes: []string{"openid"}}
+
+	_, errEx := c.Exchange(ctx, cfg, "http://leassh.test/cb", "code", "verifier-verifier-verifier-verifier-verifier")
+	_, errUI := c.UserInfo(ctx, cfg, "access-token")
+	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+	_, errVf := c.VerifyIDToken(ctx, cfg, oidctest.Sign(t, map[string]any{"iss": ts.URL, "sub": "s", "aud": "leassh", "exp": time.Now().Add(time.Minute).Unix()}, key, "inconnu"), "n")
+	for name, err := range map[string]error{"exchange": errEx, "userinfo": errUI, "verify": errVf} {
+		if err == nil {
+			t.Fatalf("%s: erreur attendue", name)
+		}
+		if strings.Contains(err.Error(), sentinel) {
+			t.Fatalf("%s cite le corps distant: %v", name, err)
+		}
+		if !strings.Contains(err.Error(), "500") {
+			t.Fatalf("%s: le code HTTP devrait figurer: %v", name, err)
 		}
 	}
 }

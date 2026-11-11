@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	gooidc "github.com/coreos/go-oidc/v3/oidc"
@@ -105,6 +106,7 @@ type cached struct {
 	disc *Discovery
 	prov *gooidc.Provider
 	at   time.Time
+	rec  *statusRecorder // transport du fournisseur (récupération du JWKS par go-oidc)
 }
 
 // Client: découverte, échange de code, vérification d'ID token; cache de découverte.
@@ -136,8 +138,25 @@ func (c *Client) Reset() {
 }
 
 // withHTTP place le client HTTP configuré dans le contexte, comme go-oidc et x/oauth2 l'attendent.
-func (c *Client) withHTTP(ctx context.Context) context.Context {
-	return gooidc.ClientContext(ctx, c.HTTP)
+// Le recorder retourné retient le code HTTP reçu: go-oidc et x/oauth2 citent le corps des réponses dans leurs
+// erreurs, on construit donc nos messages à partir du seul code (voir remoteStatus).
+func (c *Client) withHTTP(ctx context.Context) (context.Context, *statusRecorder) {
+	hc := *c.HTTP
+	base := hc.Transport
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	rec := &statusRecorder{base: base}
+	hc.Transport = rec
+	return gooidc.ClientContext(ctx, &hc), rec
+}
+
+// remoteStatus: " (HTTP 500)" si le serveur distant a répondu en erreur, sinon "".
+func (t *statusRecorder) remoteStatus() string {
+	if st := t.status.Load(); st >= 300 {
+		return fmt.Sprintf(" (HTTP %d)", st)
+	}
+	return ""
 }
 
 // jwksThrottle limite le rechargement du JWKS: go-oidc le recharge à chaque jeton dont le kid est inconnu,
@@ -164,6 +183,21 @@ func (t *jwksThrottle) RoundTrip(req *http.Request) (*http.Response, error) {
 	return t.base.RoundTrip(req)
 }
 
+// statusRecorder retient le dernier code HTTP reçu: go-oidc cite le corps de la réponse dans ses erreurs,
+// on ne garde donc que le code pour construire un message qui ne relaie rien du serveur distant.
+type statusRecorder struct {
+	base   http.RoundTripper
+	status atomic.Int64
+}
+
+func (t *statusRecorder) RoundTrip(req *http.Request) (*http.Response, error) {
+	res, err := t.base.RoundTrip(req)
+	if res != nil {
+		t.status.Store(int64(res.StatusCode))
+	}
+	return res, err
+}
+
 func httpURL(s string) bool {
 	u, err := url.Parse(s)
 	return err == nil && (u.Scheme == "https" || u.Scheme == "http") && u.Host != ""
@@ -185,11 +219,15 @@ func (c *Client) provider(ctx context.Context, issuer string) (*cached, error) {
 	}
 	thr := &jwksThrottle{base: base, now: c.Now}
 	hc := *c.HTTP
-	hc.Transport = thr
+	rec := &statusRecorder{base: thr}
+	hc.Transport = rec
 	// NewProvider lit le document de découverte et vérifie que l'issuer annoncé est celui configuré.
 	prov, err := gooidc.NewProvider(gooidc.ClientContext(ctx, &hc), issuer)
 	if err != nil {
-		return nil, fail(ReasonDiscovery, "découverte impossible: %v", err)
+		if st := rec.status.Load(); st >= 300 {
+			return nil, fail(ReasonDiscovery, "découverte impossible: le serveur a répondu HTTP %d", st)
+		}
+		return nil, fail(ReasonDiscovery, "découverte impossible: serveur injoignable ou document invalide")
 	}
 	var d Discovery
 	if err := prov.Claims(&d); err != nil {
@@ -204,7 +242,7 @@ func (c *Client) provider(ctx context.Context, issuer string) (*cached, error) {
 	thr.mu.Lock()
 	thr.url = d.JWKSURI
 	thr.mu.Unlock()
-	e := &cached{disc: &d, prov: prov, at: c.Now()}
+	e := &cached{disc: &d, prov: prov, at: c.Now(), rec: rec}
 	c.mu.Lock()
 	c.cache[issuer] = e
 	c.mu.Unlock()
@@ -297,9 +335,10 @@ func (c *Client) Exchange(ctx context.Context, cfg Config, redirectURI, code, ve
 	if err != nil {
 		return Tokens{}, err
 	}
-	tok, err := c.oauth(e, cfg, redirectURI).Exchange(c.withHTTP(ctx), code, oauth2.VerifierOption(verifier))
+	hctx, rec := c.withHTTP(ctx)
+	tok, err := c.oauth(e, cfg, redirectURI).Exchange(hctx, code, oauth2.VerifierOption(verifier))
 	if err != nil {
-		return Tokens{}, fail(ReasonExchange, "échange du code refusé: %v", err)
+		return Tokens{}, fail(ReasonExchange, "échange du code refusé%s", rec.remoteStatus())
 	}
 	id, _ := tok.Extra("id_token").(string)
 	if id == "" {
@@ -391,8 +430,13 @@ func (c *Client) VerifyIDToken(ctx context.Context, cfg Config, raw, nonce strin
 	}
 	// L'expiration est contrôlée plus bas, avec le même décalage toléré que nbf et iat.
 	verifier := e.prov.Verifier(&gooidc.Config{ClientID: cfg.ClientID, SupportedSigningAlgs: allowedAlgs, SkipExpiryCheck: true})
-	idt, err := verifier.Verify(c.withHTTP(ctx), raw)
+	hctx, _ := c.withHTTP(ctx)
+	e.rec.status.Store(0)
+	idt, err := verifier.Verify(hctx, raw)
 	if err != nil {
+		if st := e.rec.remoteStatus(); st != "" { // récupération du JWKS en échec: le message de go-oidc cite le corps distant
+			return nil, fail(ReasonSignature, "clés de signature inaccessibles%s", st)
+		}
 		return nil, fail(classify(err), "ID token refusé: %v", err)
 	}
 	var cl Claims
@@ -437,9 +481,10 @@ func (c *Client) UserInfo(ctx context.Context, cfg Config, accessToken string) (
 	if e.disc.UserinfoEndpoint == "" || accessToken == "" {
 		return nil, fail(ReasonUserinfo, "userinfo indisponible")
 	}
-	ui, err := e.prov.UserInfo(c.withHTTP(ctx), oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken, TokenType: "Bearer"}))
+	hctx, rec := c.withHTTP(ctx)
+	ui, err := e.prov.UserInfo(hctx, oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken, TokenType: "Bearer"}))
 	if err != nil {
-		return nil, fail(ReasonUserinfo, "userinfo: %v", err)
+		return nil, fail(ReasonUserinfo, "userinfo indisponible%s", rec.remoteStatus())
 	}
 	var cl Claims
 	if err := ui.Claims(&cl); err != nil {
