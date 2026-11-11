@@ -255,3 +255,19 @@ func TestNiveauCoherentEtDecisionSEC08(t *testing.T) {
 		t.Error("docs/adr/README.md doit lister l'ADR des adresses privées")
 	}
 }
+
+// #45 : les fichiers de test restent à côté du code ; ce choix est assumé par un ADR
+// et rappelé dans CONTRIBUTING.md pour ne pas relancer la question à chaque revue.
+func TestADRTestsACoteDuCode(t *testing.T) {
+	m, _ := filepath.Glob(filepath.Join(racine, "docs/adr/*tests-a-cote-du-code*"))
+	if len(m) == 0 {
+		t.Fatal("ADR manquant sur l'emplacement des fichiers de test (docs/adr/*tests-a-cote-du-code*)")
+	}
+	nom := filepath.Base(m[0])
+	if !strings.Contains(lire(t, "docs/adr/README.md"), nom) {
+		t.Error("docs/adr/README.md doit lister l'ADR sur l'emplacement des tests")
+	}
+	if !strings.Contains(lire(t, "CONTRIBUTING.md"), nom) {
+		t.Error("CONTRIBUTING.md doit renvoyer vers l'ADR sur l'emplacement des tests")
+	}
+}

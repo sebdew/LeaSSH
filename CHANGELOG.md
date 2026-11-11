@@ -5,6 +5,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 ## [Non publié]
 
 ### Ajouté
+- ADR 0007 : les fichiers de test restent à côté du code, jamais livrés dans le binaire (#45).
 - Documentation : wiki bilingue (français / anglais), `CONTRIBUTING.md`, `docs/architecture.md`, `docs/exploitation.md`, `docs/specs/`, ADR 0004 et 0005, versionnement de `docs/standards/` (#11).
 
 ## [0.1.0] - 2026-11-11
