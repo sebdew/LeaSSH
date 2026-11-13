@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"crypto/subtle"
-	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -12,8 +11,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"unicode"
 
+	"github.com/leassh-dev/leassh/internal/accounts"
 	"github.com/leassh-dev/leassh/internal/audit"
 	"github.com/leassh-dev/leassh/internal/oidc"
 	"github.com/leassh-dev/leassh/internal/store"
@@ -22,10 +21,9 @@ import (
 // ---- SSO OpenID Connect (SPEC §9bis) ----
 
 const (
-	oidcCookie   = "leassh_oidc"
-	oidcCbPath   = "/api/v1/auth/oidc/callback"
-	oidcFlowTTL  = 10 * time.Minute
-	maxUsernames = 64
+	oidcCookie  = "leassh_oidc"
+	oidcCbPath  = "/api/v1/auth/oidc/callback"
+	oidcFlowTTL = 10 * time.Minute
 )
 
 // oidcView: configuration exposée par l'API (jamais le secret client).
@@ -60,13 +58,6 @@ func viewOf(c store.OIDCConfig) oidcView {
 	return v
 }
 
-// auditView: ce qui est écrit dans l'audit (jamais le secret).
-func (v oidcView) auditView() map[string]any {
-	return map[string]any{"enabled": v.Enabled, "name": v.Name, "issuer": v.Issuer, "client_id": v.ClientID, "has_client_secret": v.HasClientSecret,
-		"scopes": v.Scopes, "role_claim": v.RoleClaim, "role_map": v.RoleMap, "default_role": v.DefaultRole, "jit": v.JIT,
-		"local_password_admins_only": v.LocalPasswordAdminsOnly, "local_login_disabled": v.LocalLoginDisabled, "end_session": v.EndSession, "auto_redirect": v.AutoRedirect}
-}
-
 // baseURL: URL publique de l'application, par ordre de priorité:
 //  1. l'URL publique réglée dans Réglages → Général (fixe, recommandé: aucune dépendance aux en-têtes de la requête);
 //  2. X-Forwarded-Host / X-Forwarded-Proto, uniquement si la requête vient d'un proxy de confiance (Réglages → Général);
@@ -95,7 +86,7 @@ func validHost(h string) bool { return h != "" && len(h) <= 255 && hostRe.MatchS
 func (s *Server) redirectURL(r *http.Request) string { return s.baseURL(r) + oidcCbPath }
 
 func (s *Server) getOIDC(w http.ResponseWriter, r *http.Request) {
-	c, err := store.GetOIDCConfig(r.Context(), s.st.DB)
+	c, err := s.accounts.SSOConfig(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -174,51 +165,35 @@ func (s *Server) putOIDC(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	u := currentUser(r)
-	var after oidcView
-	err := s.st.Tx(r.Context(), func(tx *sql.Tx) error {
-		old, err := store.GetOIDCConfig(r.Context(), tx)
+	up := accounts.SSOUpdate{Actor: currentUser(r), IP: s.clientIP(r)}
+	switch {
+	case in.ClientSecret != "":
+		sealed, err := s.box.Seal([]byte(in.ClientSecret))
 		if err != nil {
-			return err
+			s.fail(w, err)
+			return
 		}
-		secret := old.ClientSecretEnc
-		switch {
-		case in.ClientSecret != "":
-			if secret, err = s.box.Seal([]byte(in.ClientSecret)); err != nil {
-				return err
-			}
-		case in.ClearClientSecret:
-			secret = nil
-		}
-		if in.LocalPasswordAdminsOnly {
-			if n, err := store.CountLocalAdmins(r.Context(), tx); err != nil {
-				return err
-			} else if n == 0 {
-				return bad("no_local_admin", "il faut au moins un administrateur local actif (compte de secours) pour restreindre le mot de passe local")
-			}
-		}
-		if in.LocalLoginDisabled {
-			if n, err := store.CountOIDCAdmins(r.Context(), tx); err != nil {
-				return err
-			} else if n == 0 {
-				return bad("no_sso_admin", "connectez-vous d'abord une fois en tant qu'administrateur via le SSO avant de désactiver le mot de passe local")
-			}
-		}
-		rm, _ := json.Marshal(in.RoleMap)
-		c := store.OIDCConfig{Enabled: in.Enabled, Name: in.Name, Issuer: in.Issuer, ClientID: in.ClientID, ClientSecretEnc: secret, Scopes: in.Scopes,
-			RoleClaim: in.RoleClaim, RoleMap: string(rm), DefaultRole: in.DefaultRole, JIT: in.JIT, LocalPasswordAdminsOnly: in.LocalPasswordAdminsOnly, LocalLoginDisabled: in.LocalLoginDisabled, EndSession: in.EndSession, AutoRedirect: in.AutoRedirect}
-		if err := store.SaveOIDCConfig(r.Context(), tx, c); err != nil {
-			return err
-		}
-		after = viewOf(c)
-		return audit.Record(r.Context(), tx, audit.Event{ActorType: "user", ActorID: u.ID, ActorName: u.Username, IP: s.clientIP(r), Action: "oidc.update",
-			TargetType: "oidc", TargetName: c.Issuer,
-			Diff: map[string]any{"before": viewOf(old).auditView(), "after": after.auditView(), "credential_changed": in.ClientSecret != "" || in.ClearClientSecret}})
-	})
-	if err != nil {
+		up.ReplaceSecret, up.SecretEnc = true, sealed
+	case in.ClearClientSecret:
+		up.ReplaceSecret = true
+	}
+	rm, _ := json.Marshal(in.RoleMap)
+	up.Config = store.OIDCConfig{Enabled: in.Enabled, Name: in.Name, Issuer: in.Issuer, ClientID: in.ClientID, Scopes: in.Scopes,
+		RoleClaim: in.RoleClaim, RoleMap: string(rm), DefaultRole: in.DefaultRole, JIT: in.JIT, LocalPasswordAdminsOnly: in.LocalPasswordAdminsOnly,
+		LocalLoginDisabled: in.LocalLoginDisabled, EndSession: in.EndSession, AutoRedirect: in.AutoRedirect}
+	saved, err := s.accounts.UpdateSSOConfig(r.Context(), up)
+	switch {
+	case errors.Is(err, accounts.ErrNoLocalAdmin):
+		s.fail(w, bad("no_local_admin", accounts.ErrNoLocalAdmin.Error()))
+		return
+	case errors.Is(err, accounts.ErrNoSSOAdmin):
+		s.fail(w, bad("no_sso_admin", accounts.ErrNoSSOAdmin.Error()))
+		return
+	case err != nil:
 		s.fail(w, err)
 		return
 	}
+	after := viewOf(saved)
 	s.oidc.Reset()
 	after.RedirectURL = s.redirectURL(r)
 	writeJSON(w, 200, after)
@@ -234,7 +209,7 @@ func (s *Server) testOIDC(w http.ResponseWriter, r *http.Request) {
 	}
 	issuer := strings.TrimSpace(in.Issuer)
 	if issuer == "" {
-		c, err := store.GetOIDCConfig(r.Context(), s.st.DB)
+		c, err := s.accounts.SSOConfig(r.Context())
 		if err != nil {
 			s.fail(w, err)
 			return
@@ -280,7 +255,7 @@ func (s *Server) testOIDC(w http.ResponseWriter, r *http.Request) {
 // ---- côté public: page de connexion ----
 
 func (s *Server) authProviders(w http.ResponseWriter, r *http.Request) {
-	c, err := store.GetOIDCConfig(r.Context(), s.st.DB)
+	c, err := s.accounts.SSOConfig(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -297,7 +272,7 @@ func (s *Server) authProviders(w http.ResponseWriter, r *http.Request) {
 
 // oidcLoaded: configuration active + secret déchiffré. ok=false si le SSO est désactivé ou incomplet.
 func (s *Server) oidcLoaded(ctx context.Context) (store.OIDCConfig, oidc.Config, bool, error) {
-	c, err := store.GetOIDCConfig(ctx, s.st.DB)
+	c, err := s.accounts.SSOConfig(ctx)
 	if err != nil || !c.Enabled || c.Issuer == "" || c.ClientID == "" || s.box == nil {
 		return c, oidc.Config{}, false, err
 	}
@@ -400,19 +375,6 @@ func (s *Server) oidcStart(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, loc, http.StatusFound)
 }
 
-func cleanName(v string) string {
-	v = strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) {
-			return -1
-		}
-		return r
-	}, strings.TrimSpace(v))
-	if len(v) > maxUsernames {
-		v = strings.ToValidUTF8(v[:maxUsernames], "")
-	}
-	return v
-}
-
 func (s *Server) oidcCallback(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	ip := s.clientIP(r)
@@ -476,81 +438,22 @@ func (s *Server) oidcCallback(w http.ResponseWriter, r *http.Request) {
 	_ = json.Unmarshal([]byte(c.RoleMap), &rm)
 	role, mapped := oidc.MapRole(cl, c.RoleClaim, rm, c.DefaultRole)
 	sub := cl.String("sub")
-	uname := cleanName(firstNonEmpty(cl.String("preferred_username"), cl.String("email"), sub))
+	uname := accounts.CleanName(firstNonEmpty(cl.String("preferred_username"), cl.String("email"), sub))
 	if !mapped {
 		fail(uname, "role_not_mapped", map[string]any{"sub": sub})
 		return
 	}
-	display := cleanName(firstNonEmpty(cl.String("name"), uname))
+	display := accounts.CleanName(firstNonEmpty(cl.String("name"), uname))
 
-	var user store.User
-	reason := ""
-	err = s.st.Tx(ctx, func(tx *sql.Tx) error {
-		actor := audit.Event{ActorType: "system", ActorName: "sso", IP: ip}
-		u, err := store.UserByOIDC(ctx, tx, cfg.Issuer, sub)
-		switch {
-		case errors.Is(err, store.ErrNotFound):
-			if !c.JIT {
-				reason = "not_provisioned"
-				return errSSORefused
-			}
-			name, err := s.freeUsername(ctx, tx, uname, cfg.Issuer, sub)
-			if err != nil {
-				return err
-			}
-			if u, err = store.InsertOIDCUser(ctx, tx, store.User{Username: name, DisplayName: display, Role: role, OIDCIssuer: cfg.Issuer, OIDCSub: sub}); err != nil {
-				return err
-			}
-			ev := actor
-			ev.Action, ev.TargetType, ev.TargetID, ev.TargetName = "user.create", "user", u.ID, u.Username
-			ev.Diff = map[string]any{"after": map[string]any{"username": u.Username, "role": u.Role, "auth_provider": "oidc", "issuer": cfg.Issuer}, "jit": true}
-			if err := audit.Record(ctx, tx, ev); err != nil {
-				return err
-			}
-		case err != nil:
-			return err
-		default:
-			if u.Disabled {
-				reason = "account_disabled"
-				return errSSORefused
-			}
-			if u.Role != role || u.DisplayName != display {
-				newRole := role
-				diff := map[string]any{"before": map[string]any{"role": u.Role, "display_name": u.DisplayName}}
-				if u.Role == "admin" && role != "admin" {
-					if n, err := store.CountEnabledAdmins(ctx, tx); err != nil {
-						return err
-					} else if n <= 1 {
-						newRole = "admin" // garde-fou « dernier administrateur »
-						diff["role_sync_skipped"] = "last_admin"
-					}
-				}
-				if err := store.SyncOIDCUser(ctx, tx, u.ID, display, newRole); err != nil {
-					return err
-				}
-				if newRole != u.Role {
-					if err := store.DeleteSessionsOf(ctx, tx, u.ID, ""); err != nil { // le nouveau rôle s'applique tout de suite
-						return err
-					}
-				}
-				diff["after"] = map[string]any{"role": newRole, "display_name": display}
-				ev := actor
-				ev.Action, ev.TargetType, ev.TargetID, ev.TargetName, ev.Diff = "user.update", "user", u.ID, u.Username, diff
-				if err := audit.Record(ctx, tx, ev); err != nil {
-					return err
-				}
-				u.Role, u.DisplayName = newRole, display
-			}
-		}
-		user = u
-		return audit.Record(ctx, tx, audit.Event{ActorType: "user", ActorID: u.ID, ActorName: u.Username, Action: "user.sso_login",
-			TargetType: "user", TargetID: u.ID, TargetName: u.Username, Diff: map[string]any{"issuer": cfg.Issuer, "role": u.Role}, IP: ip})
-	})
-	if errors.Is(err, errSSORefused) {
-		fail(uname, reason, map[string]any{"sub": sub})
+	user, err := s.accounts.SignInSSO(ctx, accounts.SSOSignIn{Issuer: cfg.Issuer, Sub: sub, Username: uname, DisplayName: display, Role: role, JIT: c.JIT, IP: ip})
+	switch {
+	case errors.Is(err, accounts.ErrSSONotProvisioned):
+		fail(uname, "not_provisioned", map[string]any{"sub": sub})
 		return
-	}
-	if err != nil {
+	case errors.Is(err, accounts.ErrSSOAccountDisabled):
+		fail(uname, "account_disabled", map[string]any{"sub": sub})
+		return
+	case err != nil:
 		s.log.Error("sso: connexion", "err", err)
 		fail(uname, "internal", nil)
 		return
@@ -561,33 +464,7 @@ func (s *Server) oidcCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.lim.reset(limKey)
-	_ = s.st.TouchLogin(ctx, user.ID)
 	http.Redirect(w, r, "/", http.StatusFound)
-}
-
-var errSSORefused = errors.New("connexion SSO refusée")
-
-// freeUsername: nom d'utilisateur libre. Un compte existant du même nom n'est JAMAIS lié: on suffixe.
-func (s *Server) freeUsername(ctx context.Context, tx *sql.Tx, want, issuer, sub string) (string, error) {
-	host := issuer
-	if u, err := url.Parse(issuer); err == nil && u.Host != "" {
-		host = u.Hostname()
-	}
-	short, _ := oidc.RandomString(4)
-	for _, cand := range []string{want, want + "@" + host, want + "-" + short} {
-		cand = cleanName(cand)
-		if cand == "" {
-			continue
-		}
-		taken, err := store.UsernameExists(ctx, tx, cand)
-		if err != nil {
-			return "", err
-		}
-		if !taken {
-			return cand, nil
-		}
-	}
-	return "sso-" + short + "-" + truncate(sub, 8), nil
 }
 
 var codeRe = regexp.MustCompile(`[^a-z_]`)
