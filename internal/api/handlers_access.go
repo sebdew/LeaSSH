@@ -1,15 +1,11 @@
 package api
 
 import (
-	"context"
-	"database/sql"
+	"errors"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/audit"
-	"github.com/leassh-dev/leassh/internal/crypto"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/leassh-dev/leassh/internal/access"
 )
 
 type keyInput struct {
@@ -21,115 +17,8 @@ type keyInput struct {
 	RuleIDs     []string `json:"rule_ids"`
 }
 
-func (s *Server) listKeys(w http.ResponseWriter, r *http.Request) {
-	items, err := store.ListKeys(r.Context(), s.st.DB)
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	writeJSON(w, 200, map[string]any{"items": items}) // le hash est en json:"-"
-}
-
-func (in *keyInput) validate() (string, error) {
-	in.Name = strings.TrimSpace(in.Name)
-	if in.Name == "" || len(in.Name) > 120 {
-		return "", bad("invalid_name", "nom requis (120 caractères max)")
-	}
-	exp, err := parseExpiry(in.ExpiresAt)
-	if err != nil {
-		return "", err
-	}
-	if exp != "" {
-		if t, _ := store.ParseTime(exp); !t.After(time.Now()) {
-			return "", bad("invalid_expiry", "la date d'expiration est dans le passé")
-		}
-	}
-	return exp, nil
-}
-
-// createKey: le jeton complet n'est renvoyé qu'ici, une seule fois; seul son hash est stocké.
-func (s *Server) createKey(w http.ResponseWriter, r *http.Request) {
-	var in keyInput
-	if !decode(w, r, &in) {
-		return
-	}
-	exp, err := in.validate()
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	token, err := crypto.NewToken()
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-		k, err := store.InsertKey(ctx, tx, store.MCPKey{Name: in.Name, Description: in.Description, Prefix: crypto.Prefix(token), Hash: crypto.HashToken(token),
-			ExpiresAt: exp, CanPropose: in.CanPropose == nil || *in.CanPropose, CreatedBy: u.ID, RuleIDs: in.RuleIDs})
-		if err != nil {
-			return outcome{}, err
-		}
-		return outcome{201, map[string]any{"key": k, "token": token}, &audit.Event{Action: "key.create", TargetType: "key", TargetID: k.ID, TargetName: k.Name,
-			Diff: map[string]any{"after": map[string]any{"name": k.Name, "prefix": k.Prefix, "expires_at": k.ExpiresAt, "can_propose": k.CanPropose, "rule_ids": k.RuleIDs}}}}, nil
-	})
-}
-
-func (s *Server) updateKey(w http.ResponseWriter, r *http.Request) {
-	var in keyInput
-	if !decode(w, r, &in) {
-		return
-	}
-	exp, err := in.validate()
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-		old, err := store.KeyByID(ctx, tx, id(r))
-		if err != nil {
-			return outcome{}, err
-		}
-		k := old
-		k.Name, k.Description, k.ExpiresAt, k.Disabled = in.Name, in.Description, exp, in.Disabled
-		if in.CanPropose != nil {
-			k.CanPropose = *in.CanPropose
-		}
-		if in.RuleIDs != nil {
-			k.RuleIDs = in.RuleIDs
-		}
-		if err := store.UpdateKey(ctx, tx, k); err != nil {
-			return outcome{}, err
-		}
-		return outcome{200, k, &audit.Event{Action: "key.update", TargetType: "key", TargetID: k.ID, TargetName: k.Name, Diff: map[string]any{"before": old, "after": k}}}, nil
-	})
-}
-
-// revokeKey désactive la clé: effet immédiat (la clé est relue à chaque requête).
-func (s *Server) revokeKey(w http.ResponseWriter, r *http.Request) {
-	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-		k, err := store.KeyByID(ctx, tx, id(r))
-		if err != nil {
-			return outcome{}, err
-		}
-		k.Disabled, k.RuleIDs = true, []string{} // une clé révoquée sort de toutes les règles
-		if err := store.UpdateKey(ctx, tx, k); err != nil {
-			return outcome{}, err
-		}
-		return outcome{200, k, &audit.Event{Action: "key.revoke", TargetType: "key", TargetID: k.ID, TargetName: k.Name}}, nil
-	})
-}
-
-func (s *Server) deleteKey(w http.ResponseWriter, r *http.Request) {
-	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-		old, err := store.KeyByID(ctx, tx, id(r))
-		if err != nil {
-			return outcome{}, err
-		}
-		if err := store.DeleteKey(ctx, tx, old.ID); err != nil {
-			return outcome{}, err
-		}
-		return outcome{Event: &audit.Event{Action: "key.delete", TargetType: "key", TargetID: old.ID, TargetName: old.Name}}, nil
-	})
+func (in keyInput) toService() access.KeyInput {
+	return access.KeyInput{Name: in.Name, Description: in.Description, ExpiresAt: in.ExpiresAt, CanPropose: in.CanPropose, Disabled: in.Disabled, RuleIDs: in.RuleIDs}
 }
 
 type ruleInput struct {
@@ -142,22 +31,81 @@ type ruleInput struct {
 	KeyIDs                []string `json:"key_ids"`
 }
 
-func (in ruleInput) toRule() (store.AccessRule, error) {
-	if strings.TrimSpace(in.Name) == "" {
-		return store.AccessRule{}, bad("invalid_name", "nom requis")
+func (in ruleInput) toService() access.RuleInput {
+	return access.RuleInput{Name: in.Name, ServerGroupIDs: in.ServerGroupIDs, CommandGroupIDs: in.CommandGroupIDs, Profile: in.Profile,
+		WriteRequiresApproval: in.WriteRequiresApproval, Enabled: in.Enabled, KeyIDs: in.KeyIDs}
+}
+
+// accessErr traduit les erreurs de validation du service en erreurs d'API.
+func accessErr(err error) error {
+	switch {
+	case errors.Is(err, access.ErrInvalidKeyName), errors.Is(err, access.ErrInvalidRuleName):
+		return bad("invalid_name", err.Error())
+	case errors.Is(err, access.ErrInvalidExpiry), errors.Is(err, access.ErrExpiryPast):
+		return bad("invalid_expiry", err.Error())
+	case errors.Is(err, access.ErrInvalidProfile):
+		return bad("invalid_profile", err.Error())
+	case errors.Is(err, access.ErrInvalidRule):
+		return bad("invalid_rule", err.Error())
 	}
-	if in.Profile != "RO" && in.Profile != "RW" {
-		return store.AccessRule{}, bad("invalid_profile", "profil: RO ou RW")
+	return err
+}
+
+func (s *Server) listKeys(w http.ResponseWriter, r *http.Request) {
+	items, err := s.acc.ListKeys(r.Context())
+	if err != nil {
+		s.fail(w, err)
+		return
 	}
-	if len(in.ServerGroupIDs) == 0 || len(in.CommandGroupIDs) == 0 {
-		return store.AccessRule{}, bad("invalid_rule", "au moins un groupe de serveurs et un groupe de commandes requis")
+	writeJSON(w, 200, map[string]any{"items": items}) // le hash est en json:"-"
+}
+
+// createKey: le jeton complet n'est renvoyé qu'ici, une seule fois; seul son hash est stocké.
+func (s *Server) createKey(w http.ResponseWriter, r *http.Request) {
+	var in keyInput
+	if !decode(w, r, &in) {
+		return
 	}
-	return store.AccessRule{Name: strings.TrimSpace(in.Name), ServerGroupIDs: in.ServerGroupIDs, CommandGroupIDs: in.CommandGroupIDs, Profile: in.Profile,
-		WriteRequiresApproval: in.WriteRequiresApproval == nil || *in.WriteRequiresApproval, Enabled: in.Enabled == nil || *in.Enabled, KeyIDs: in.KeyIDs}, nil
+	k, token, err := s.acc.CreateKey(r.Context(), currentUser(r), s.clientIP(r), in.toService())
+	if err != nil {
+		s.fail(w, accessErr(err))
+		return
+	}
+	writeJSON(w, 201, map[string]any{"key": k, "token": token})
+}
+
+func (s *Server) updateKey(w http.ResponseWriter, r *http.Request) {
+	var in keyInput
+	if !decode(w, r, &in) {
+		return
+	}
+	k, err := s.acc.UpdateKey(r.Context(), currentUser(r), s.clientIP(r), id(r), in.toService())
+	if err != nil {
+		s.fail(w, accessErr(err))
+		return
+	}
+	writeJSON(w, 200, k)
+}
+
+func (s *Server) revokeKey(w http.ResponseWriter, r *http.Request) {
+	k, err := s.acc.RevokeKey(r.Context(), currentUser(r), s.clientIP(r), id(r))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, k)
+}
+
+func (s *Server) deleteKey(w http.ResponseWriter, r *http.Request) {
+	if err := s.acc.DeleteKey(r.Context(), currentUser(r), s.clientIP(r), id(r)); err != nil {
+		s.fail(w, err)
+		return
+	}
+	w.WriteHeader(204)
 }
 
 func (s *Server) listRules(w http.ResponseWriter, r *http.Request) {
-	items, err := store.ListRules(r.Context(), s.st.DB)
+	items, err := s.acc.ListRules(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -170,18 +118,12 @@ func (s *Server) createRule(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	rule, err := in.toRule()
+	rule, err := s.acc.CreateRule(r.Context(), currentUser(r), s.clientIP(r), in.toService())
 	if err != nil {
-		s.fail(w, err)
+		s.fail(w, accessErr(err))
 		return
 	}
-	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-		rule, err := store.InsertRule(ctx, tx, rule)
-		if err != nil {
-			return outcome{}, err
-		}
-		return outcome{201, rule, &audit.Event{Action: "rule.create", TargetType: "rule", TargetID: rule.ID, TargetName: rule.Name, Diff: map[string]any{"after": rule}}}, nil
-	})
+	writeJSON(w, 201, rule)
 }
 
 func (s *Server) updateRule(w http.ResponseWriter, r *http.Request) {
@@ -189,48 +131,28 @@ func (s *Server) updateRule(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	rule, err := in.toRule()
+	rule, err := s.acc.UpdateRule(r.Context(), currentUser(r), s.clientIP(r), id(r), in.toService())
 	if err != nil {
-		s.fail(w, err)
+		s.fail(w, accessErr(err))
 		return
 	}
-	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-		old, err := store.RuleByID(ctx, tx, id(r))
-		if err != nil {
-			return outcome{}, err
-		}
-		rule.ID = old.ID
-		if err := store.UpdateRule(ctx, tx, rule); err != nil {
-			return outcome{}, err
-		}
-		return outcome{200, rule, &audit.Event{Action: "rule.update", TargetType: "rule", TargetID: rule.ID, TargetName: rule.Name, Diff: map[string]any{"before": old, "after": rule}}}, nil
-	})
+	writeJSON(w, 200, rule)
 }
 
 func (s *Server) deleteRule(w http.ResponseWriter, r *http.Request) {
-	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-		old, err := store.RuleByID(ctx, tx, id(r))
-		if err != nil {
-			return outcome{}, err
-		}
-		if err := store.DeleteRule(ctx, tx, old.ID); err != nil {
-			return outcome{}, err
-		}
-		return outcome{Event: &audit.Event{Action: "rule.delete", TargetType: "rule", TargetID: old.ID, TargetName: old.Name, Diff: map[string]any{"before": old}}}, nil
-	})
+	if err := s.acc.DeleteRule(r.Context(), currentUser(r), s.clientIP(r), id(r)); err != nil {
+		s.fail(w, err)
+		return
+	}
+	w.WriteHeader(204)
 }
 
 // simulate: même fonction d'évaluation que l'exécution et les outils MCP (SPEC §5).
 func (s *Server) simulate(w http.ResponseWriter, r *http.Request) {
-	key, err := store.KeyByID(r.Context(), s.st.DB, r.URL.Query().Get("key"))
+	name, cells, err := s.acc.Simulate(r.Context(), r.URL.Query().Get("key"), r.URL.Query().Get("server"), time.Now())
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	snap, err := s.acc.Load(r.Context())
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	writeJSON(w, 200, map[string]any{"key": key.Name, "cells": snap.Matrix(time.Now(), key, r.URL.Query().Get("server"))})
+	writeJSON(w, 200, map[string]any{"key": name, "cells": cells})
 }

@@ -123,3 +123,16 @@ func Verify(ctx context.Context, q store.Q) (store.ChainResult, error) {
 		return eventFields(id, ts, seq, Event{ActorType: at, ActorID: aid, ActorName: an, Action: act, TargetType: tt, TargetID: tid, TargetName: tn, IP: ip}, diff)
 	})
 }
+
+// Mutate exécute une mutation de configuration et écrit l'événement d'audit de l'acteur dans la même transaction
+// (invariant: toute mutation d'administration produit son audit). fn ne doit utiliser que tx.
+func Mutate(ctx context.Context, st *store.Store, actor store.User, ip string, fn func(tx *sql.Tx) (Event, error)) error {
+	return st.Tx(ctx, func(tx *sql.Tx) error {
+		ev, err := fn(tx)
+		if err != nil {
+			return err
+		}
+		ev.ActorType, ev.ActorID, ev.ActorName, ev.IP = "user", actor.ID, actor.Username, ip
+		return Record(ctx, tx, ev)
+	})
+}
