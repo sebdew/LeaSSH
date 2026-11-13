@@ -6,8 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
-	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/leassh-dev/leassh/internal/audit"
@@ -97,16 +95,3 @@ func (s *Server) mutate(w http.ResponseWriter, r *http.Request, fn func(ctx cont
 }
 
 func id(r *http.Request) string { return chi.URLParam(r, "id") }
-
-func parseExpiry(v string) (string, error) {
-	v = strings.TrimSpace(v)
-	if v == "" {
-		return "", nil
-	}
-	for _, layout := range []string{time.RFC3339, "2006-01-02"} {
-		if t, err := time.Parse(layout, v); err == nil {
-			return store.FormatTime(t), nil
-		}
-	}
-	return "", bad("invalid_expiry", "date d'expiration invalide (RFC 3339 ou AAAA-MM-JJ)")
-}

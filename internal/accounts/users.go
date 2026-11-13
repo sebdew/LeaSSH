@@ -35,16 +35,9 @@ func (s *Service) ListUsers(ctx context.Context) ([]store.User, error) {
 	return store.ListUsers(ctx, s.st.DB)
 }
 
-// mutate: transaction + événement d'audit de l'acteur, atomiques (invariant « toute mutation écrit son audit »).
+// mutate: transaction + événement d'audit de l'acteur, atomiques.
 func (s *Service) mutate(ctx context.Context, actor store.User, ip string, fn func(tx *sql.Tx) (audit.Event, error)) error {
-	return s.st.Tx(ctx, func(tx *sql.Tx) error {
-		ev, err := fn(tx)
-		if err != nil {
-			return err
-		}
-		ev.ActorType, ev.ActorID, ev.ActorName, ev.IP = "user", actor.ID, actor.Username, ip
-		return audit.Record(ctx, tx, ev)
-	})
+	return audit.Mutate(ctx, s.st, actor, ip, fn)
 }
 
 func (s *Service) CreateUser(ctx context.Context, actor store.User, ip string, in UserInput) (store.User, error) {
