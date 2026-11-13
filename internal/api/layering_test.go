@@ -37,7 +37,7 @@ func TestHandlersCallServicesNotStore(t *testing.T) {
 	ceiling := map[string]int{
 		"api.go": 8, "handlers_access.go": 19, "handlers_auditreports.go": 9, "handlers_catalog.go": 20,
 		"handlers_dashboard.go": 8, "handlers_exec.go": 7, "handlers_infra.go": 27, "handlers_journal.go": 15,
-		"handlers_oidc.go": 21, "handlers_packs.go": 8, "handlers_provisioning.go": 12, "handlers_settings.go": 1,
+		"handlers_oidc.go": 0, "handlers_packs.go": 8, "handlers_provisioning.go": 12, "handlers_settings.go": 1,
 		"handlers_syslog.go": 2, "handlers_users.go": 14, "helpers.go": 2, "routes.go": 1,
 	}
 	call := regexp.MustCompile(`\bs\.st\.[A-Z]|\bstore\.[A-Z]\w*\(`)
