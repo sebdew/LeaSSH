@@ -22,6 +22,7 @@ import (
 	"github.com/leassh-dev/leassh/internal/auditreport"
 	"github.com/leassh-dev/leassh/internal/crypto"
 	"github.com/leassh-dev/leassh/internal/executions"
+	"github.com/leassh-dev/leassh/internal/journal"
 	"github.com/leassh-dev/leassh/internal/metrics"
 	"github.com/leassh-dev/leassh/internal/oidc"
 	"github.com/leassh-dev/leassh/internal/packs"
@@ -36,7 +37,6 @@ import (
 
 const (
 	cookieName  = "leassh_session"
-	minPassword = accounts.MinPassword
 	maxFailures = 5
 	failWindow  = 15 * time.Minute
 	// maxFailuresPerIP: seuil par adresse, volontairement bien plus haut que maxFailures (NAT, proxy):
@@ -51,6 +51,7 @@ type Server struct {
 	set      *settings.Service
 	st       *store.Store
 	accounts *accounts.Service
+	journal  *journal.Service
 	log      *slog.Logger
 	lim      *limiter
 	limIP    *limiter
@@ -116,7 +117,7 @@ func (s *Server) ClientIP(r *http.Request) string { return s.clientIP(r) }
 
 // New construit le routeur. static sert l'interface (SPA); peut être nil.
 func New(set *settings.Service, st *store.Store, log *slog.Logger, static http.Handler) (*Server, error) {
-	return &Server{set: set, st: st, accounts: accounts.New(st), log: log, lim: newLimiter(st, "account", maxFailures, failWindow), limIP: newLimiter(st, "ip", maxFailuresPerIP, failWindow), static: static, oidc: oidc.New()}, nil
+	return &Server{set: set, st: st, accounts: accounts.New(st), journal: journal.New(st), log: log, lim: newLimiter(st, "account", maxFailures, failWindow), limIP: newLimiter(st, "ip", maxFailuresPerIP, failWindow), static: static, oidc: oidc.New()}, nil
 }
 
 func (s *Server) Handler() http.Handler {

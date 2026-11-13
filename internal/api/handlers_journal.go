@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/audit"
 	"github.com/leassh-dev/leassh/internal/store"
 )
 
@@ -82,7 +81,7 @@ func (s *Server) listExecutions(w http.ResponseWriter, r *http.Request) {
 	}
 	want := f.Limit
 	f.Limit++ // une ligne de plus pour savoir s'il existe une page suivante
-	items, err := store.ListExecutions(r.Context(), s.st.DB, f)
+	items, err := s.journal.ListExecutions(r.Context(), f)
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -123,7 +122,7 @@ func (s *Server) streamExecutions(w http.ResponseWriter, r *http.Request) {
 		case <-ping.C:
 			fmt.Fprint(w, ": ping\n\n")
 		case id := <-ch:
-			e, err := store.ExecutionByID(r.Context(), s.st.DB, id)
+			e, err := s.journal.Execution(r.Context(), id)
 			if err != nil {
 				continue
 			}
@@ -179,7 +178,7 @@ func (s *Server) exportExecutions(w http.ResponseWriter, r *http.Request) {
 		_ = cw.Write([]string{"id", "requested_at", "agent", "validator", "server", "command", "risk", "status", "exit_code", "duration_ms", "rule", "decided_at", "decision_comment", "reason", "rendered", "params", "denial_reason", "client_ip"})
 	}
 	for {
-		page, err := store.ListExecutions(r.Context(), s.st.DB, f)
+		page, err := s.journal.ListExecutions(r.Context(), f)
 		if err != nil || r.Context().Err() != nil {
 			return
 		}
@@ -245,7 +244,7 @@ func (s *Server) listAudit(w http.ResponseWriter, r *http.Request) {
 	}
 	want := f.Limit
 	f.Limit++
-	items, err := store.ListAudit(r.Context(), s.st.DB, f)
+	items, err := s.journal.ListAudit(r.Context(), f)
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -277,7 +276,7 @@ func (s *Server) exportAudit(w http.ResponseWriter, r *http.Request) {
 		_ = cw.Write([]string{"id", "ts", "actor_type", "actor", "action", "target_type", "target", "ip", "diff"})
 	}
 	for {
-		page, err := store.ListAudit(r.Context(), s.st.DB, f)
+		page, err := s.journal.ListAudit(r.Context(), f)
 		if err != nil || r.Context().Err() != nil {
 			return
 		}
@@ -302,15 +301,10 @@ func (s *Server) exportAudit(w http.ResponseWriter, r *http.Request) {
 
 // verifyIntegrity: bouton « Vérifier l'intégrité » (Réglages → Journal).
 func (s *Server) verifyIntegrity(w http.ResponseWriter, r *http.Request) {
-	ex, err := store.VerifyExecutions(r.Context(), s.st.DB)
+	res, err := s.journal.VerifyIntegrity(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	au, err := audit.Verify(r.Context(), s.st.DB)
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	writeJSON(w, 200, map[string]any{"ok": ex.OK && au.OK, "executions": ex, "audit": au})
+	writeJSON(w, 200, res)
 }
