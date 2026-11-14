@@ -3,7 +3,7 @@
   "info": {
     "title": "Leassh — API d'administration",
     "version": "0.1.0",
-    "description": "API JSON de l'interface d'administration de Leassh (session par cookie + jeton CSRF `X-CSRF-Token` sur les mutations).\n\nLe transport MCP (`/mcp`) n'est pas décrit ici: il suit le protocole MCP.\n\nLes corps de requête et de réponse sont décrits comme des objets JSON; leurs champs détaillés sont dans `docs/specs/SPEC.md`. Cette spécification est testée: chaque route du routeur doit y figurer (`internal/api/openapi_test.go`)."
+    "description": "API JSON de l'interface d'administration de Leassh (session par cookie + jeton CSRF `X-CSRF-Token` sur les mutations).\n\nLe transport MCP (`/mcp`) n'est pas décrit ici: il suit le protocole MCP.\n\nLes corps de requête et de réponse sont décrits par des schémas par ressource (`components.schemas`). Deux tests les gardent à jour (`internal/api/openapi_test.go`, `openapi_schema_test.go`): chaque route du routeur doit figurer dans cette spécification, et les champs de chaque schéma doivent correspondre aux champs JSON du type Go qui le produit. Les champs `writeOnly` ne sont jamais renvoyés."
   },
   "servers": [
     {
@@ -29,7 +29,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AuditEvent"
+                      }
+                    },
+                    "next_cursor": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
@@ -59,7 +73,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AuditReport"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
@@ -89,7 +114,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/ReportInput"
               }
             }
           }
@@ -100,7 +125,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/AuditReport"
                 }
               }
             }
@@ -135,7 +160,9 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Fichier JSON exporté d'un rapport (corps brut)"
               }
             }
           }
@@ -146,7 +173,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/ReportVerify"
                 }
               }
             }
@@ -192,7 +219,25 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "report": {
+                      "$ref": "#/components/schemas/AuditReport"
+                    },
+                    "snapshot": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Instantané du rapport"
+                    },
+                    "summary": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "report",
+                    "snapshot",
+                    "summary"
+                  ]
                 }
               }
             }
@@ -284,7 +329,9 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "Enveloppe signée du rapport (instantané, empreinte SHA-256, étiquette HMAC)"
                 }
               }
             }
@@ -329,7 +376,16 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "type": "object",
+                "properties": {
+                  "lang": {
+                    "type": "string",
+                    "enum": [
+                      "fr",
+                      "en"
+                    ]
+                  }
+                }
               }
             }
           }
@@ -340,7 +396,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "summary": {
+                      "type": "string"
+                    },
+                    "model": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "summary",
+                    "model"
+                  ]
                 }
               }
             }
@@ -413,7 +481,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/User"
                 }
               }
             }
@@ -440,12 +508,23 @@
           }
         ],
         "responses": {
+          "204": {
+            "description": "Aucun contenu"
+          },
           "200": {
             "description": "Succès",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "end_session_url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "end_session_url"
+                  ]
                 }
               }
             }
@@ -477,7 +556,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/User"
                 }
               }
             }
@@ -497,15 +576,8 @@
         "operationId": "GET_api_v1_auth_oidc_callback",
         "security": [],
         "responses": {
-          "200": {
-            "description": "Succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
+          "302": {
+            "description": "Redirection"
           }
         }
       }
@@ -519,15 +591,8 @@
         "operationId": "GET_api_v1_auth_oidc_start",
         "security": [],
         "responses": {
-          "200": {
-            "description": "Succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
+          "302": {
+            "description": "Redirection"
           }
         }
       }
@@ -549,21 +614,26 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "type": "object",
+                "properties": {
+                  "current": {
+                    "type": "string"
+                  },
+                  "new": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "current",
+                  "new"
+                ]
               }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "Succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
+          "204": {
+            "description": "Aucun contenu"
           },
           "401": {
             "$ref": "#/components/responses/Error"
@@ -588,7 +658,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/AuthProviders"
                 }
               }
             }
@@ -613,21 +683,27 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "type": "object",
+                "properties": {
+                  "theme": {
+                    "type": "string",
+                    "enum": [
+                      "light",
+                      "dark",
+                      "system"
+                    ]
+                  }
+                },
+                "required": [
+                  "theme"
+                ]
               }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "Succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
+          "204": {
+            "description": "Aucun contenu"
           },
           "401": {
             "$ref": "#/components/responses/Error"
@@ -656,7 +732,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Group"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
@@ -683,7 +770,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/GroupInput"
               }
             }
           }
@@ -694,7 +781,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Group"
                 }
               }
             }
@@ -735,15 +822,8 @@
         ],
         "x-role": "admin",
         "responses": {
-          "200": {
-            "description": "Succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
+          "204": {
+            "description": "Aucun contenu"
           },
           "401": {
             "$ref": "#/components/responses/Error"
@@ -783,7 +863,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/GroupInput"
               }
             }
           }
@@ -794,7 +874,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Group"
                 }
               }
             }
@@ -842,7 +922,15 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
               }
             }
           }
@@ -853,7 +941,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "member_ids": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "member_ids"
+                  ]
                 }
               }
             }
@@ -891,7 +990,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Command"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
@@ -918,7 +1028,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/CommandInput"
               }
             }
           }
@@ -929,7 +1039,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "command": {
+                      "$ref": "#/components/schemas/Command"
+                    },
+                    "lint": {
+                      "$ref": "#/components/schemas/LintResult"
+                    }
+                  },
+                  "required": [
+                    "command",
+                    "lint"
+                  ]
                 }
               }
             }
@@ -964,7 +1086,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/LintRequest"
               }
             }
           }
@@ -975,7 +1097,22 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "lint": {
+                      "$ref": "#/components/schemas/LintResult"
+                    },
+                    "placeholders": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "lint",
+                    "placeholders"
+                  ]
                 }
               }
             }
@@ -1010,7 +1147,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/PreviewRequest"
               }
             }
           }
@@ -1021,7 +1158,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/PreviewResult"
                 }
               }
             }
@@ -1062,15 +1199,8 @@
         ],
         "x-role": "admin",
         "responses": {
-          "200": {
-            "description": "Succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
+          "204": {
+            "description": "Aucun contenu"
           },
           "401": {
             "$ref": "#/components/responses/Error"
@@ -1110,7 +1240,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Command"
                 }
               }
             }
@@ -1150,7 +1280,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/CommandInput"
               }
             }
           }
@@ -1161,7 +1291,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "command": {
+                      "$ref": "#/components/schemas/Command"
+                    },
+                    "lint": {
+                      "$ref": "#/components/schemas/LintResult"
+                    }
+                  },
+                  "required": [
+                    "command",
+                    "lint"
+                  ]
                 }
               }
             }
@@ -1209,7 +1351,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/TestRunRequest"
               }
             }
           }
@@ -1220,7 +1362,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "execution": {
+                      "$ref": "#/components/schemas/Execution"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "execution"
+                  ]
                 }
               }
             }
@@ -1258,7 +1411,29 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "checklist": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChecklistItem"
+                      }
+                    },
+                    "stats": {
+                      "$ref": "#/components/schemas/DashboardStats"
+                    },
+                    "recent": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Execution"
+                      }
+                    }
+                  },
+                  "required": [
+                    "checklist",
+                    "stats",
+                    "recent"
+                  ]
                 }
               }
             }
@@ -1287,7 +1462,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Insights"
                 }
               }
             }
@@ -1316,7 +1491,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Execution"
+                      }
+                    },
+                    "next_cursor": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
@@ -1413,7 +1602,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Execution"
                 }
               }
             }
@@ -1455,7 +1644,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/DecisionInput"
               }
             }
           }
@@ -1466,7 +1655,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Execution"
                 }
               }
             }
@@ -1504,7 +1693,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Identity"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
@@ -1531,7 +1731,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/IdentityInput"
               }
             }
           }
@@ -1542,7 +1742,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "identity": {
+                      "$ref": "#/components/schemas/Identity"
+                    },
+                    "authorized_keys_line": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "identity"
+                  ]
                 }
               }
             }
@@ -1583,15 +1794,8 @@
         ],
         "x-role": "admin",
         "responses": {
-          "200": {
-            "description": "Succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
+          "204": {
+            "description": "Aucun contenu"
           },
           "401": {
             "$ref": "#/components/responses/Error"
@@ -1618,23 +1822,13 @@
           }
         ],
         "x-role": "admin",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Object"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Succès",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Integrity"
                 }
               }
             }
@@ -1669,7 +1863,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MCPKey"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
@@ -1696,7 +1901,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/KeyInput"
               }
             }
           }
@@ -1707,7 +1912,20 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "$ref": "#/components/schemas/MCPKey"
+                    },
+                    "token": {
+                      "type": "string",
+                      "description": "Jeton MCP en clair, affiché une seule fois"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "token"
+                  ]
                 }
               }
             }
@@ -1748,15 +1966,8 @@
         ],
         "x-role": "admin",
         "responses": {
-          "200": {
-            "description": "Succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
+          "204": {
+            "description": "Aucun contenu"
           },
           "401": {
             "$ref": "#/components/responses/Error"
@@ -1796,7 +2007,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/KeyInput"
               }
             }
           }
@@ -1807,7 +2018,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/MCPKey"
                 }
               }
             }
@@ -1850,23 +2061,13 @@
           }
         ],
         "x-role": "admin",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Object"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Succès",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/MCPKey"
                 }
               }
             }
@@ -1904,7 +2105,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Meta"
                 }
               }
             }
@@ -1933,7 +2134,25 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "installed": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/InstalledPack"
+                      }
+                    },
+                    "bundled": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BundledPack"
+                      }
+                    }
+                  },
+                  "required": [
+                    "installed",
+                    "bundled"
+                  ]
                 }
               }
             }
@@ -1991,12 +2210,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
-              }
-            },
-            "application/yaml": {
-              "schema": {
-                "type": "string"
+                "$ref": "#/components/schemas/PackImportRequest"
               }
             }
           }
@@ -2007,7 +2221,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/PackImportResult"
                 }
               }
             }
@@ -2042,12 +2256,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
-              }
-            },
-            "application/yaml": {
-              "schema": {
-                "type": "string"
+                "$ref": "#/components/schemas/PackSource"
               }
             }
           }
@@ -2058,7 +2267,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "preview": {
+                      "$ref": "#/components/schemas/PackPreview"
+                    },
+                    "trusted": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "preview",
+                    "trusted"
+                  ]
                 }
               }
             }
@@ -2093,7 +2314,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Proposal"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
@@ -2122,7 +2354,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/ProposalPayload"
               }
             }
           }
@@ -2133,7 +2365,22 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "lint": {
+                      "$ref": "#/components/schemas/LintResult"
+                    },
+                    "placeholders": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "lint",
+                    "placeholders"
+                  ]
                 }
               }
             }
@@ -2178,7 +2425,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Proposal"
                 }
               }
             }
@@ -2220,7 +2467,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/ApproveProposal"
               }
             }
           }
@@ -2231,7 +2478,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "command": {
+                      "$ref": "#/components/schemas/Command"
+                    }
+                  },
+                  "required": [
+                    "command"
+                  ]
                 }
               }
             }
@@ -2279,21 +2534,19 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "type": "object",
+                "properties": {
+                  "comment": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "Succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
+          "204": {
+            "description": "Aucun contenu"
           },
           "401": {
             "$ref": "#/components/responses/Error"
@@ -2328,7 +2581,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Provisioner"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
@@ -2355,7 +2619,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/ProvisionerInput"
               }
             }
           }
@@ -2366,7 +2630,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Provisioner"
                 }
               }
             }
@@ -2401,7 +2665,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ProvisionerType"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
@@ -2436,15 +2711,8 @@
         ],
         "x-role": "admin",
         "responses": {
-          "200": {
-            "description": "Succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
+          "204": {
+            "description": "Aucun contenu"
           },
           "401": {
             "$ref": "#/components/responses/Error"
@@ -2484,7 +2752,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/ProvisionerInput"
               }
             }
           }
@@ -2495,7 +2763,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Provisioner"
                 }
               }
             }
@@ -2543,7 +2811,15 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "type": "object",
+                "properties": {
+                  "fingerprint": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "fingerprint"
+                ]
               }
             }
           }
@@ -2554,7 +2830,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Provisioner"
                 }
               }
             }
@@ -2597,23 +2873,13 @@
           }
         ],
         "x-role": "admin",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Object"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Succès",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/SyncReport"
                 }
               }
             }
@@ -2661,7 +2927,12 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "type": "object",
+                "properties": {
+                  "force": {
+                    "type": "boolean"
+                  }
+                }
               }
             }
           }
@@ -2672,7 +2943,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/SyncReport"
                 }
               }
             }
@@ -2715,23 +2986,13 @@
           }
         ],
         "x-role": "admin",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Object"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Succès",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/SourceTest"
                 }
               }
             }
@@ -2769,7 +3030,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AccessRule"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
@@ -2796,7 +3068,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/RuleInput"
               }
             }
           }
@@ -2807,7 +3079,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/AccessRule"
                 }
               }
             }
@@ -2848,15 +3120,8 @@
         ],
         "x-role": "admin",
         "responses": {
-          "200": {
-            "description": "Succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
+          "204": {
+            "description": "Aucun contenu"
           },
           "401": {
             "$ref": "#/components/responses/Error"
@@ -2896,7 +3161,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/RuleInput"
               }
             }
           }
@@ -2907,7 +3172,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/AccessRule"
                 }
               }
             }
@@ -2945,7 +3210,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Group"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
@@ -2972,7 +3248,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/GroupInput"
               }
             }
           }
@@ -2983,7 +3259,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Group"
                 }
               }
             }
@@ -3024,15 +3300,8 @@
         ],
         "x-role": "admin",
         "responses": {
-          "200": {
-            "description": "Succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
+          "204": {
+            "description": "Aucun contenu"
           },
           "401": {
             "$ref": "#/components/responses/Error"
@@ -3072,7 +3341,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/GroupInput"
               }
             }
           }
@@ -3083,7 +3352,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Group"
                 }
               }
             }
@@ -3131,7 +3400,15 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
               }
             }
           }
@@ -3142,7 +3419,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "member_ids": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "member_ids"
+                  ]
                 }
               }
             }
@@ -3180,7 +3468,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Server"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
@@ -3207,7 +3506,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/ServerInput"
               }
             }
           }
@@ -3218,7 +3517,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Server"
                 }
               }
             }
@@ -3259,15 +3558,8 @@
         ],
         "x-role": "admin",
         "responses": {
-          "200": {
-            "description": "Succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
+          "204": {
+            "description": "Aucun contenu"
           },
           "401": {
             "$ref": "#/components/responses/Error"
@@ -3307,7 +3599,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Server"
                 }
               }
             }
@@ -3347,7 +3639,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/ServerInput"
               }
             }
           }
@@ -3358,7 +3650,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Server"
                 }
               }
             }
@@ -3406,7 +3698,15 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "type": "object",
+                "properties": {
+                  "fingerprint": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "fingerprint"
+                ]
               }
             }
           }
@@ -3417,7 +3717,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/Server"
                 }
               }
             }
@@ -3460,23 +3760,13 @@
           }
         ],
         "x-role": "admin",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Object"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Succès",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/ConnectionTest"
                 }
               }
             }
@@ -3515,7 +3805,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "config": {
+                      "$ref": "#/components/schemas/AIConfig"
+                    }
+                  },
+                  "required": [
+                    "config"
+                  ]
                 }
               }
             }
@@ -3545,7 +3843,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/AuditAIInput"
               }
             }
           }
@@ -3556,7 +3854,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "config": {
+                      "$ref": "#/components/schemas/AIConfig"
+                    }
+                  },
+                  "required": [
+                    "config"
+                  ]
                 }
               }
             }
@@ -3592,7 +3898,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/GeneralSettings"
                 }
               }
             }
@@ -3622,7 +3928,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/GeneralSettingsPut"
               }
             }
           }
@@ -3633,7 +3939,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/GeneralSettings"
                 }
               }
             }
@@ -3669,7 +3975,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/OIDCSettings"
                 }
               }
             }
@@ -3699,7 +4005,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/OIDCSettingsPut"
               }
             }
           }
@@ -3710,7 +4016,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/OIDCSettings"
                 }
               }
             }
@@ -3745,7 +4051,12 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "type": "object",
+                "properties": {
+                  "issuer": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }
@@ -3756,7 +4067,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/OIDCTest"
                 }
               }
             }
@@ -3792,7 +4103,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/SyslogBody"
                 }
               }
             }
@@ -3822,7 +4133,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/SyslogSettingsInput"
               }
             }
           }
@@ -3833,7 +4144,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/SyslogBody"
                 }
               }
             }
@@ -3863,23 +4174,13 @@
           }
         ],
         "x-role": "admin",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Object"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Succès",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/SyslogTest"
                 }
               }
             }
@@ -3915,7 +4216,22 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "config": {
+                      "$ref": "#/components/schemas/WebhookConfig"
+                    },
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "config",
+                    "events"
+                  ]
                 }
               }
             }
@@ -3945,7 +4261,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/WebhookInput"
               }
             }
           }
@@ -3956,7 +4272,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "config": {
+                      "$ref": "#/components/schemas/WebhookConfig"
+                    }
+                  },
+                  "required": [
+                    "config"
+                  ]
                 }
               }
             }
@@ -3992,7 +4316,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WebhookDelivery"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
@@ -4019,23 +4354,13 @@
           }
         ],
         "x-role": "admin",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Object"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Succès",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/WebhookResult"
                 }
               }
             }
@@ -4076,7 +4401,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/User"
                 }
               }
             }
@@ -4107,7 +4432,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "initialized": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "initialized"
+                  ]
                 }
               }
             }
@@ -4133,7 +4466,22 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "cells": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AccessCell"
+                      }
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "cells"
+                  ]
                 }
               }
             }
@@ -4163,7 +4511,18 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
                 }
               }
             }
@@ -4193,7 +4552,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/UserInput"
               }
             }
           }
@@ -4204,7 +4563,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/User"
                 }
               }
             }
@@ -4245,15 +4604,8 @@
         ],
         "x-role": "admin",
         "responses": {
-          "200": {
-            "description": "Succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Object"
-                }
-              }
-            }
+          "204": {
+            "description": "Aucun contenu"
           },
           "401": {
             "$ref": "#/components/responses/Error"
@@ -4293,7 +4645,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Object"
+                "$ref": "#/components/schemas/UserInput"
               }
             }
           }
@@ -4304,7 +4656,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Object"
+                  "$ref": "#/components/schemas/User"
                 }
               }
             }
@@ -4432,10 +4784,6 @@
           }
         }
       },
-      "Object": {
-        "type": "object",
-        "additionalProperties": true
-      },
       "SetupRequest": {
         "type": "object",
         "required": [
@@ -4477,6 +4825,3106 @@
             "format": "password"
           }
         }
+      },
+      "AIConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "has_key": {
+            "type": "boolean"
+          },
+          "model": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "has_key",
+          "model",
+          "url"
+        ],
+        "type": "object"
+      },
+      "AccessCell": {
+        "properties": {
+          "allowed": {
+            "type": "boolean"
+          },
+          "command": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "requires_approval": {
+            "type": "boolean"
+          },
+          "rule": {
+            "type": "string"
+          },
+          "server": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "allowed",
+          "command",
+          "requires_approval",
+          "server"
+        ],
+        "type": "object"
+      },
+      "AccessRule": {
+        "properties": {
+          "command_group_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "key_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "server_group_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "write_requires_approval": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "command_group_ids",
+          "enabled",
+          "id",
+          "key_ids",
+          "name",
+          "profile",
+          "server_group_ids",
+          "write_requires_approval"
+        ],
+        "type": "object"
+      },
+      "ApproveProposal": {
+        "properties": {
+          "comment": {
+            "type": "string"
+          },
+          "edited": {
+            "$ref": "#/components/schemas/ProposalPayload"
+          },
+          "group_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          }
+        },
+        "type": "object"
+      },
+      "AuditAIInput": {
+        "properties": {
+          "api_key": {
+            "type": "string",
+            "writeOnly": true,
+            "format": "password"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "model": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AuditEvent": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "actor_id": {
+            "type": "string"
+          },
+          "actor_name": {
+            "type": "string"
+          },
+          "actor_type": {
+            "type": "string"
+          },
+          "diff": {},
+          "id": {
+            "type": "string"
+          },
+          "ip": {
+            "type": "string"
+          },
+          "seq": {
+            "type": "integer"
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "target_name": {
+            "type": "string"
+          },
+          "target_type": {
+            "type": "string"
+          },
+          "ts": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "actor_id",
+          "actor_name",
+          "actor_type",
+          "diff",
+          "id",
+          "ip",
+          "seq",
+          "target_id",
+          "target_name",
+          "target_type",
+          "ts"
+        ],
+        "type": "object"
+      },
+      "AuditReport": {
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_by_name": {
+            "type": "string"
+          },
+          "findings_high": {
+            "type": "integer"
+          },
+          "findings_low": {
+            "type": "integer"
+          },
+          "findings_medium": {
+            "type": "integer"
+          },
+          "has_summary": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "leassh_version": {
+            "type": "string"
+          },
+          "period_from": {
+            "type": "string"
+          },
+          "period_to": {
+            "type": "string"
+          },
+          "schema_version": {
+            "type": "integer"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "summary_at": {
+            "type": "string"
+          },
+          "summary_model": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "created_by",
+          "created_by_name",
+          "findings_high",
+          "findings_low",
+          "findings_medium",
+          "has_summary",
+          "id",
+          "leassh_version",
+          "period_from",
+          "period_to",
+          "schema_version",
+          "sha256",
+          "summary_at",
+          "summary_model"
+        ],
+        "type": "object"
+      },
+      "BundledPack": {
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "command_count": {
+            "type": "integer"
+          },
+          "command_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "installed_version": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "risks": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "nullable": true
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "command_count",
+          "command_ids",
+          "description",
+          "id",
+          "installed_version",
+          "name",
+          "risks",
+          "version"
+        ],
+        "type": "object"
+      },
+      "ChecklistItem": {
+        "properties": {
+          "done": {
+            "type": "boolean"
+          },
+          "href": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "done",
+          "href",
+          "id"
+        ],
+        "type": "object"
+      },
+      "Command": {
+        "properties": {
+          "approved_at": {
+            "type": "string"
+          },
+          "approved_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "max_output_kb": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "pack_id": {
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": {
+              "properties": {
+                "allowed_prefixes": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "nullable": true
+                },
+                "default": {},
+                "description": {
+                  "type": "string"
+                },
+                "max": {
+                  "nullable": true,
+                  "type": "integer"
+                },
+                "max_length": {
+                  "type": "integer"
+                },
+                "min": {
+                  "nullable": true,
+                  "type": "integer"
+                },
+                "pattern": {
+                  "type": "string"
+                },
+                "required": {
+                  "nullable": true,
+                  "type": "boolean"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "values": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": "object"
+            },
+            "type": "object",
+            "nullable": true
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "read",
+              "write",
+              "destructive"
+            ]
+          },
+          "slug": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "template": {
+            "type": "string"
+          },
+          "timeout_s": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "approved_at",
+          "approved_by",
+          "created_at",
+          "created_by",
+          "description",
+          "hash",
+          "id",
+          "max_output_kb",
+          "name",
+          "pack_id",
+          "params",
+          "risk",
+          "slug",
+          "source",
+          "status",
+          "template",
+          "timeout_s",
+          "updated_at",
+          "version"
+        ],
+        "type": "object"
+      },
+      "CommandInput": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "max_output_kb": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": {
+              "properties": {
+                "allowed_prefixes": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "nullable": true
+                },
+                "default": {},
+                "description": {
+                  "type": "string"
+                },
+                "max": {
+                  "nullable": true,
+                  "type": "integer"
+                },
+                "max_length": {
+                  "type": "integer"
+                },
+                "min": {
+                  "nullable": true,
+                  "type": "integer"
+                },
+                "pattern": {
+                  "type": "string"
+                },
+                "required": {
+                  "nullable": true,
+                  "type": "boolean"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "values": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": "object"
+            },
+            "type": "object",
+            "nullable": true
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "read",
+              "write",
+              "destructive"
+            ]
+          },
+          "slug": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "template": {
+            "type": "string"
+          },
+          "timeout_s": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ConnectionTest": {
+        "properties": {
+          "auth_ok": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          },
+          "fingerprint": {
+            "nullable": true,
+            "type": "string"
+          },
+          "host_key_status": {
+            "nullable": true,
+            "type": "string"
+          },
+          "key_type": {
+            "nullable": true,
+            "type": "string"
+          },
+          "matches": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "pinned_fingerprint": {
+            "nullable": true,
+            "type": "string"
+          },
+          "reachable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "reachable"
+        ],
+        "type": "object"
+      },
+      "DashboardStats": {
+        "properties": {
+          "active_agents_24h": {
+            "type": "integer"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "nullable": true
+          },
+          "executions_24h": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "nullable": true
+          },
+          "pending_approvals": {
+            "type": "integer"
+          },
+          "pending_proposals": {
+            "type": "integer"
+          },
+          "servers_in_anomaly": {
+            "items": {
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "slug": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "reason",
+                "slug"
+              ],
+              "type": "object"
+            },
+            "type": "array",
+            "nullable": true
+          }
+        },
+        "required": [
+          "active_agents_24h",
+          "counts",
+          "executions_24h",
+          "pending_approvals",
+          "pending_proposals",
+          "servers_in_anomaly"
+        ],
+        "type": "object"
+      },
+      "DecisionInput": {
+        "properties": {
+          "comment": {
+            "type": "string"
+          },
+          "confirm_slug": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "reject"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "Execution": {
+        "properties": {
+          "actor_user_id": {
+            "type": "string"
+          },
+          "client_ip": {
+            "type": "string"
+          },
+          "command_hash": {
+            "type": "string"
+          },
+          "command_id": {
+            "type": "string"
+          },
+          "command_slug": {
+            "type": "string"
+          },
+          "command_version": {
+            "type": "integer"
+          },
+          "decided_at": {
+            "type": "string"
+          },
+          "decided_by": {
+            "type": "string"
+          },
+          "decided_by_name": {
+            "type": "string"
+          },
+          "decision_comment": {
+            "type": "string"
+          },
+          "denial_reason": {
+            "type": "string"
+          },
+          "duration_ms": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "exit_code": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "finished_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "key_id": {
+            "type": "string"
+          },
+          "key_name": {
+            "type": "string"
+          },
+          "mcp_session_id": {
+            "type": "string"
+          },
+          "output_truncated": {
+            "type": "boolean"
+          },
+          "params": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "rendered": {
+            "nullable": true,
+            "type": "string"
+          },
+          "requested_at": {
+            "type": "string"
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "read",
+              "write",
+              "destructive"
+            ]
+          },
+          "rule_id": {
+            "type": "string"
+          },
+          "rule_name": {
+            "type": "string"
+          },
+          "seq": {
+            "type": "integer"
+          },
+          "server_id": {
+            "type": "string"
+          },
+          "server_slug": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "stderr": {
+            "type": "string"
+          },
+          "stdout": {
+            "type": "string"
+          },
+          "user_agent": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_user_id",
+          "client_ip",
+          "command_hash",
+          "command_id",
+          "command_slug",
+          "command_version",
+          "decided_at",
+          "decided_by",
+          "decided_by_name",
+          "decision_comment",
+          "denial_reason",
+          "finished_at",
+          "id",
+          "key_id",
+          "key_name",
+          "mcp_session_id",
+          "output_truncated",
+          "params",
+          "reason",
+          "requested_at",
+          "risk",
+          "rule_id",
+          "rule_name",
+          "seq",
+          "server_id",
+          "server_slug",
+          "started_at",
+          "status",
+          "stderr",
+          "stdout",
+          "user_agent"
+        ],
+        "type": "object"
+      },
+      "GeneralSettings": {
+        "properties": {
+          "approval_ttl_minutes": {
+            "type": "integer"
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "detected_url": {
+            "type": "string"
+          },
+          "has_metrics_token": {
+            "type": "boolean"
+          },
+          "log_level": {
+            "type": "string"
+          },
+          "log_retention_days": {
+            "type": "integer"
+          },
+          "session_ttl_hours": {
+            "type": "integer"
+          },
+          "trusted_proxies": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "approval_ttl_minutes",
+          "base_url",
+          "detected_url",
+          "has_metrics_token",
+          "log_level",
+          "log_retention_days",
+          "session_ttl_hours",
+          "trusted_proxies"
+        ],
+        "type": "object"
+      },
+      "GeneralSettingsPut": {
+        "properties": {
+          "approval_ttl_minutes": {
+            "type": "integer"
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "clear_metrics_token": {
+            "type": "boolean"
+          },
+          "detected_url": {
+            "type": "string"
+          },
+          "has_metrics_token": {
+            "type": "boolean"
+          },
+          "log_level": {
+            "type": "string"
+          },
+          "log_retention_days": {
+            "type": "integer"
+          },
+          "metrics_token": {
+            "type": "string",
+            "writeOnly": true,
+            "format": "password"
+          },
+          "session_ttl_hours": {
+            "type": "integer"
+          },
+          "trusted_proxies": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Group": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "external_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "managed_by": {
+            "type": "string"
+          },
+          "managed_member_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "member_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "external_id",
+          "id",
+          "managed_by",
+          "managed_member_ids",
+          "member_ids",
+          "name",
+          "slug"
+        ],
+        "type": "object"
+      },
+      "GroupInput": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "member_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Identity": {
+        "properties": {
+          "auth_type": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "public_key": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "auth_type",
+          "created_at",
+          "id",
+          "name",
+          "public_key",
+          "username"
+        ],
+        "type": "object"
+      },
+      "IdentityInput": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "generate",
+              "import",
+              "password"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "writeOnly": true,
+            "format": "password"
+          },
+          "private_key": {
+            "type": "string",
+            "writeOnly": true,
+            "format": "password"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Insights": {
+        "properties": {
+          "approvals": {
+            "type": "integer"
+          },
+          "avg_approval_seconds": {
+            "type": "integer"
+          },
+          "avg_ms": {
+            "type": "integer"
+          },
+          "days": {
+            "type": "integer"
+          },
+          "denial_reasons": {
+            "items": {
+              "properties": {
+                "avg_ms": {
+                  "type": "integer"
+                },
+                "count": {
+                  "type": "integer"
+                },
+                "failed": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "servers": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "avg_ms",
+                "count",
+                "failed",
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "denied": {
+            "type": "integer"
+          },
+          "executed": {
+            "type": "integer"
+          },
+          "failed": {
+            "type": "integer"
+          },
+          "hourly": {
+            "items": {
+              "properties": {
+                "denied": {
+                  "type": "integer"
+                },
+                "hour": {
+                  "type": "string"
+                },
+                "ko": {
+                  "type": "integer"
+                },
+                "ok": {
+                  "type": "integer"
+                },
+                "other": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "denied",
+                "hour",
+                "ko",
+                "ok",
+                "other"
+              ],
+              "type": "object"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "max_ms": {
+            "type": "integer"
+          },
+          "p50_ms": {
+            "type": "integer"
+          },
+          "p95_ms": {
+            "type": "integer"
+          },
+          "requests": {
+            "type": "integer"
+          },
+          "risk": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "nullable": true
+          },
+          "slowest_commands": {
+            "items": {
+              "properties": {
+                "avg_ms": {
+                  "type": "integer"
+                },
+                "count": {
+                  "type": "integer"
+                },
+                "failed": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "servers": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "avg_ms",
+                "count",
+                "failed",
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "succeeded": {
+            "type": "integer"
+          },
+          "top_commands": {
+            "items": {
+              "properties": {
+                "avg_ms": {
+                  "type": "integer"
+                },
+                "count": {
+                  "type": "integer"
+                },
+                "failed": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "servers": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "avg_ms",
+                "count",
+                "failed",
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "top_keys": {
+            "items": {
+              "properties": {
+                "avg_ms": {
+                  "type": "integer"
+                },
+                "count": {
+                  "type": "integer"
+                },
+                "failed": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "servers": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "avg_ms",
+                "count",
+                "failed",
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "top_servers": {
+            "items": {
+              "properties": {
+                "avg_ms": {
+                  "type": "integer"
+                },
+                "count": {
+                  "type": "integer"
+                },
+                "failed": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "servers": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "avg_ms",
+                "count",
+                "failed",
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array",
+            "nullable": true
+          }
+        },
+        "required": [
+          "approvals",
+          "avg_approval_seconds",
+          "avg_ms",
+          "days",
+          "denial_reasons",
+          "denied",
+          "executed",
+          "failed",
+          "hourly",
+          "max_ms",
+          "p50_ms",
+          "p95_ms",
+          "requests",
+          "risk",
+          "slowest_commands",
+          "succeeded",
+          "top_commands",
+          "top_keys",
+          "top_servers"
+        ],
+        "type": "object"
+      },
+      "InstalledPack": {
+        "properties": {
+          "command_count": {
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "installed_at": {
+            "type": "string"
+          },
+          "installed_by": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_count",
+          "description",
+          "id",
+          "installed_at",
+          "installed_by",
+          "name",
+          "version"
+        ],
+        "type": "object"
+      },
+      "Integrity": {
+        "properties": {
+          "audit": {
+            "properties": {
+              "bad_id": {
+                "type": "string"
+              },
+              "bad_seq": {
+                "type": "integer"
+              },
+              "checked": {
+                "type": "integer"
+              },
+              "ok": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "checked",
+              "ok"
+            ],
+            "type": "object"
+          },
+          "executions": {
+            "properties": {
+              "bad_id": {
+                "type": "string"
+              },
+              "bad_seq": {
+                "type": "integer"
+              },
+              "checked": {
+                "type": "integer"
+              },
+              "ok": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "checked",
+              "ok"
+            ],
+            "type": "object"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "audit",
+          "executions",
+          "ok"
+        ],
+        "type": "object"
+      },
+      "KeyInput": {
+        "properties": {
+          "can_propose": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          },
+          "disabled": {
+            "type": "boolean"
+          },
+          "expires_at": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "rule_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          }
+        },
+        "type": "object"
+      },
+      "LintRequest": {
+        "properties": {
+          "params": {
+            "additionalProperties": {
+              "properties": {
+                "allowed_prefixes": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "nullable": true
+                },
+                "default": {},
+                "description": {
+                  "type": "string"
+                },
+                "max": {
+                  "nullable": true,
+                  "type": "integer"
+                },
+                "max_length": {
+                  "type": "integer"
+                },
+                "min": {
+                  "nullable": true,
+                  "type": "integer"
+                },
+                "pattern": {
+                  "type": "string"
+                },
+                "required": {
+                  "nullable": true,
+                  "type": "boolean"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "values": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": "object"
+            },
+            "type": "object",
+            "nullable": true
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "read",
+              "write",
+              "destructive"
+            ]
+          },
+          "template": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "LintResult": {
+        "properties": {
+          "errors": {
+            "items": {
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "param": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "warnings": {
+            "items": {
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "param": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array",
+            "nullable": true
+          }
+        },
+        "required": [
+          "errors",
+          "warnings"
+        ],
+        "type": "object"
+      },
+      "MCPKey": {
+        "properties": {
+          "can_propose": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "disabled": {
+            "type": "boolean"
+          },
+          "expires_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "last_used_at": {
+            "type": "string"
+          },
+          "last_used_ip": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "rule_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "use_count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "can_propose",
+          "created_at",
+          "created_by",
+          "description",
+          "disabled",
+          "expires_at",
+          "id",
+          "last_used_at",
+          "last_used_ip",
+          "name",
+          "prefix",
+          "rule_ids",
+          "use_count"
+        ],
+        "type": "object"
+      },
+      "OIDCSettings": {
+        "properties": {
+          "auto_redirect": {
+            "type": "boolean"
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "default_role": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "end_session": {
+            "type": "boolean"
+          },
+          "has_client_secret": {
+            "type": "boolean"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "jit": {
+            "type": "boolean"
+          },
+          "local_login_disabled": {
+            "type": "boolean"
+          },
+          "local_password_admins_only": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "redirect_url": {
+            "type": "string"
+          },
+          "role_claim": {
+            "type": "string"
+          },
+          "role_map": {
+            "properties": {
+              "admin": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "nullable": true
+              },
+              "approver": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "nullable": true
+              },
+              "viewer": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "nullable": true
+              }
+            },
+            "required": [
+              "admin",
+              "approver",
+              "viewer"
+            ],
+            "type": "object"
+          },
+          "scopes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "auto_redirect",
+          "client_id",
+          "default_role",
+          "enabled",
+          "end_session",
+          "has_client_secret",
+          "issuer",
+          "jit",
+          "local_login_disabled",
+          "local_password_admins_only",
+          "name",
+          "redirect_url",
+          "role_claim",
+          "role_map",
+          "scopes"
+        ],
+        "type": "object"
+      },
+      "OIDCSettingsPut": {
+        "properties": {
+          "auto_redirect": {
+            "type": "boolean"
+          },
+          "clear_client_secret": {
+            "type": "boolean"
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": "string",
+            "writeOnly": true,
+            "format": "password"
+          },
+          "default_role": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "end_session": {
+            "type": "boolean"
+          },
+          "has_client_secret": {
+            "type": "boolean"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "jit": {
+            "type": "boolean"
+          },
+          "local_login_disabled": {
+            "type": "boolean"
+          },
+          "local_password_admins_only": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "redirect_url": {
+            "type": "string"
+          },
+          "role_claim": {
+            "type": "string"
+          },
+          "role_map": {
+            "properties": {
+              "admin": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "nullable": true
+              },
+              "approver": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "nullable": true
+              },
+              "viewer": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "nullable": true
+              }
+            },
+            "required": [
+              "admin",
+              "approver",
+              "viewer"
+            ],
+            "type": "object"
+          },
+          "scopes": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PackImportRequest": {
+        "properties": {
+          "allow_warnings": {
+            "type": "boolean"
+          },
+          "bundled": {
+            "type": "string"
+          },
+          "create_group": {
+            "type": "boolean"
+          },
+          "yaml": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PackImportResult": {
+        "properties": {
+          "created": {
+            "type": "integer"
+          },
+          "group_id": {
+            "type": "string"
+          },
+          "unchanged": {
+            "type": "integer"
+          },
+          "updated": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "created",
+          "unchanged",
+          "updated"
+        ],
+        "type": "object"
+      },
+      "PackPreview": {
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "nullable": true
+          },
+          "errors": {
+            "type": "integer"
+          },
+          "installed_version": {
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "properties": {
+                "changes": {
+                  "items": {
+                    "properties": {
+                      "after": {
+                        "type": "string"
+                      },
+                      "before": {
+                        "type": "string"
+                      },
+                      "field": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "after",
+                      "before",
+                      "field"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "nullable": true
+                },
+                "lint": {
+                  "$ref": "#/components/schemas/LintResult"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "overrides_manual": {
+                  "type": "boolean"
+                },
+                "risk": {
+                  "type": "string"
+                },
+                "slug": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "lint",
+                "name",
+                "risk",
+                "slug",
+                "status"
+              ],
+              "type": "object"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "pack": {
+            "properties": {
+              "category": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "category",
+              "description",
+              "id",
+              "name",
+              "version"
+            ],
+            "type": "object"
+          },
+          "warnings": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "counts",
+          "errors",
+          "installed_version",
+          "items",
+          "pack",
+          "warnings"
+        ],
+        "type": "object"
+      },
+      "PackSource": {
+        "properties": {
+          "bundled": {
+            "type": "string"
+          },
+          "yaml": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PreviewRequest": {
+        "properties": {
+          "params": {
+            "additionalProperties": {
+              "properties": {
+                "allowed_prefixes": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "nullable": true
+                },
+                "default": {},
+                "description": {
+                  "type": "string"
+                },
+                "max": {
+                  "nullable": true,
+                  "type": "integer"
+                },
+                "max_length": {
+                  "type": "integer"
+                },
+                "min": {
+                  "nullable": true,
+                  "type": "integer"
+                },
+                "pattern": {
+                  "type": "string"
+                },
+                "required": {
+                  "nullable": true,
+                  "type": "boolean"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "values": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": "object"
+            },
+            "type": "object",
+            "nullable": true
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "read",
+              "write",
+              "destructive"
+            ]
+          },
+          "template": {
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": {},
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "type": "object"
+      },
+      "Proposal": {
+        "properties": {
+          "command_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "justification": {
+            "type": "string"
+          },
+          "key_id": {
+            "type": "string"
+          },
+          "key_name": {
+            "type": "string"
+          },
+          "lint": {},
+          "payload": {},
+          "review_comment": {
+            "type": "string"
+          },
+          "reviewed_at": {
+            "type": "string"
+          },
+          "reviewed_by": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_id",
+          "created_at",
+          "id",
+          "justification",
+          "key_id",
+          "key_name",
+          "lint",
+          "payload",
+          "review_comment",
+          "reviewed_at",
+          "reviewed_by",
+          "status"
+        ],
+        "type": "object"
+      },
+      "ProposalPayload": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": {
+              "properties": {
+                "allowed_prefixes": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "nullable": true
+                },
+                "default": {},
+                "description": {
+                  "type": "string"
+                },
+                "max": {
+                  "nullable": true,
+                  "type": "integer"
+                },
+                "max_length": {
+                  "type": "integer"
+                },
+                "min": {
+                  "nullable": true,
+                  "type": "integer"
+                },
+                "pattern": {
+                  "type": "string"
+                },
+                "required": {
+                  "nullable": true,
+                  "type": "boolean"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "values": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": "object"
+            },
+            "type": "object",
+            "nullable": true
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "read",
+              "write",
+              "destructive"
+            ]
+          },
+          "slug": {
+            "type": "string"
+          },
+          "template": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Provisioner": {
+        "properties": {
+          "config": {
+            "additionalProperties": {},
+            "type": "object",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "default_user": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "has_secret": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "identity_id": {
+            "type": "string"
+          },
+          "interval_min": {
+            "type": "integer"
+          },
+          "last_sync_at": {
+            "type": "string"
+          },
+          "last_sync_message": {
+            "type": "string"
+          },
+          "last_sync_status": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "rule_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "config",
+          "created_at",
+          "default_user",
+          "enabled",
+          "has_secret",
+          "id",
+          "identity_id",
+          "interval_min",
+          "last_sync_at",
+          "last_sync_message",
+          "last_sync_status",
+          "name",
+          "rule_ids",
+          "type"
+        ],
+        "type": "object"
+      },
+      "ProvisionerField": {
+        "properties": {
+          "default": {},
+          "help": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "label",
+          "required"
+        ],
+        "type": "object"
+      },
+      "ProvisionerInput": {
+        "properties": {
+          "config": {
+            "additionalProperties": {},
+            "type": "object",
+            "nullable": true
+          },
+          "default_user": {
+            "type": "string"
+          },
+          "enabled": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "identity_id": {
+            "type": "string"
+          },
+          "interval_min": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "rule_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "secret": {
+            "type": "string",
+            "writeOnly": true,
+            "format": "password"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ProvisionerType": {
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ProvisionerField"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "fields",
+          "id",
+          "label"
+        ],
+        "type": "object"
+      },
+      "ReportInput": {
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ReportVerify": {
+        "properties": {
+          "digest": {
+            "type": "string"
+          },
+          "digest_ok": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "report_id": {
+            "type": "string"
+          },
+          "tag_ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "digest",
+          "digest_ok",
+          "message",
+          "report_id",
+          "tag_ok"
+        ],
+        "type": "object"
+      },
+      "RuleInput": {
+        "properties": {
+          "command_group_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "enabled": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "key_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "server_group_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "write_requires_approval": {
+            "nullable": true,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "Server": {
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "external_id": {
+            "type": "string"
+          },
+          "host": {
+            "type": "string"
+          },
+          "host_key_fingerprint": {
+            "type": "string"
+          },
+          "host_key_status": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "identity_id": {
+            "type": "string"
+          },
+          "managed_by": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "ssh_user": {
+            "type": "string"
+          },
+          "ssh_user_custom": {
+            "type": "boolean"
+          },
+          "sync_removed": {
+            "type": "boolean"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "description",
+          "enabled",
+          "external_id",
+          "host",
+          "host_key_fingerprint",
+          "host_key_status",
+          "id",
+          "identity_id",
+          "managed_by",
+          "name",
+          "port",
+          "slug",
+          "ssh_user",
+          "ssh_user_custom",
+          "sync_removed",
+          "tags",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "ServerInput": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "host": {
+            "type": "string"
+          },
+          "identity_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "ssh_user": {
+            "type": "string"
+          },
+          "ssh_user_follow_sync": {
+            "type": "boolean"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          }
+        },
+        "type": "object"
+      },
+      "SourceTest": {
+        "properties": {
+          "groups": {
+            "type": "integer"
+          },
+          "machines": {
+            "type": "integer"
+          },
+          "ssh": {
+            "nullable": true,
+            "properties": {
+              "error": {
+                "type": "string"
+              },
+              "fingerprint": {
+                "type": "string"
+              },
+              "host": {
+                "type": "string"
+              },
+              "key_type": {
+                "type": "string"
+              },
+              "pinned_fingerprint": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "host",
+              "pinned_fingerprint",
+              "port"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "groups",
+          "machines"
+        ],
+        "type": "object"
+      },
+      "SyncChange": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "kind",
+          "name"
+        ],
+        "type": "object"
+      },
+      "SyncReport": {
+        "properties": {
+          "blocked": {
+            "type": "string"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/SyncChange"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "machines": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "changes",
+          "machines"
+        ],
+        "type": "object"
+      },
+      "SyslogConfig": {
+        "properties": {
+          "app_name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "facility": {
+            "type": "string"
+          },
+          "framing": {
+            "type": "string"
+          },
+          "has_tls_client_key": {
+            "type": "boolean"
+          },
+          "host": {
+            "type": "string"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "message_format": {
+            "type": "string"
+          },
+          "min_severity": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer"
+          },
+          "protocol": {
+            "type": "string"
+          },
+          "tls_ca_pem": {
+            "type": "string"
+          },
+          "tls_client_cert_pem": {
+            "type": "string"
+          },
+          "tls_server_name": {
+            "type": "string"
+          },
+          "tls_skip_verify": {
+            "type": "boolean"
+          },
+          "types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          }
+        },
+        "required": [
+          "app_name",
+          "enabled",
+          "facility",
+          "framing",
+          "has_tls_client_key",
+          "host",
+          "hostname",
+          "message_format",
+          "min_severity",
+          "port",
+          "protocol",
+          "tls_ca_pem",
+          "tls_client_cert_pem",
+          "tls_server_name",
+          "tls_skip_verify",
+          "types"
+        ],
+        "type": "object"
+      },
+      "SyslogSettingsInput": {
+        "properties": {
+          "app_name": {
+            "type": "string"
+          },
+          "clear_tls_client_key": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "facility": {
+            "type": "string"
+          },
+          "framing": {
+            "type": "string"
+          },
+          "has_tls_client_key": {
+            "type": "boolean"
+          },
+          "host": {
+            "type": "string"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "message_format": {
+            "type": "string"
+          },
+          "min_severity": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer"
+          },
+          "protocol": {
+            "type": "string"
+          },
+          "tls_ca_pem": {
+            "type": "string"
+          },
+          "tls_client_cert_pem": {
+            "type": "string"
+          },
+          "tls_client_key_pem": {
+            "type": "string",
+            "writeOnly": true,
+            "format": "password"
+          },
+          "tls_server_name": {
+            "type": "string"
+          },
+          "tls_skip_verify": {
+            "type": "boolean"
+          },
+          "types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "nullable": true
+          }
+        },
+        "type": "object"
+      },
+      "SyslogStatus": {
+        "properties": {
+          "dropped": {
+            "type": "integer"
+          },
+          "last_error": {
+            "type": "string"
+          },
+          "last_error_at": {
+            "type": "string"
+          },
+          "last_success_at": {
+            "type": "string"
+          },
+          "queued": {
+            "type": "integer"
+          },
+          "sent": {
+            "type": "integer"
+          },
+          "state": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dropped",
+          "last_error",
+          "last_error_at",
+          "last_success_at",
+          "queued",
+          "sent",
+          "state"
+        ],
+        "type": "object"
+      },
+      "SyslogTest": {
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "TestRunRequest": {
+        "properties": {
+          "params": {
+            "additionalProperties": {},
+            "type": "object",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string"
+          },
+          "server": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "User": {
+        "properties": {
+          "auth_provider": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "csrf_token": {
+            "type": "string"
+          },
+          "disabled": {
+            "type": "boolean"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "last_login_at": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "theme": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "auth_provider",
+          "created_at",
+          "disabled",
+          "display_name",
+          "id",
+          "last_login_at",
+          "role",
+          "theme",
+          "username"
+        ],
+        "type": "object"
+      },
+      "UserInput": {
+        "properties": {
+          "disabled": {
+            "type": "boolean"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "writeOnly": true,
+            "format": "password"
+          },
+          "role": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "WebhookConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "has_secret": {
+            "type": "boolean"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "has_secret",
+          "url"
+        ],
+        "type": "object"
+      },
+      "WebhookDelivery": {
+        "properties": {
+          "attempts": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "event": {
+            "type": "string"
+          },
+          "http_status": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "ts": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "attempts",
+          "error",
+          "event",
+          "http_status",
+          "id",
+          "ok",
+          "ts",
+          "url"
+        ],
+        "type": "object"
+      },
+      "WebhookInput": {
+        "properties": {
+          "clear_secret": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "secret": {
+            "type": "string",
+            "writeOnly": true,
+            "format": "password"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "WebhookResult": {
+        "properties": {
+          "attempts": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "http_status": {
+            "type": "integer"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "attempts",
+          "http_status",
+          "ok"
+        ],
+        "type": "object"
+      },
+      "AuthProviders": {
+        "type": "object",
+        "properties": {
+          "oidc": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "start_url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "start_url"
+            ]
+          },
+          "local_password_admins_only": {
+            "type": "boolean"
+          },
+          "local_login_disabled": {
+            "type": "boolean"
+          },
+          "auto_redirect": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "oidc",
+          "local_password_admins_only",
+          "local_login_disabled",
+          "auto_redirect"
+        ]
+      },
+      "PreviewResult": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "rendered": {
+            "type": "string"
+          },
+          "param": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "OIDCTest": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "authorization_endpoint": {
+            "type": "string"
+          },
+          "token_endpoint": {
+            "type": "string"
+          },
+          "jwks_uri": {
+            "type": "string"
+          },
+          "jwks_keys": {
+            "type": "integer"
+          },
+          "userinfo_endpoint": {
+            "type": "string"
+          },
+          "end_session_endpoint": {
+            "type": "string"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "ok",
+          "issuer"
+        ]
+      },
+      "SyslogBody": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/SyslogConfig"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SyslogStatus"
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "facilities": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "severities": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "types": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "facilities",
+              "severities",
+              "types"
+            ]
+          }
+        },
+        "required": [
+          "config",
+          "status",
+          "options"
+        ]
+      },
+      "Meta": {
+        "type": "object",
+        "properties": {
+          "approval_ttl_seconds": {
+            "type": "integer"
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "log_retention_days": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "approval_ttl_seconds",
+          "base_url",
+          "log_retention_days"
+        ]
       }
     },
     "responses": {

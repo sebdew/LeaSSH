@@ -41,7 +41,7 @@ La documentation **utilisateur** (installation, manuel écran par écran, SSO, e
 | [`adr/`](adr/README.md) | Décisions d'architecture (un fichier numéroté par décision) |
 | [`architecture.md`](architecture.md) | Composants, flux, frontières de confiance, données stockées et conservation |
 | [`exploitation.md`](exploitation.md) | Mise à jour, retour arrière, sauvegarde, test de restauration consigné |
-| [`openapi.json`](openapi.json) | Spécification OpenAPI de l'API (un test la compare au routeur) |
+| [`openapi.json`](openapi.json) | Spécification OpenAPI de l'API, avec un schéma par ressource (des tests la comparent au routeur, aux types Go et aux réponses réelles) |
 | [`securite-sorties-et-urls.md`](securite-sorties-et-urls.md) | Décisions sur les sorties de commandes non fiables et les URL sortantes |
 | [`standards/`](standards/) | Constitution et checklist de revue, **non modifiés ici** (modèle de dépôt) |
 | [`revues/`](revues/) | Rapports de revue (ex. revue du 2026-11-07) |
@@ -81,7 +81,7 @@ La documentation **utilisateur** (installation, manuel écran par écran, SSO, e
 | [`adr/`](adr/README.md) | Architecture decision records |
 | [`architecture.md`](architecture.md) | Components, flows, trust boundaries, stored data and retention |
 | [`exploitation.md`](exploitation.md) | Update, rollback, backup, recorded restore test |
-| [`openapi.json`](openapi.json) | OpenAPI specification (a test compares it to the router) |
+| [`openapi.json`](openapi.json) | OpenAPI specification with per-resource schemas (tests compare it to the router, the Go types and real responses) |
 | [`securite-sorties-et-urls.md`](securite-sorties-et-urls.md) | Decisions on untrusted command output and outgoing URLs |
 | [`standards/`](standards/) | Constitution and review checklist, **not modified here** (template repository) |
 | [`revues/`](revues/) | Review reports |
