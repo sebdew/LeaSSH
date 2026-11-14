@@ -44,8 +44,9 @@ jobs:
 
   e2e:
     # Parcours navigateur (Playwright) sur le binaire réel : initialisation, connexion, clé MCP, journal.
+    # Version figée : Playwright ne supporte pas encore Ubuntu 26.04 (ubuntu-latest).
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

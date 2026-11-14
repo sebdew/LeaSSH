@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 func TestOverviewListsBundledWithInstalledVersion(t *testing.T) {

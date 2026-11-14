@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 var ErrEmptyGroup = errors.New("le groupe ne contient aucune commande")

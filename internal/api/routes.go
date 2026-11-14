@@ -2,7 +2,7 @@ package api
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 // configRoutes: lecture pour tous les rôles, mutations réservées à l'admin (SPEC §9, tableau des droits).

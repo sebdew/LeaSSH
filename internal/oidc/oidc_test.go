@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/oidc"
-	"github.com/leassh-dev/leassh/internal/oidc/oidctest"
+	"github.com/sebdew/LeaSSH/internal/oidc"
+	"github.com/sebdew/LeaSSH/internal/oidc/oidctest"
 )
 
 func payload(idp *oidctest.Server, over map[string]any) map[string]any {

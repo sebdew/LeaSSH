@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/audit"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/audit"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 const (

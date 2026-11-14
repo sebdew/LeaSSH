@@ -7,10 +7,10 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/leassh-dev/leassh/internal/audit"
-	"github.com/leassh-dev/leassh/internal/auditreport"
-	"github.com/leassh-dev/leassh/internal/crypto"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/audit"
+	"github.com/sebdew/LeaSSH/internal/auditreport"
+	"github.com/sebdew/LeaSSH/internal/crypto"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 func reseal(oldBox, newBox *crypto.Box, blob []byte) ([]byte, error) {

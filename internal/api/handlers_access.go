@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/access"
+	"github.com/sebdew/LeaSSH/internal/access"
 )
 
 type keyInput struct {

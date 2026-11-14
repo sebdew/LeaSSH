@@ -6,7 +6,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/leassh-dev/leassh/web"
+	"github.com/sebdew/LeaSSH/web"
 )
 
 // webHandler sert l'interface embarquée; toute route inconnue retombe sur index.html (SPA).

@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/store"
 	"io"
 	"net/http"
 	"strings"

@@ -6,7 +6,7 @@ Leassh est un projet de niveau **N3** régi par une [constitution](../standards/
 
 ## Flux de travail
 
-1. **Un ticket Gitea** décrit le besoin.
+1. **Un ticket GitHub** décrit le besoin.
 2. **Une branche dédiée** depuis `main` à jour : `feat/12-nom-court`, `fix/15-nom-court`.
 3. **Le test d'abord** (un test qui échoue et démontre le problème ; pour une fonction, sa spécification dans `docs/specs/`).
 4. **Réutiliser plutôt que réinventer** : socle, bibliothèque standard, dépendance déjà présente, librairie reconnue, et seulement ensuite du code maison.
@@ -36,7 +36,7 @@ go test -tags integration ./internal/sshexec -run Integration   # vrai sshd via 
 
 ## Intégration continue
 
-Le workflow Gitea Actions s'exécute sur chaque merge request et sur `main` : `make lint`, `make test`, tests d'intégration SSH (vrai `openssh-server`), parcours Playwright, **gitleaks** (secrets), **Trivy**, **govulncheck**, `npm audit`. Rien n'est fusionné sans CI verte ; `main` est protégée.
+Le workflow GitHub Actions s'exécute sur chaque merge request et sur `main` : `make lint`, `make test`, tests d'intégration SSH (vrai `openssh-server`), parcours Playwright, **gitleaks** (secrets), **Trivy**, **govulncheck**, `npm audit`. Rien n'est fusionné sans CI verte ; `main` est protégée.
 
 ## Documentation
 

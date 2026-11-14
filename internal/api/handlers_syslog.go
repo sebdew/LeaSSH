@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/leassh-dev/leassh/internal/syslog"
+	"github.com/sebdew/LeaSSH/internal/syslog"
 )
 
 // ---- export syslog (SPEC §11bis) ----

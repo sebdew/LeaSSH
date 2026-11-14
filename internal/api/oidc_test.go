@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/oidc/oidctest"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/oidc/oidctest"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 // ssoEnv: instance Leassh + fournisseur OIDC factice en mémoire (aucun vrai identifiant).

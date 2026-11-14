@@ -50,7 +50,7 @@ docker run -d --name leassh --restart unless-stopped \
   -p 127.0.0.1:8080:8080 \
   -v leassh-data:/data \
   -e LEASSH_MASTER_KEY \
-  gitea.dewarlez.fr/sebastien/leassh:latest
+  ghcr.io/sebdew/leassh:latest
 
 docker logs leassh   # jeton d'initialisation, affiché une seule fois
 ```
@@ -117,7 +117,7 @@ Contribution : [`CONTRIBUTING.md`](CONTRIBUTING.md) (ticket, branche, merge requ
 
 ### Intégration continue
 
-Le workflow `.gitea/workflows/ci.yml` (Gitea Actions) s'exécute sur chaque merge request et sur `main` : `make lint`, `make test`, tests d'intégration SSH contre `openssh-server`, parcours Playwright, gitleaks (historique complet), Trivy, `govulncheck ./...` et `npm audit`. Rien n'est fusionné sans CI verte ; `main` doit être protégée (merge request obligatoire, jobs `qualite`, `integration-ssh`, `e2e` et `securite` requis).
+Le workflow `.github/workflows/ci.yml` (GitHub Actions) s'exécute sur chaque merge request et sur `main` : `make lint`, `make test`, tests d'intégration SSH contre `openssh-server`, parcours Playwright, gitleaks (historique complet), Trivy, `govulncheck ./...` et `npm audit`. Rien n'est fusionné sans CI verte ; `main` doit être protégée (merge request obligatoire, jobs `qualite`, `integration-ssh`, `e2e` et `securite` requis).
 
 ## Documents du dépôt
 

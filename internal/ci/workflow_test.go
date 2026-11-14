@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const workflowPath = "../../.gitea/workflows/ci.yml"
+const workflowPath = "../../.github/workflows/ci.yml"
 
 // Chaque contrôle exigé par le ticket #3 doit apparaître dans une commande ou une action du workflow.
 var requiredChecks = map[string]string{

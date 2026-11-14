@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 // Values: contenu de la ligne unique app_settings.

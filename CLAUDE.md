@@ -53,7 +53,7 @@ docs/
 - `make lint` : `go vet`, `gofmt`, `golangci-lint` v2 (version figée dans le Makefile, dont `gosec`), `eslint`, `tsc --noEmit`
 - `make build` : build frontend puis binaire unique
 - `make e2e` : parcours Playwright sur le binaire réel
-- `make docker` : image multi-arch (amd64/arm64), base distroless, publiée dans le registre Gitea `gitea.dewarlez.fr/sebastien/leassh:<version>`
+- `make docker` : image multi-arch (amd64/arm64), base distroless, publiée dans le registre GitHub `ghcr.io/sebdew/leassh:<version>`
 - Version : SemVer (`vMAJEUR.MINEUR.CORRECTIF`), tag Git et entrée de `CHANGELOG.md` ; `make build` injecte `git describe` (`dev` sans tag)
 
 ## Invariants de sécurité — ne jamais enfreindre

@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/authz"
-	"github.com/leassh-dev/leassh/internal/crypto"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/authz"
+	"github.com/sebdew/LeaSSH/internal/crypto"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 type Service struct{ st *store.Store }

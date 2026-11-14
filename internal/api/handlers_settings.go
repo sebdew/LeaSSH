@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/leassh-dev/leassh/internal/settings"
+	"github.com/sebdew/LeaSSH/internal/settings"
 )
 
 // ---- Réglages généraux (Réglages → Général): stockés en base, appliqués à chaud ----

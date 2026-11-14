@@ -5,7 +5,7 @@ package authz
 import (
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/catalog"
+	"github.com/sebdew/LeaSSH/internal/catalog"
 )
 
 type Profile string

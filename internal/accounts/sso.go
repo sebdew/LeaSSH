@@ -10,9 +10,9 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/leassh-dev/leassh/internal/audit"
-	"github.com/leassh-dev/leassh/internal/oidc"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/audit"
+	"github.com/sebdew/LeaSSH/internal/oidc"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 var (

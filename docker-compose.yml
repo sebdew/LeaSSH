@@ -4,7 +4,7 @@
 # Le reste (URL publique, reverse proxies de confiance, rétention…) se règle dans l'interface : Réglages → Général.
 services:
   leassh:
-    image: gitea.dewarlez.fr/sebastien/leassh:latest   # ou : build: .
+    image: ghcr.io/sebdew/leassh:latest   # ou : build: .
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:8080"           # exposez via un reverse proxy TLS, pas directement

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/sshtest"
+	"github.com/sebdew/LeaSSH/internal/sshtest"
 )
 
 func target(fs *sshtest.Server) Target {

@@ -33,7 +33,7 @@ Leassh is an open source **MCP** server that gives AI agents SSH access **limite
 3. Browse the [manual](user-manual.md) as needed.
 4. Before going to production: [security](security.md) and [operations](operations.md).
 
-Source code and tickets: [Gitea repository](https://gitea.dewarlez.fr/sebastien/Leassh). Apache 2.0 license.
+Source code and tickets: [GitHub repository](https://github.com/sebdew/LeaSSH). Apache 2.0 license.
 
 > The interface is available in French and English; some generated content (audit report facts, agent-provided reasons, the normative `docs/specs/SPEC.md`) stays in French.
 

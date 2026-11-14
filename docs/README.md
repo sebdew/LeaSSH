@@ -23,7 +23,7 @@ La documentation **utilisateur** (installation, manuel écran par écran, SSO, e
 ├── web/                    frontend React 19 + TypeScript (Vite, Tailwind), embarqué dans le binaire
 ├── packs/                  packs de commandes YAML fournis
 ├── docs/                   ce dossier (voir ci-dessous)
-├── .gitea/workflows/       intégration continue
+├── .github/workflows/       intégration continue
 ├── Dockerfile, docker-compose.yml, Makefile, .env.example
 ├── CLAUDE.md               consignes de développement
 ├── CONTRIBUTING.md         flux de travail (ticket, branche, merge request, revue)
@@ -68,7 +68,7 @@ La documentation **utilisateur** (installation, manuel écran par écran, SSO, e
 | `web/` | React 19 + TypeScript front end, embedded in the binary |
 | `packs/` | Provided YAML command packs |
 | `docs/` | This folder (below) |
-| `.gitea/workflows/` | Continuous integration |
+| `.github/workflows/` | Continuous integration |
 | `Dockerfile`, `docker-compose.yml`, `Makefile`, `.env.example` | Build and deployment |
 | `CLAUDE.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `README*.md` | Development rules, workflow, version history, overview |
 

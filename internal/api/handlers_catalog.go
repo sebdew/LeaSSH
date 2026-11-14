@@ -4,11 +4,11 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/leassh-dev/leassh/internal/catalog"
-	"github.com/leassh-dev/leassh/internal/commands"
-	"github.com/leassh-dev/leassh/internal/executions"
-	"github.com/leassh-dev/leassh/internal/groups"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/catalog"
+	"github.com/sebdew/LeaSSH/internal/commands"
+	"github.com/sebdew/LeaSSH/internal/executions"
+	"github.com/sebdew/LeaSSH/internal/groups"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 type commandInput struct {

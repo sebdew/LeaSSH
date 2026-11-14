@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/executions"
-	"github.com/leassh-dev/leassh/internal/store"
-	"github.com/leassh-dev/leassh/internal/testkit"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/sebdew/LeaSSH/internal/executions"
+	"github.com/sebdew/LeaSSH/internal/store"
+	"github.com/sebdew/LeaSSH/internal/testkit"
 )
 
 type bearer struct{ token string }

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/leassh-dev/leassh/internal/catalog"
+	"github.com/sebdew/LeaSSH/internal/catalog"
 )
 
 type Command struct {

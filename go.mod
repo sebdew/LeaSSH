@@ -1,4 +1,4 @@
-module github.com/leassh-dev/leassh
+module github.com/sebdew/LeaSSH
 
 go 1.26.11
 

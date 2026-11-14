@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/leassh-dev/leassh/internal/catalog"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/catalog"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 func setup(t *testing.T) (*Service, *store.Store, store.MCPKey, store.User) {

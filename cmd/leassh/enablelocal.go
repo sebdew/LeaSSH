@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/leassh-dev/leassh/internal/audit"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/audit"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 // enableLocalLogin: secours hors interface quand le SSO est en panne et que le mot de passe local a été désactivé.

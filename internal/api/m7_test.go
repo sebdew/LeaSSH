@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/catalog"
-	"github.com/leassh-dev/leassh/internal/proposals"
-	"github.com/leassh-dev/leassh/internal/store"
-	"github.com/leassh-dev/leassh/internal/webhook"
+	"github.com/sebdew/LeaSSH/internal/catalog"
+	"github.com/sebdew/LeaSSH/internal/proposals"
+	"github.com/sebdew/LeaSSH/internal/store"
+	"github.com/sebdew/LeaSSH/internal/webhook"
 )
 
 const pipedPack = `

@@ -8,9 +8,9 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/leassh-dev/leassh/internal/audit"
-	"github.com/leassh-dev/leassh/internal/catalog"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/audit"
+	"github.com/sebdew/LeaSSH/internal/catalog"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 var (

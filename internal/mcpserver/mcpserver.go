@@ -18,14 +18,14 @@ import (
 	"time"
 
 	"github.com/google/jsonschema-go/jsonschema"
-	"github.com/leassh-dev/leassh/internal/access"
-	"github.com/leassh-dev/leassh/internal/audit"
-	"github.com/leassh-dev/leassh/internal/catalog"
-	"github.com/leassh-dev/leassh/internal/executions"
-	"github.com/leassh-dev/leassh/internal/proposals"
-	"github.com/leassh-dev/leassh/internal/store"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/sebdew/LeaSSH/internal/access"
+	"github.com/sebdew/LeaSSH/internal/audit"
+	"github.com/sebdew/LeaSSH/internal/catalog"
+	"github.com/sebdew/LeaSSH/internal/executions"
+	"github.com/sebdew/LeaSSH/internal/proposals"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 type Config struct {
