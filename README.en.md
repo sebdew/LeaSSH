@@ -1,4 +1,9 @@
-# Leassh
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo/leassh-sombre-en.png">
+    <img src="docs/images/logo/leassh-clair-en.png" alt="LeaSSH, MCP server, secure actions for AI agents" width="450">
+  </picture>
+</h1>
 
 > **Give your AI agents SSH access… on a leash.**
 > A catalogue of validated commands, clear permissions, and a log of everything that was run, by whom and where.
