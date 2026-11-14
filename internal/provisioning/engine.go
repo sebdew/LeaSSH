@@ -45,10 +45,12 @@ type Service struct {
 	log        *slog.Logger
 	mu         sync.Mutex // une synchro à la fois
 	Invalidate func(serverID string)
+	// ScanHostKey relève la clé d'hôte d'un bastion (remplaçable dans les tests).
+	ScanHostKey func(ctx context.Context, host string, port int) (fingerprint, keyType string, err error)
 }
 
 func New(st *store.Store, box *crypto.Box, log *slog.Logger) *Service {
-	return &Service{st: st, box: box, log: log}
+	return &Service{st: st, box: box, log: log, ScanHostKey: defaultScan}
 }
 
 // Connector construit le connecteur d'un provisioner (secret déchiffré en mémoire seulement).

@@ -1,87 +1,39 @@
 package api
 
 import (
-	"context"
-	"database/sql"
 	"errors"
 	"net/http"
-	"sort"
-	"strings"
 
-	"github.com/leassh-dev/leassh/internal/audit"
 	"github.com/leassh-dev/leassh/internal/packs"
-	"github.com/leassh-dev/leassh/internal/store"
 	"github.com/leassh-dev/leassh/internal/webhook"
 )
 
-type bundledInfo struct {
-	packs.Meta
-	CommandCount     int            `json:"command_count"`
-	InstalledVersion string         `json:"installed_version"`
-	Risks            map[string]int `json:"risks"`       // commandes par niveau de risque
-	CommandIDs       []string       `json:"command_ids"` // pour la recherche
-}
-
 func (s *Server) listPacks(w http.ResponseWriter, r *http.Request) {
-	installed, err := store.ListPacks(r.Context(), s.st.DB)
+	installed, bundled, err := s.packs.Overview(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	bundled, err := packs.Bundled()
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	ver := map[string]string{}
-	for _, p := range installed {
-		ver[p.ID] = p.Version
-	}
-	var list []bundledInfo
-	for id, f := range bundled {
-		bi := bundledInfo{Meta: f.Pack, CommandCount: len(f.Commands), InstalledVersion: ver[id], Risks: map[string]int{"read": 0, "write": 0, "destructive": 0}, CommandIDs: []string{}}
-		for _, c := range f.Commands {
-			bi.Risks[string(c.Risk)]++
-			bi.CommandIDs = append(bi.CommandIDs, c.ID)
-		}
-		list = append(list, bi)
-	}
-	sort.Slice(list, func(i, j int) bool { return list[i].ID < list[j].ID })
-	writeJSON(w, 200, map[string]any{"installed": installed, "bundled": list})
+	writeJSON(w, 200, map[string]any{"installed": installed, "bundled": bundled})
 }
 
-type packSource struct {
-	Bundled string `json:"bundled"` // id d'un pack fourni
-	YAML    string `json:"yaml"`    // ou contenu d'un fichier
-}
-
-func (in packSource) load() (*packs.File, bool, error) {
-	if in.Bundled != "" {
-		all, err := packs.Bundled()
-		if err != nil {
-			return nil, false, err
-		}
-		f, ok := all[in.Bundled]
-		if !ok {
-			return nil, false, store.ErrNotFound
-		}
-		return f, true, nil
+// packErr traduit les erreurs de lecture d'un pack en erreurs d'API.
+func packErr(err error) error {
+	var ip *packs.InvalidPackError
+	if errors.As(err, &ip) {
+		return bad("invalid_pack", ip.Msg)
 	}
-	f, err := packs.Parse([]byte(in.YAML))
-	if err != nil {
-		return nil, false, bad("invalid_pack", err.Error())
-	}
-	return f, false, nil
+	return err
 }
 
 func (s *Server) previewPack(w http.ResponseWriter, r *http.Request) {
-	var in packSource
+	var in packs.Source
 	if !decode(w, r, &in) {
 		return
 	}
-	f, trusted, err := in.load()
+	f, trusted, err := in.Load()
 	if err != nil {
-		s.fail(w, err)
+		s.fail(w, packErr(err))
 		return
 	}
 	p, err := s.packs.Preview(r.Context(), f)
@@ -93,7 +45,7 @@ func (s *Server) previewPack(w http.ResponseWriter, r *http.Request) {
 }
 
 type importInput struct {
-	packSource
+	packs.Source
 	CreateGroup   bool `json:"create_group"`
 	AllowWarnings bool `json:"allow_warnings"`
 }
@@ -104,9 +56,9 @@ func (s *Server) importPack(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	f, trusted, err := in.load()
+	f, trusted, err := in.Load()
 	if err != nil {
-		s.fail(w, err)
+		s.fail(w, packErr(err))
 		return
 	}
 	res, err := s.packs.Import(r.Context(), currentUser(r), f, s.clientIP(r), packs.Options{CreateGroup: in.CreateGroup, AllowWarnings: in.AllowWarnings || trusted})
@@ -123,32 +75,12 @@ func (s *Server) importPack(w http.ResponseWriter, r *http.Request) {
 // exportPack: ?group=ID | ?ids=a,b | (rien = tout le catalogue); métadonnées via pack_id, name, version.
 func (s *Server) exportPack(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	var ids []string
-	if g := q.Get("group"); g != "" {
-		grp, err := store.GroupByID(r.Context(), s.st.DB, store.CommandGroups, g)
-		if err != nil {
-			s.fail(w, err)
-			return
-		}
-		ids = grp.MemberIDs
-		if len(ids) == 0 {
-			s.fail(w, bad("empty_group", "le groupe ne contient aucune commande"))
-			return
-		}
-	} else if v := q.Get("ids"); v != "" {
-		ids = strings.Split(v, ",")
+	data, meta, err := s.packs.ExportFile(r.Context(), packs.ExportRequest{GroupID: q.Get("group"), IDs: packs.ParseIDs(q.Get("ids")),
+		Meta: packs.Meta{ID: q.Get("pack_id"), Name: q.Get("name"), Version: q.Get("version")}})
+	if errors.Is(err, packs.ErrEmptyGroup) {
+		s.fail(w, bad("empty_group", err.Error()))
+		return
 	}
-	meta := packs.Meta{ID: q.Get("pack_id"), Name: q.Get("name"), Version: q.Get("version")}
-	if meta.ID == "" {
-		meta.ID = "export"
-	}
-	if meta.Name == "" {
-		meta.Name = "Export Leassh"
-	}
-	if meta.Version == "" {
-		meta.Version = "1.0.0"
-	}
-	data, err := s.packs.Export(r.Context(), ids, meta)
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -182,51 +114,35 @@ func (s *Server) putWebhook(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	in.URL = strings.TrimSpace(in.URL)
-	if in.URL != "" {
-		if err := webhook.ValidateURL(in.URL); err != nil {
-			s.fail(w, bad("invalid_url", err.Error()))
-			return
-		}
+	cfg, err := s.hook.Update(r.Context(), currentUser(r), s.clientIP(r), webhook.UpdateInput{URL: in.URL, Secret: in.Secret, ClearSecret: in.ClearSecret, Enabled: in.Enabled})
+	var iu *webhook.InvalidURLError
+	switch {
+	case errors.As(err, &iu):
+		s.fail(w, bad("invalid_url", iu.Msg))
+	case errors.Is(err, webhook.ErrURLRequired):
+		s.fail(w, bad("url_required", err.Error()))
+	case err != nil:
+		s.fail(w, err)
+	default:
+		writeJSON(w, 200, map[string]any{"config": cfg})
 	}
-	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-		old, secret, err := s.hook.ConfigQ(ctx, tx)
-		if err != nil {
-			return outcome{}, err
-		}
-		if in.Enabled {
-			if in.URL == "" {
-				return outcome{}, bad("url_required", "une URL est requise pour activer le webhook")
-			}
-		}
-		if err := s.hook.Save(ctx, tx, in.URL, in.Secret, in.ClearSecret, in.Enabled); err != nil {
-			return outcome{}, err
-		}
-		cfg := webhook.Config{URL: in.URL, Enabled: in.Enabled, HasSecret: in.Secret != "" || (secret != "" && !in.ClearSecret)}
-		return outcome{200, map[string]any{"config": cfg}, &audit.Event{Action: "webhook.update", TargetType: "webhook", TargetName: in.URL,
-			Diff: map[string]any{"before": map[string]any{"url": old.URL, "enabled": old.Enabled},
-				"after": map[string]any{"url": in.URL, "enabled": in.Enabled, "signing_key_rotated": in.Secret != "", "signing_key_removed": in.Secret == "" && in.ClearSecret && secret != ""}}}}, nil
-	})
 }
 
 // testWebhook: envoi d'essai immédiat (une seule tentative) avec le résultat détaillé.
 func (s *Server) testWebhook(w http.ResponseWriter, r *http.Request) {
-	cfg, secret, err := s.hook.Config(r.Context())
-	if err != nil {
+	res, err := s.hook.Test(r.Context())
+	switch {
+	case errors.Is(err, webhook.ErrNotConfigured):
+		s.fail(w, bad("not_configured", err.Error()))
+	case err != nil:
 		s.fail(w, err)
-		return
+	default:
+		writeJSON(w, 200, res)
 	}
-	if cfg.URL == "" {
-		s.fail(w, bad("not_configured", "renseignez une URL avant de tester"))
-		return
-	}
-	res := s.hook.Send(r.Context(), cfg.URL, secret, "webhook.test", map[string]any{"message": "Test d'envoi depuis Leassh"}, s.hook.Link("/reglages"), 1)
-	_ = store.InsertDelivery(r.Context(), s.st.DB, store.WebhookDelivery{Event: "webhook.test", OK: res.OK, Attempts: res.Attempts, HTTPStatus: res.Status, Error: res.Error, URL: cfg.URL})
-	writeJSON(w, 200, res)
 }
 
 func (s *Server) webhookDeliveries(w http.ResponseWriter, r *http.Request) {
-	items, err := store.ListDeliveries(r.Context(), s.st.DB, 50)
+	items, err := s.hook.Deliveries(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return

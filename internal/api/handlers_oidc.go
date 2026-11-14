@@ -387,12 +387,12 @@ func (s *Server) oidcCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	limKey := "sso|" + ip
-	if s.lim.blocked(limKey) {
+	if s.lim.Blocked(limKey) {
 		s.ssoFailure(w, r, "", "too_many_attempts", nil)
 		return
 	}
 	fail := func(actor, reason string, detail map[string]any) {
-		s.lim.fail(limKey)
+		s.lim.Fail(limKey)
 		s.ssoFailure(w, r, actor, reason, detail)
 	}
 	f, have := s.readFlow(r)
@@ -463,7 +463,7 @@ func (s *Server) oidcCallback(w http.ResponseWriter, r *http.Request) {
 		fail(uname, "internal", nil)
 		return
 	}
-	s.lim.reset(limKey)
+	s.lim.Reset(limKey)
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 

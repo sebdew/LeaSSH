@@ -1,13 +1,10 @@
 package api
 
 import (
-	"context"
-	"database/sql"
 	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/leassh-dev/leassh/internal/audit"
 	"github.com/leassh-dev/leassh/internal/store"
 )
 
@@ -45,42 +42,9 @@ func (s *Server) fail(w http.ResponseWriter, err error) {
 	}
 }
 
-type outcome struct {
-	Status int
-	Body   any
-	Event  *audit.Event
-}
-
 func currentUser(r *http.Request) store.User {
 	u, _ := r.Context().Value(userKey).(store.User)
 	return u
-}
-
-// mutate exécute une mutation de configuration; l'événement d'audit est écrit dans la même transaction.
-// fn ne doit utiliser que tx (la base n'a qu'une connexion).
-func (s *Server) mutate(w http.ResponseWriter, r *http.Request, fn func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error)) {
-	u := currentUser(r)
-	var out outcome
-	err := s.st.Tx(r.Context(), func(tx *sql.Tx) error {
-		var err error
-		if out, err = fn(r.Context(), tx, u); err != nil {
-			return err
-		}
-		if out.Event != nil {
-			out.Event.ActorType, out.Event.ActorID, out.Event.ActorName, out.Event.IP = "user", u.ID, u.Username, s.clientIP(r)
-			return audit.Record(r.Context(), tx, *out.Event)
-		}
-		return nil
-	})
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	if out.Body == nil {
-		w.WriteHeader(204)
-		return
-	}
-	writeJSON(w, out.Status, out.Body)
 }
 
 func id(r *http.Request) string { return chi.URLParam(r, "id") }

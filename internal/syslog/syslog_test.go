@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"regexp"
@@ -405,5 +406,70 @@ func TestMessagesAreSingleLine(t *testing.T) {
 	got := srv.WaitFor(2)
 	if len(got) != 2 || !header.MatchString(got[0]) {
 		t.Fatalf("un retour à la ligne a cassé le cadrage: %q", got)
+	}
+}
+
+func adminOf(t *testing.T, r *rig) store.User {
+	t.Helper()
+	var u store.User
+	if err := r.st.Tx(r.ctx, func(tx *sql.Tx) (err error) {
+		u, err = store.InsertUser(r.ctx, tx, store.User{Username: "adm", Role: "admin", PasswordHash: "x"})
+		return
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return u
+}
+
+func TestUpdateAuditsWithoutPrivateKey(t *testing.T) {
+	srv := syslogtest.New(t, "tcp")
+	r := newRig(t)
+	u := adminOf(t, r)
+
+	var ve *syslog.ValidationError
+	if _, err := r.f.Update(r.ctx, u, "192.0.2.1", syslog.Input{Config: syslog.Config{Enabled: true, Protocol: "ftp", Host: "x", Port: 1}}); !errors.As(err, &ve) {
+		t.Fatalf("configuration invalide: %v", err)
+	}
+	var n int
+	_ = r.st.DB.QueryRow(`SELECT count(*) FROM audit_events WHERE action='syslog.update'`).Scan(&n)
+	if n != 0 {
+		t.Fatal("un refus ne doit pas être audité comme une mise à jour")
+	}
+	in := syslog.Input{Config: cfgFor(srv), TLSClientKeyPEM: "-----BEGIN PRIVATE KEY-----SECRETKEY"}
+	if _, err := r.f.Update(r.ctx, u, "192.0.2.1", in); err == nil || !errors.As(err, &ve) {
+		t.Fatalf("clé privée invalide acceptée: %v", err) // la clé factice doit être refusée, sans fuite
+	}
+	after, err := r.f.Update(r.ctx, u, "192.0.2.1", syslog.Input{Config: cfgFor(srv)})
+	if err != nil || after.Host != srv.Host {
+		t.Fatalf("mise à jour: %+v %v", after, err)
+	}
+	var diff string
+	if err := r.st.DB.QueryRow(`SELECT diff FROM audit_events WHERE action='syslog.update'`).Scan(&diff); err != nil || strings.Contains(diff, "SECRETKEY") {
+		t.Fatalf("audit: %v %s", err, diff)
+	}
+	if st := r.f.Status(); st.State == "disabled" {
+		t.Fatalf("l'export doit être rechargé: %+v", st)
+	}
+}
+
+func TestTestAuditedRecordsEachTry(t *testing.T) {
+	srv := syslogtest.New(t, "tcp")
+	r := newRig(t)
+	u := adminOf(t, r)
+	var ve *syslog.ValidationError
+	if _, err := r.f.TestAudited(r.ctx, u, ""); !errors.As(err, &ve) {
+		t.Fatalf("sans configuration: %v", err)
+	}
+	if _, err := r.f.Update(r.ctx, u, "", syslog.Input{Config: cfgFor(srv)}); err != nil {
+		t.Fatal(err)
+	}
+	res, err := r.f.TestAudited(r.ctx, u, "192.0.2.1")
+	if err != nil || !res.OK || res.Error != "" {
+		t.Fatalf("essai: %+v %v", res, err)
+	}
+	var n int
+	_ = r.st.DB.QueryRow(`SELECT count(*) FROM audit_events WHERE action='syslog.test'`).Scan(&n)
+	if n != 1 {
+		t.Fatalf("événements syslog.test = %d, attendu 1", n)
 	}
 }

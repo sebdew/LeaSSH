@@ -96,7 +96,7 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	keep := ""
 	if c, err := r.Cookie(cookieName); err == nil {
-		keep = hashSession(c.Value)
+		keep = accounts.HashSession(c.Value)
 	}
 	err := s.accounts.ChangePassword(r.Context(), currentUser(r), s.clientIP(r), in.Current, in.New, keep)
 	switch {
