@@ -5,7 +5,7 @@
 
 ## Contexte
 
-Leassh est de niveau **N3** (exposé ou destiné à l'entreprise) : le wiki recommande un reverse proxy TLS pour que des agents distants joignent `/mcp`. La note `docs/securite-sorties-et-urls.md` justifiait pourtant l'acceptation des adresses privées par « N2, jamais exposé à Internet ». Cette justification était fausse ; la décision doit être reprise sur de bonnes bases.
+Leassh est de niveau **N3** (exposé ou destiné à l'entreprise) : la documentation recommande un reverse proxy TLS pour que des agents distants joignent `/mcp`. La note `docs/securite-sorties-et-urls.md` justifiait pourtant l'acceptation des adresses privées par « N2, jamais exposé à Internet ». Cette justification était fausse ; la décision doit être reprise sur de bonnes bases.
 
 Le webhook, la synthèse IA, le connecteur de bastion et les serveurs SSH sont configurés par un administrateur et peuvent viser une adresse privée, de boucle locale ou de lien local (risque SSRF, OWASP A10).
 
@@ -21,5 +21,5 @@ On **conserve** l'acceptation des adresses privées, sans option de blocage, pou
 ## Conséquences
 
 - Le risque résiduel est celui d'un **compte administrateur compromis** : il peut faire émettre des requêtes depuis le réseau où tourne Leassh. Les mesures qui le bornent sont le SSO (avec double authentification côté fournisseur d'identité), le journal d'administration à chaîne d'intégrité et l'absence de relais du corps des réponses.
-- Pour un déploiement où cela est inacceptable (service exposé, cloud avec point de métadonnées), isoler Leassh au niveau réseau : règles de sortie du pare-feu ou du conteneur limitées aux cibles attendues, et blocage de `169.254.169.254`. À documenter dans le wiki d'exploitation.
+- Pour un déploiement où cela est inacceptable (service exposé, cloud avec point de métadonnées), isoler Leassh au niveau réseau : règles de sortie du pare-feu ou du conteneur limitées aux cibles attendues, et blocage de `169.254.169.254`. À documenter dans `docs/exploitation.md`.
 - **Réexamen** : si un rôle non administrateur peut un jour saisir une URL sortante, ou si Leassh est proposé en service multi-organisations, ajouter une option de blocage des plages privées (désactivée par défaut) avant de l'autoriser.

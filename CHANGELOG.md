@@ -4,6 +4,9 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 
 ## [Non publié]
 
+### Modifié
+- Documentation utilisateur migrée du wiki vers `docs/fr/` et `docs/en/` (captures dans `docs/images/`), architecture et exploitation sans copie ; le wiki peut être désactivé (#65).
+
 ### Ajouté
 - ADR 0007 : les fichiers de test restent à côté du code, jamais livrés dans le binaire (#45).
 - Documentation : wiki bilingue (français / anglais), `CONTRIBUTING.md`, `docs/architecture.md`, `docs/exploitation.md`, `docs/specs/`, ADR 0004 et 0005, versionnement de `docs/standards/` (#11).

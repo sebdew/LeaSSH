@@ -3,7 +3,7 @@ ARG GO_VERSION=1.26
 # Image multi-arch (amd64/arm64) : docker buildx build --platform linux/amd64,linux/arm64 -t leassh .
 
 # --- 1. interface (React) ---
-# Node 24 LTS (support jusqu'en avril 2028). Images figées par condensat: la mise à jour est volontaire (voir le wiki, page Installation).
+# Node 24 LTS (support jusqu'en avril 2028). Images figées par condensat: la mise à jour est volontaire (voir docs/fr/installation.md).
 FROM --platform=$BUILDPLATFORM node:24-alpine@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8 AS web
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./

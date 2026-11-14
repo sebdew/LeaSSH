@@ -18,6 +18,6 @@ Le rapport d'audit (ISO 27001, HDS) peut être accompagné d'une synthèse rédi
 
 ## Conséquences
 
-- Si l'URL est externe, des chiffres agrégés quittent le réseau : l'activation est un choix explicite de l'administrateur et doit être documentée à l'utilisateur (wiki, page Rapport d'audit).
+- Si l'URL est externe, des chiffres agrégés quittent le réseau : l'activation est un choix explicite de l'administrateur et doit être documentée à l'utilisateur (`docs/fr/audit.md`).
 - Le modèle peut se tromper : le texte est une aide, jamais une preuve.
 - Les URL sortantes sont réservées aux administrateurs (voir `docs/securite-sorties-et-urls.md`).
