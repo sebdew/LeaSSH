@@ -24,6 +24,7 @@ import (
 	"github.com/leassh-dev/leassh/internal/crypto"
 	"github.com/leassh-dev/leassh/internal/executions"
 	"github.com/leassh-dev/leassh/internal/groups"
+	"github.com/leassh-dev/leassh/internal/infra"
 	"github.com/leassh-dev/leassh/internal/journal"
 	"github.com/leassh-dev/leassh/internal/metrics"
 	"github.com/leassh-dev/leassh/internal/oidc"
@@ -56,6 +57,7 @@ type Server struct {
 	journal  *journal.Service
 	commands *commands.Service
 	groups   *groups.Service
+	infra    *infra.Service
 	log      *slog.Logger
 	lim      *limiter
 	limIP    *limiter
@@ -103,6 +105,7 @@ type Services struct {
 func (s *Server) Attach(sv Services) {
 	s.box, s.pool, s.acc, s.exec, s.props, s.packs, s.hook, s.mcp = sv.Box, sv.Pool, sv.Acc, sv.Exec, sv.Props, sv.Packs, sv.Hook, sv.MCP
 	s.prov, s.sysl = sv.Prov, sv.Syslog
+	s.infra = infra.New(s.st, sv.Box, sv.Pool, sv.Exec)
 	s.metrics, s.version, s.aiDefaults = sv.Metrics, sv.Version, sv.AIDefaults
 	s.oidc.HTTP.Transport = s.metrics.Transport("idp", s.oidc.HTTP.Transport) // durée des appels au fournisseur d'identité
 }

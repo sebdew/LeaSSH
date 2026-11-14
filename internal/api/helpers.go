@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/leassh-dev/leassh/internal/catalog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -22,13 +21,6 @@ type apiError struct {
 func (e *apiError) Error() string { return e.Message }
 
 func bad(code, msg string) *apiError { return &apiError{Status: 400, Code: code, Message: msg} }
-
-func checkSlug(slug string) error {
-	if err := catalog.CheckSlug(slug); err != nil {
-		return bad("invalid_slug", err.Error())
-	}
-	return nil
-}
 
 func managedErr(msg string) *apiError { return &apiError{Status: 409, Code: "managed", Message: msg} }
 
