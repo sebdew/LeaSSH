@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/leassh-dev/leassh/internal/audit"
-	"github.com/leassh-dev/leassh/internal/sshexec"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/audit"
+	"github.com/sebdew/LeaSSH/internal/sshexec"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 // InputError: configuration de provisioner refusée. Code est repris tel quel par l'API.

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/leassh-dev/leassh/internal/catalog"
-	"github.com/leassh-dev/leassh/internal/infra"
+	"github.com/sebdew/LeaSSH/internal/catalog"
+	"github.com/sebdew/LeaSSH/internal/infra"
 )
 
 type identityInput struct {

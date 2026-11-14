@@ -6,8 +6,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/leassh-dev/leassh/internal/crypto"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/crypto"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 func newService(t *testing.T) (*Service, *store.Store) {

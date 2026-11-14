@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/leassh-dev/leassh/internal/provisioning"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/provisioning"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 type provisionerInput struct {

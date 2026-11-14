@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/leassh-dev/leassh/internal/packs"
-	"github.com/leassh-dev/leassh/internal/webhook"
+	"github.com/sebdew/LeaSSH/internal/packs"
+	"github.com/sebdew/LeaSSH/internal/webhook"
 )
 
 func (s *Server) listPacks(w http.ResponseWriter, r *http.Request) {

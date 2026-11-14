@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/accounts"
-	"github.com/leassh-dev/leassh/internal/audit"
-	"github.com/leassh-dev/leassh/internal/oidc"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/accounts"
+	"github.com/sebdew/LeaSSH/internal/audit"
+	"github.com/sebdew/LeaSSH/internal/oidc"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 // ---- SSO OpenID Connect (SPEC §9bis) ----

@@ -11,14 +11,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/access"
-	"github.com/leassh-dev/leassh/internal/catalog"
-	"github.com/leassh-dev/leassh/internal/crypto"
-	"github.com/leassh-dev/leassh/internal/executions"
-	"github.com/leassh-dev/leassh/internal/proposals"
-	"github.com/leassh-dev/leassh/internal/sshexec"
-	"github.com/leassh-dev/leassh/internal/sshtest"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/access"
+	"github.com/sebdew/LeaSSH/internal/catalog"
+	"github.com/sebdew/LeaSSH/internal/crypto"
+	"github.com/sebdew/LeaSSH/internal/executions"
+	"github.com/sebdew/LeaSSH/internal/proposals"
+	"github.com/sebdew/LeaSSH/internal/sshexec"
+	"github.com/sebdew/LeaSSH/internal/sshtest"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 type Kit struct {

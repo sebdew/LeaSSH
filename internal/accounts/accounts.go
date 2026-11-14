@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/leassh-dev/leassh/internal/audit"
-	"github.com/leassh-dev/leassh/internal/crypto"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/audit"
+	"github.com/sebdew/LeaSSH/internal/crypto"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 // MinPassword: longueur minimale d'un mot de passe local.

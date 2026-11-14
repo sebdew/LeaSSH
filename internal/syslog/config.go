@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 // Config est la vue de la configuration exposée par l'API (jamais la clé privée TLS).

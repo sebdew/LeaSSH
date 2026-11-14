@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/leassh-dev/leassh/internal/accounts"
+	"github.com/sebdew/LeaSSH/internal/accounts"
 )
 
 func (s *Server) listUsers(w http.ResponseWriter, r *http.Request) {

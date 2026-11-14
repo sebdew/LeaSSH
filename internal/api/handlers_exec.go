@@ -3,12 +3,12 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"github.com/leassh-dev/leassh/internal/catalog"
+	"github.com/sebdew/LeaSSH/internal/catalog"
 	"net/http"
 
-	"github.com/leassh-dev/leassh/internal/executions"
-	"github.com/leassh-dev/leassh/internal/proposals"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/executions"
+	"github.com/sebdew/LeaSSH/internal/proposals"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 func (s *Server) getExecution(w http.ResponseWriter, r *http.Request) {

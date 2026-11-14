@@ -12,13 +12,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/access"
-	"github.com/leassh-dev/leassh/internal/audit"
-	"github.com/leassh-dev/leassh/internal/catalog"
-	"github.com/leassh-dev/leassh/internal/crypto"
-	"github.com/leassh-dev/leassh/internal/metrics"
-	"github.com/leassh-dev/leassh/internal/sshexec"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/access"
+	"github.com/sebdew/LeaSSH/internal/audit"
+	"github.com/sebdew/LeaSSH/internal/catalog"
+	"github.com/sebdew/LeaSSH/internal/crypto"
+	"github.com/sebdew/LeaSSH/internal/metrics"
+	"github.com/sebdew/LeaSSH/internal/sshexec"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 // Statuts d'exécution (SPEC §4.9).

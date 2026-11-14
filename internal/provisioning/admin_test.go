@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 type bastionConn struct{ fakeConn }

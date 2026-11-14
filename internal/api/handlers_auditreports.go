@@ -6,8 +6,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/leassh-dev/leassh/internal/auditreport"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/auditreport"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 type reportInput struct {

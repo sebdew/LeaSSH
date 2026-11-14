@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/provisioning"
+	"github.com/sebdew/LeaSSH/internal/provisioning"
 )
 
 const maxBody = 4 << 20

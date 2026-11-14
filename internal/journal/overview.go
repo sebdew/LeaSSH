@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 // ErrInvalidPeriod: la période des statistiques d'usage n'est pas l'une de celles proposées.

@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/crypto"
-	"github.com/leassh-dev/leassh/internal/executions"
-	"github.com/leassh-dev/leassh/internal/store"
-	"github.com/leassh-dev/leassh/internal/syslog/syslogtest"
+	"github.com/sebdew/LeaSSH/internal/crypto"
+	"github.com/sebdew/LeaSSH/internal/executions"
+	"github.com/sebdew/LeaSSH/internal/store"
+	"github.com/sebdew/LeaSSH/internal/syslog/syslogtest"
 )
 
 func TestSyslogSettingsAdminOnly(t *testing.T) {

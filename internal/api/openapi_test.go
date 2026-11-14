@@ -11,8 +11,8 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-chi/chi/v5"
-	"github.com/leassh-dev/leassh/internal/settings"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/settings"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 const specPath = "../../docs/openapi.json"

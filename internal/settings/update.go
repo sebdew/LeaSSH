@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/leassh-dev/leassh/internal/audit"
-	"github.com/leassh-dev/leassh/internal/store"
+	"github.com/sebdew/LeaSSH/internal/audit"
+	"github.com/sebdew/LeaSSH/internal/store"
 )
 
 // InvalidError: les réglages proposés sont refusés (valeur hors bornes, jeton trop long…).

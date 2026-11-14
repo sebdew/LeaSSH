@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leassh-dev/leassh/internal/journal"
-	"github.com/leassh-dev/leassh/internal/metrics"
+	"github.com/sebdew/LeaSSH/internal/journal"
+	"github.com/sebdew/LeaSSH/internal/metrics"
 )
 
 // dashboard: checklist d'accueil (cases cochées automatiquement), chiffres des dernières 24 h, activité récente.
