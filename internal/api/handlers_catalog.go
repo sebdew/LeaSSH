@@ -1,15 +1,13 @@
 package api
 
 import (
-	"context"
-	"database/sql"
 	"errors"
 	"net/http"
-	"strings"
 
-	"github.com/leassh-dev/leassh/internal/audit"
 	"github.com/leassh-dev/leassh/internal/catalog"
+	"github.com/leassh-dev/leassh/internal/commands"
 	"github.com/leassh-dev/leassh/internal/executions"
+	"github.com/leassh-dev/leassh/internal/groups"
 	"github.com/leassh-dev/leassh/internal/store"
 )
 
@@ -25,52 +23,37 @@ type commandInput struct {
 	Status      string                      `json:"status"`
 }
 
-func (in *commandInput) validate() (catalog.LintResult, error) {
-	in.Slug, in.Name = strings.TrimSpace(in.Slug), strings.TrimSpace(in.Name)
-	if err := checkSlug(in.Slug); err != nil {
-		return catalog.LintResult{}, err
-	}
-	if in.Name == "" || len(in.Name) > 120 {
-		return catalog.LintResult{}, bad("invalid_name", "nom requis (120 caractères max)")
-	}
-	if len(in.Description) > 4000 {
-		return catalog.LintResult{}, bad("invalid_description", "description trop longue (4000 caractères max)")
-	}
-	if in.Status == "" {
-		in.Status = "enabled"
-	}
-	if in.Status != "enabled" && in.Status != "disabled" && in.Status != "pending" {
-		return catalog.LintResult{}, bad("invalid_status", "statut invalide")
-	}
-	if in.TimeoutS == 0 {
-		in.TimeoutS = 30
-	}
-	if in.TimeoutS < 1 || in.TimeoutS > 600 {
-		return catalog.LintResult{}, bad("invalid_timeout", "délai entre 1 et 600 secondes")
-	}
-	if in.MaxOutputKB == 0 {
-		in.MaxOutputKB = 64
-	}
-	if in.MaxOutputKB < 1 || in.MaxOutputKB > 4096 {
-		return catalog.LintResult{}, bad("invalid_max_output", "sortie max entre 1 et 4096 Ko")
-	}
-	if in.Params == nil {
-		in.Params = map[string]catalog.ParamDef{}
-	}
-	res := catalog.Lint(in.Template, in.Params, in.Risk, catalog.ModeAdmin)
-	if !res.OK() {
-		return res, &apiError{Status: 400, Code: "lint_failed", Message: res.Errors[0].Message, Details: res}
-	}
-	return res, nil
-}
-
-func (in commandInput) toCommand() store.Command {
-	return store.Command{Slug: in.Slug, Name: in.Name, Description: in.Description, Risk: in.Risk, Template: in.Template, Params: in.Params,
+func (in commandInput) toService() commands.Input {
+	return commands.Input{Slug: in.Slug, Name: in.Name, Description: in.Description, Risk: in.Risk, Template: in.Template, Params: in.Params,
 		TimeoutS: in.TimeoutS, MaxOutputKB: in.MaxOutputKB, Status: in.Status}
 }
 
+// catalogErr traduit les erreurs de validation des services commands et groups en erreurs d'API.
+func catalogErr(err error) error {
+	var le *commands.LintError
+	switch {
+	case errors.As(err, &le):
+		return &apiError{Status: 400, Code: "lint_failed", Message: le.Error(), Details: le.Result}
+	case errors.Is(err, catalog.ErrInvalidSlug):
+		return bad("invalid_slug", err.Error())
+	case errors.Is(err, commands.ErrInvalidName), errors.Is(err, groups.ErrInvalidName):
+		return bad("invalid_name", err.Error())
+	case errors.Is(err, commands.ErrInvalidDescription):
+		return bad("invalid_description", err.Error())
+	case errors.Is(err, commands.ErrInvalidStatus):
+		return bad("invalid_status", err.Error())
+	case errors.Is(err, commands.ErrInvalidTimeout):
+		return bad("invalid_timeout", err.Error())
+	case errors.Is(err, commands.ErrInvalidMaxOutput):
+		return bad("invalid_max_output", err.Error())
+	case errors.Is(err, groups.ErrManagedLocked), errors.Is(err, groups.ErrManagedUndeletable):
+		return managedErr(err.Error())
+	}
+	return err
+}
+
 func (s *Server) listCommands(w http.ResponseWriter, r *http.Request) {
-	cmds, err := store.ListCommands(r.Context(), s.st.DB)
+	cmds, err := s.commands.List(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -79,7 +62,7 @@ func (s *Server) listCommands(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getCommand(w http.ResponseWriter, r *http.Request) {
-	c, err := store.CommandByID(r.Context(), s.st.DB, id(r))
+	c, err := s.commands.Get(r.Context(), id(r))
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -92,20 +75,12 @@ func (s *Server) createCommand(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	lint, err := in.validate()
+	c, lint, err := s.commands.Create(r.Context(), currentUser(r), s.clientIP(r), in.toService())
 	if err != nil {
-		s.fail(w, err)
+		s.fail(w, catalogErr(err))
 		return
 	}
-	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-		c := in.toCommand()
-		c.Source, c.CreatedBy = "manual", u.ID
-		c, err := store.InsertCommand(ctx, tx, c)
-		if err != nil {
-			return outcome{}, err
-		}
-		return outcome{201, map[string]any{"command": c, "lint": lint}, &audit.Event{Action: "command.create", TargetType: "command", TargetID: c.ID, TargetName: c.Slug, Diff: map[string]any{"after": c}}}, nil
-	})
+	writeJSON(w, 201, map[string]any{"command": c, "lint": lint})
 }
 
 func (s *Server) updateCommand(w http.ResponseWriter, r *http.Request) {
@@ -113,33 +88,20 @@ func (s *Server) updateCommand(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	lint, err := in.validate()
+	c, lint, err := s.commands.Update(r.Context(), currentUser(r), s.clientIP(r), id(r), in.toService())
 	if err != nil {
-		s.fail(w, err)
+		s.fail(w, catalogErr(err))
 		return
 	}
-	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-		c := in.toCommand()
-		c.ID = id(r)
-		c, old, err := store.UpdateCommand(ctx, tx, c)
-		if err != nil {
-			return outcome{}, err
-		}
-		return outcome{200, map[string]any{"command": c, "lint": lint}, &audit.Event{Action: "command.update", TargetType: "command", TargetID: c.ID, TargetName: c.Slug, Diff: map[string]any{"before": old, "after": c}}}, nil
-	})
+	writeJSON(w, 200, map[string]any{"command": c, "lint": lint})
 }
 
 func (s *Server) deleteCommand(w http.ResponseWriter, r *http.Request) {
-	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-		old, err := store.CommandByID(ctx, tx, id(r))
-		if err != nil {
-			return outcome{}, err
-		}
-		if err := store.DeleteCommand(ctx, tx, old.ID); err != nil {
-			return outcome{}, err
-		}
-		return outcome{Event: &audit.Event{Action: "command.delete", TargetType: "command", TargetID: old.ID, TargetName: old.Slug, Diff: map[string]any{"before": old}}}, nil
-	})
+	if err := s.commands.Delete(r.Context(), currentUser(r), s.clientIP(r), id(r)); err != nil {
+		s.fail(w, err)
+		return
+	}
+	w.WriteHeader(204)
 }
 
 type lintInput struct {
@@ -196,7 +158,7 @@ func (s *Server) testCommand(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	c, err := store.CommandByID(r.Context(), s.st.DB, id(r))
+	c, err := s.commands.Get(r.Context(), id(r))
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -229,84 +191,49 @@ type groupInput struct {
 	MemberIDs   []string `json:"member_ids"`
 }
 
+func (in groupInput) toService() groups.Input {
+	return groups.Input{Slug: in.Slug, Name: in.Name, Description: in.Description, MemberIDs: in.MemberIDs}
+}
+
 func (s *Server) groupHandlers(kind store.GroupKind) (list, create, update, del, members http.HandlerFunc) {
-	label := string(kind)
 	list = func(w http.ResponseWriter, r *http.Request) {
-		gs, err := store.ListGroups(r.Context(), s.st.DB, kind)
+		gs, err := s.groups.List(r.Context(), kind)
 		if err != nil {
 			s.fail(w, err)
 			return
 		}
 		writeJSON(w, 200, map[string]any{"items": gs})
 	}
-	check := func(in *groupInput) error {
-		in.Slug, in.Name = strings.TrimSpace(in.Slug), strings.TrimSpace(in.Name)
-		if err := checkSlug(in.Slug); err != nil {
-			return err
-		}
-		if in.Name == "" {
-			return bad("invalid_name", "nom requis")
-		}
-		return nil
-	}
 	create = func(w http.ResponseWriter, r *http.Request) {
 		var in groupInput
 		if !decode(w, r, &in) {
 			return
 		}
-		if err := check(&in); err != nil {
-			s.fail(w, err)
+		g, err := s.groups.Create(r.Context(), currentUser(r), s.clientIP(r), kind, in.toService())
+		if err != nil {
+			s.fail(w, catalogErr(err))
 			return
 		}
-		s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-			g, err := store.InsertGroup(ctx, tx, kind, store.Group{Slug: in.Slug, Name: in.Name, Description: in.Description, MemberIDs: in.MemberIDs})
-			if err != nil {
-				return outcome{}, err
-			}
-			return outcome{201, g, &audit.Event{Action: label + "_group.create", TargetType: label + "_group", TargetID: g.ID, TargetName: g.Slug, Diff: map[string]any{"after": g}}}, nil
-		})
+		writeJSON(w, 201, g)
 	}
 	update = func(w http.ResponseWriter, r *http.Request) {
 		var in groupInput
 		if !decode(w, r, &in) {
 			return
 		}
-		if err := check(&in); err != nil {
-			s.fail(w, err)
+		g, err := s.groups.Update(r.Context(), currentUser(r), s.clientIP(r), kind, id(r), in.toService())
+		if err != nil {
+			s.fail(w, catalogErr(err))
 			return
 		}
-		s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-			old, err := store.GroupByID(ctx, tx, kind, id(r))
-			if err != nil {
-				return outcome{}, err
-			}
-			if old.ManagedBy != "" {
-				return outcome{}, managedErr("ce groupe est synchronisé: nom et identifiant sont verrouillés (seuls ses membres se modifient, via la liste des membres)")
-			}
-			g := store.Group{ID: old.ID, Slug: in.Slug, Name: in.Name, Description: in.Description, MemberIDs: in.MemberIDs}
-			if err := store.UpdateGroup(ctx, tx, kind, g); err != nil {
-				return outcome{}, err
-			}
-			if g.MemberIDs == nil {
-				g.MemberIDs = old.MemberIDs
-			}
-			return outcome{200, g, &audit.Event{Action: label + "_group.update", TargetType: label + "_group", TargetID: g.ID, TargetName: g.Slug, Diff: map[string]any{"before": old, "after": g}}}, nil
-		})
+		writeJSON(w, 200, g)
 	}
 	del = func(w http.ResponseWriter, r *http.Request) {
-		s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-			old, err := store.GroupByID(ctx, tx, kind, id(r))
-			if err != nil {
-				return outcome{}, err
-			}
-			if old.ManagedBy != "" {
-				return outcome{}, managedErr("ce groupe est synchronisé: il ne peut pas être supprimé")
-			}
-			if err := store.DeleteGroup(ctx, tx, kind, old.ID); err != nil {
-				return outcome{}, err
-			}
-			return outcome{Event: &audit.Event{Action: label + "_group.delete", TargetType: label + "_group", TargetID: old.ID, TargetName: old.Slug, Diff: map[string]any{"before": old}}}, nil
-		})
+		if err := s.groups.Delete(r.Context(), currentUser(r), s.clientIP(r), kind, id(r)); err != nil {
+			s.fail(w, catalogErr(err))
+			return
+		}
+		w.WriteHeader(204)
 	}
 	members = func(w http.ResponseWriter, r *http.Request) {
 		var in struct {
@@ -315,20 +242,12 @@ func (s *Server) groupHandlers(kind store.GroupKind) (list, create, update, del,
 		if !decode(w, r, &in) {
 			return
 		}
-		s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-			old, err := store.GroupByID(ctx, tx, kind, id(r))
-			if err != nil {
-				return outcome{}, err
-			}
-			if err := store.SetGroupMembers(ctx, tx, kind, old.ID, in.IDs); err != nil {
-				return outcome{}, err
-			}
-			if updated, err := store.GroupByID(ctx, tx, kind, old.ID); err == nil {
-				in.IDs = updated.MemberIDs // les membres posés par une synchro restent
-			}
-			return outcome{200, map[string]any{"member_ids": in.IDs}, &audit.Event{Action: label + "_group.members", TargetType: label + "_group", TargetID: old.ID, TargetName: old.Slug,
-				Diff: map[string]any{"before": old.MemberIDs, "after": in.IDs}}}, nil
-		})
+		ids, err := s.groups.SetMembers(r.Context(), currentUser(r), s.clientIP(r), kind, id(r), in.IDs)
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		writeJSON(w, 200, map[string]any{"member_ids": ids})
 	}
 	return
 }

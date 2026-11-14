@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"github.com/leassh-dev/leassh/internal/catalog"
 	"net/http"
-	"regexp"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/leassh-dev/leassh/internal/audit"
@@ -23,16 +23,13 @@ func (e *apiError) Error() string { return e.Message }
 
 func bad(code, msg string) *apiError { return &apiError{Status: 400, Code: code, Message: msg} }
 
-var slugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9_.-]{0,63}$`)
-
 func checkSlug(slug string) error {
-	if !slugRe.MatchString(slug) {
-		return bad("invalid_slug", "slug invalide: minuscules, chiffres, . _ - (64 caractères max)")
+	if err := catalog.CheckSlug(slug); err != nil {
+		return bad("invalid_slug", err.Error())
 	}
 	return nil
 }
 
-// managedErr: modification refusée sur un objet tenu par une synchro.
 func managedErr(msg string) *apiError { return &apiError{Status: 409, Code: "managed", Message: msg} }
 
 func (s *Server) fail(w http.ResponseWriter, err error) {
