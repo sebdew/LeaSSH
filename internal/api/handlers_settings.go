@@ -1,11 +1,10 @@
 package api
 
 import (
-	"database/sql"
+	"errors"
 	"net/http"
 	"strings"
 
-	"github.com/leassh-dev/leassh/internal/audit"
 	"github.com/leassh-dev/leassh/internal/settings"
 )
 
@@ -44,11 +43,6 @@ func (s *Server) generalOf(r *http.Request, v settings.Values) generalView {
 		LogRetentionDays: v.LogRetentionDays, LogLevel: v.LogLevel, HasMetricsToken: v.MetricsTokenHash != "", DetectedURL: scheme + "://" + host}
 }
 
-func (v generalView) auditView() map[string]any {
-	return map[string]any{"base_url": v.BaseURL, "trusted_proxies": v.TrustedProxies, "session_ttl_hours": v.SessionTTLHours, "approval_ttl_minutes": v.ApprovalTTLMin,
-		"log_retention_days": v.LogRetentionDays, "log_level": v.LogLevel, "has_metrics_token": v.HasMetricsToken}
-}
-
 func (s *Server) getGeneral(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, s.generalOf(r, s.set.Get()))
 }
@@ -58,41 +52,17 @@ func (s *Server) putGeneral(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	nv := settings.Values{BaseURL: in.BaseURL, TrustedProxies: in.TrustedProxies, SessionTTLHours: in.SessionTTLHours, ApprovalTTLMin: in.ApprovalTTLMin,
-		LogRetentionDays: in.LogRetentionDays, LogLevel: in.LogLevel}
-	if err := nv.Validate(); err != nil {
-		s.fail(w, bad("invalid_settings", err.Error()))
-		return
-	}
-	if len(in.MetricsToken) > 256 {
-		s.fail(w, bad("invalid_settings", "jeton trop long"))
-		return
-	}
-	u := currentUser(r)
-	var old settings.Values
-	err := s.st.Tx(r.Context(), func(tx *sql.Tx) error {
-		var err error
-		if old, err = settings.Load(r.Context(), tx); err != nil {
-			return err
-		}
-		nv.MetricsTokenHash = old.MetricsTokenHash
-		switch {
-		case in.MetricsToken != "":
-			nv.MetricsTokenHash = settings.HashToken(in.MetricsToken)
-		case in.ClearMetricsToken:
-			nv.MetricsTokenHash = ""
-		}
-		if err := settings.Save(r.Context(), tx, nv); err != nil {
-			return err
-		}
-		return audit.Record(r.Context(), tx, audit.Event{ActorType: "user", ActorID: u.ID, ActorName: u.Username, IP: s.clientIP(r), Action: "settings.update",
-			TargetType: "settings", TargetName: "general",
-			Diff: map[string]any{"before": s.generalOf(r, old).auditView(), "after": s.generalOf(r, nv).auditView(), "credential_changed": in.MetricsToken != "" || in.ClearMetricsToken}})
-	})
-	if err != nil {
+	nv, err := s.set.Update(r.Context(), currentUser(r), s.clientIP(r), settings.UpdateInput{
+		Values: settings.Values{BaseURL: in.BaseURL, TrustedProxies: in.TrustedProxies, SessionTTLHours: in.SessionTTLHours, ApprovalTTLMin: in.ApprovalTTLMin,
+			LogRetentionDays: in.LogRetentionDays, LogLevel: in.LogLevel},
+		MetricsToken: in.MetricsToken, ClearMetricsToken: in.ClearMetricsToken})
+	var inv *settings.InvalidError
+	switch {
+	case errors.As(err, &inv):
+		s.fail(w, bad("invalid_settings", inv.Msg))
+	case err != nil:
 		s.fail(w, err)
-		return
+	default:
+		writeJSON(w, 200, s.generalOf(r, nv))
 	}
-	s.set.Apply(nv)
-	writeJSON(w, 200, s.generalOf(r, nv))
 }

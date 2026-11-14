@@ -1,62 +1,41 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/leassh-dev/leassh/internal/journal"
 	"github.com/leassh-dev/leassh/internal/metrics"
-	"github.com/leassh-dev/leassh/internal/store"
 )
-
-type checklistItem struct {
-	ID   string `json:"id"`
-	Done bool   `json:"done"`
-	Href string `json:"href"`
-}
 
 // dashboard: checklist d'accueil (cases cochées automatiquement), chiffres des dernières 24 h, activité récente.
 func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
-	st, err := store.Dashboard(r.Context(), s.st.DB, time.Now())
+	ov, err := s.journal.Dashboard(r.Context(), time.Now())
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	c := st.Counts
-	checklist := []checklistItem{
-		{"identity", c["identities"] > 0, "/identites"},
-		{"server", c["pinned_servers"] > 0, "/serveurs"},
-		{"pack", c["commands"] > 0, "/packs"},
-		{"rule", c["rules"] > 0, "/regles"},
-		{"key", c["keys_with_rules"] > 0, "/cles"},
-		{"agent", c["used_keys"] > 0, "/cles"},
-	}
-	recent, err := store.ListExecutions(r.Context(), s.st.DB, store.ExecFilter{Limit: 10})
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	for i := range recent {
-		recent[i].Stdout, recent[i].Stderr = "", ""
-	}
-	writeJSON(w, 200, map[string]any{"checklist": checklist, "stats": st, "recent": recent})
+	writeJSON(w, 200, map[string]any{"checklist": ov.Checklist, "stats": ov.Stats, "recent": ov.Recent})
 }
 
 // insights: usage sur 7, 30 ou 90 jours (durées, classements, activité horaire).
 func (s *Server) insights(w http.ResponseWriter, r *http.Request) {
 	days := 30
-	switch r.URL.Query().Get("days") {
-	case "7":
-		days = 7
-	case "90":
-		days = 90
-	case "", "30":
-	default:
-		s.fail(w, bad("invalid_period", "période: 7, 30 ou 90 jours"))
+	if v := r.URL.Query().Get("days"); v != "" {
+		var err error
+		if days, err = strconv.Atoi(v); err != nil {
+			days = 0
+		}
+	}
+	in, err := s.journal.Insights(r.Context(), time.Now(), days)
+	if errors.Is(err, journal.ErrInvalidPeriod) {
+		s.fail(w, bad("invalid_period", err.Error()))
 		return
 	}
-	in, err := store.GetInsights(r.Context(), s.st.DB, time.Now(), days)
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -71,7 +50,7 @@ func (s *Server) metricsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	m, err := store.MetricsState(r.Context(), s.st.DB)
+	m, err := s.journal.MetricsState(r.Context())
 	if err != nil {
 		s.log.Error("metrics", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)

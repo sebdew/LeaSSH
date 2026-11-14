@@ -20,8 +20,8 @@ func (s *Server) configRoutes(r chi.Router) {
 		r.With(admin).Delete("/{id}", s.deleteCommand)
 		r.With(admin).Post("/{id}/test", s.testCommand)
 	})
-	for prefix, kind := range map[string]string{"/server-groups": "server", "/command-groups": "command"} {
-		list, create, update, del, members := s.groupHandlers(groupKind(kind))
+	for prefix, kind := range map[string]store.GroupKind{"/server-groups": store.ServerGroups, "/command-groups": store.CommandGroups} {
+		list, create, update, del, members := s.groupHandlers(kind)
 		r.Route(prefix, func(r chi.Router) {
 			r.Get("/", list)
 			r.With(admin).Post("/", create)
@@ -145,5 +145,3 @@ func (s *Server) configRoutes(r chi.Router) {
 		r.With(admin).Post("/{id}/reject", s.rejectProposal)
 	})
 }
-
-func groupKind(k string) store.GroupKind { return store.GroupKind(k) }

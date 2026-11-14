@@ -3,9 +3,7 @@ package api
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/subtle"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
@@ -58,9 +56,10 @@ type Server struct {
 	commands *commands.Service
 	groups   *groups.Service
 	infra    *infra.Service
+	auditrep *auditreport.Service
 	log      *slog.Logger
-	lim      *limiter
-	limIP    *limiter
+	lim      *accounts.Limiter
+	limIP    *accounts.Limiter
 	static   http.Handler
 
 	// services attachés par Attach (nécessaires aux routes de configuration et d'exécution)
@@ -76,9 +75,8 @@ type Server struct {
 	mcp   http.Handler
 	oidc  *oidc.Client
 
-	metrics    *metrics.Registry
-	version    string
-	aiDefaults auditreport.AIDefaults // LLM_* : valeurs par défaut de la synthèse IA
+	metrics *metrics.Registry
+	version string
 
 	setupTokenHash string // SHA-256 du jeton d'initialisation; vide = /setup refusé
 }
@@ -106,7 +104,8 @@ func (s *Server) Attach(sv Services) {
 	s.box, s.pool, s.acc, s.exec, s.props, s.packs, s.hook, s.mcp = sv.Box, sv.Pool, sv.Acc, sv.Exec, sv.Props, sv.Packs, sv.Hook, sv.MCP
 	s.prov, s.sysl = sv.Prov, sv.Syslog
 	s.infra = infra.New(s.st, sv.Box, sv.Pool, sv.Exec)
-	s.metrics, s.version, s.aiDefaults = sv.Metrics, sv.Version, sv.AIDefaults
+	s.metrics, s.version = sv.Metrics, sv.Version
+	s.auditrep = auditreport.NewService(s.st, sv.Box, sv.Version, s.set, sv.AIDefaults, s.metrics.Transport("ai", nil))
 	s.oidc.HTTP.Transport = s.metrics.Transport("idp", s.oidc.HTTP.Transport) // durée des appels au fournisseur d'identité
 }
 
@@ -124,7 +123,7 @@ func (s *Server) ClientIP(r *http.Request) string { return s.clientIP(r) }
 
 // New construit le routeur. static sert l'interface (SPA); peut être nil.
 func New(set *settings.Service, st *store.Store, log *slog.Logger, static http.Handler) (*Server, error) {
-	return &Server{set: set, st: st, accounts: accounts.New(st), journal: journal.New(st), commands: commands.New(st), groups: groups.New(st), log: log, lim: newLimiter(st, "account", maxFailures, failWindow), limIP: newLimiter(st, "ip", maxFailuresPerIP, failWindow), static: static, oidc: oidc.New()}, nil
+	return &Server{set: set, st: st, accounts: accounts.New(st), journal: journal.New(st), commands: commands.New(st), groups: groups.New(st), log: log, lim: accounts.NewLimiter(st, "account", maxFailures, failWindow), limIP: accounts.NewLimiter(st, "ip", maxFailuresPerIP, failWindow), static: static, oidc: oidc.New()}, nil
 }
 
 func (s *Server) Handler() http.Handler {
@@ -262,44 +261,6 @@ func (s *Server) fromTrustedProxy(r *http.Request) bool {
 	return err == nil && s.trusted(a)
 }
 
-func randToken() (string, error) {
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	return base64.RawURLEncoding.EncodeToString(b), nil
-}
-
-// ---- limiteur de tentatives ----
-
-// limiter compte les échecs en base (SQLite) pour que les verrouillages survivent à un redémarrage (SEC-04).
-// scope sépare les compteurs par compte et par adresse.
-type limiter struct {
-	st    *store.Store
-	scope string
-	max   int
-	win   time.Duration
-}
-
-func newLimiter(st *store.Store, scope string, max int, win time.Duration) *limiter {
-	return &limiter{st: st, scope: scope, max: max, win: win}
-}
-
-// blocked: en cas d'erreur de base, on refuse (fail closed) plutôt que de laisser passer des essais illimités.
-func (l *limiter) blocked(k string) bool {
-	n, err := store.CountLoginFailures(context.Background(), l.st.DB, l.scope, k, time.Now().Add(-l.win))
-	return err != nil || n >= l.max
-}
-
-func (l *limiter) fail(k string) {
-	now := time.Now()
-	_ = store.AddLoginFailure(context.Background(), l.st.DB, l.scope, k, now, now.Add(-l.win))
-}
-
-func (l *limiter) reset(k string) {
-	_ = store.ResetLoginFailures(context.Background(), l.st.DB, l.scope, k)
-}
-
 // ---- sessions ----
 
 type ctxKey int
@@ -309,18 +270,9 @@ const (
 	csrfKey
 )
 
-func hashSession(id string) string { return crypto.HashToken(id) }
-
 func (s *Server) startSession(w http.ResponseWriter, r *http.Request, u store.User) (string, error) {
-	id, err := randToken()
+	id, csrf, err := s.accounts.OpenSession(r.Context(), u, s.clientIP(r), s.set.SessionTTL())
 	if err != nil {
-		return "", err
-	}
-	csrf, err := randToken()
-	if err != nil {
-		return "", err
-	}
-	if err := s.st.CreateSession(r.Context(), hashSession(id), u.ID, csrf, s.clientIP(r), s.set.SessionTTL()); err != nil {
 		return "", err
 	}
 	http.SetCookie(w, &http.Cookie{
@@ -337,23 +289,18 @@ func (s *Server) requireSession(next http.Handler) http.Handler {
 			writeErr(w, 401, "unauthenticated", "connexion requise")
 			return
 		}
-		se, err := s.st.SessionByHash(r.Context(), hashSession(c.Value), idleTimeout)
+		u, sessionCSRF, err := s.accounts.LookupSession(r.Context(), c.Value, idleTimeout)
 		if err != nil {
-			writeErr(w, 401, "unauthenticated", "session expirée")
-			return
-		}
-		u, err := s.st.UserByID(r.Context(), se.UserID)
-		if err != nil || u.Disabled {
-			writeErr(w, 401, "unauthenticated", "compte indisponible")
+			writeErr(w, 401, "unauthenticated", err.Error())
 			return
 		}
 		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions {
-			if subtle.ConstantTimeCompare([]byte(r.Header.Get("X-CSRF-Token")), []byte(se.CSRF)) != 1 {
+			if subtle.ConstantTimeCompare([]byte(r.Header.Get("X-CSRF-Token")), []byte(sessionCSRF)) != 1 {
 				writeErr(w, 403, "csrf", "jeton CSRF invalide")
 				return
 			}
 		}
-		ctx := context.WithValue(context.WithValue(r.Context(), userKey, u), csrfKey, se.CSRF)
+		ctx := context.WithValue(context.WithValue(r.Context(), userKey, u), csrfKey, sessionCSRF)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -381,12 +328,12 @@ type userDTO struct {
 }
 
 func (s *Server) setupStatus(w http.ResponseWriter, r *http.Request) {
-	n, err := s.st.UserCount(r.Context())
+	ok, err := s.accounts.Initialized(r.Context())
 	if err != nil {
 		writeErr(w, 500, "internal", "erreur interne")
 		return
 	}
-	writeJSON(w, 200, map[string]bool{"initialized": n > 0})
+	writeJSON(w, 200, map[string]bool{"initialized": ok})
 }
 
 type credentials struct {
@@ -407,12 +354,12 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 	}
 	// SEC-01: le jeton d'initialisation est vérifié avant toute autre chose (temps constant, tentatives limitées).
 	limKey := "setup|" + s.clientIP(r)
-	if s.lim.blocked(limKey) {
+	if s.lim.Blocked(limKey) {
 		writeErr(w, 429, "too_many_attempts", "trop de tentatives, réessayez dans quelques minutes")
 		return
 	}
 	if s.setupTokenHash == "" || subtle.ConstantTimeCompare([]byte(settings.HashToken(in.SetupToken)), []byte(s.setupTokenHash)) != 1 {
-		s.lim.fail(limKey)
+		s.lim.Fail(limKey)
 		writeErr(w, 401, "invalid_setup_token", "jeton d'initialisation invalide")
 		return
 	}
@@ -453,19 +400,19 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	ip := s.clientIP(r)
 	key := ip + "|" + strings.ToLower(in.Username)
-	if s.lim.blocked(key) || s.limIP.blocked(ip) {
+	if s.lim.Blocked(key) || s.limIP.Blocked(ip) {
 		writeErr(w, 429, "too_many_attempts", "trop de tentatives, réessayez dans quelques minutes")
 		return
 	}
 	u, err := s.accounts.Authenticate(r.Context(), accounts.LoginInput{Username: in.Username, Password: in.Password, IP: ip})
 	switch {
 	case errors.Is(err, accounts.ErrLocalLoginDisabled):
-		s.limIP.fail(ip) // SEC-09: ces refus comptent dans le plafond par IP (pas de remplissage illimité de l'audit)
+		s.limIP.Fail(ip) // SEC-09: ces refus comptent dans le plafond par IP (pas de remplissage illimité de l'audit)
 		writeErr(w, 403, "local_login_disabled", err.Error())
 		return
 	case errors.Is(err, accounts.ErrInvalidCredentials):
-		s.lim.fail(key)
-		s.limIP.fail(ip)
+		s.lim.Fail(key)
+		s.limIP.Fail(ip)
 		writeErr(w, 401, "invalid_credentials", err.Error())
 		return
 	case errors.Is(err, accounts.ErrLocalPasswordAdminsOnly):
@@ -476,7 +423,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, "internal", "erreur interne")
 		return
 	}
-	s.lim.reset(key)
+	s.lim.Reset(key)
 	csrf, err := s.startSession(w, r, u)
 	if err != nil {
 		writeErr(w, 500, "internal", "erreur interne")
@@ -493,7 +440,7 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie(cookieName); err == nil {
-		_ = s.st.DeleteSession(r.Context(), hashSession(c.Value))
+		_ = s.accounts.CloseSession(r.Context(), c.Value)
 	}
 	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: s.isHTTPS(r), SameSite: http.SameSiteStrictMode})
 	// Compte SSO: si le fournisseur sait fermer sa propre session, l'interface y est renvoyée (RP-Initiated Logout).

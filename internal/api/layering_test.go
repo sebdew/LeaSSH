@@ -34,12 +34,7 @@ func TestNoSQLInAPILayer(t *testing.T) {
 // tranches: ce « cliquet » plafonne, par fichier, le nombre d'appels directs (s.st.X, store.Fonction(…)). Un plafond ne
 // peut que baisser; un fichier absent de la table doit être à zéro. Quand une tranche est migrée, baisser le plafond.
 func TestHandlersCallServicesNotStore(t *testing.T) {
-	ceiling := map[string]int{
-		"api.go": 8, "handlers_access.go": 0, "handlers_auditreports.go": 9, "handlers_catalog.go": 0,
-		"handlers_dashboard.go": 8, "handlers_exec.go": 7, "handlers_infra.go": 0, "handlers_journal.go": 2, // store.FormatTime (formatage pur)
-		"handlers_oidc.go": 0, "handlers_packs.go": 8, "handlers_provisioning.go": 12, "handlers_settings.go": 1,
-		"handlers_syslog.go": 2, "handlers_users.go": 0, "helpers.go": 2, "routes.go": 1,
-	}
+	ceiling := map[string]int{"handlers_journal.go": 2} // store.FormatTime (formatage pur)
 	call := regexp.MustCompile(`\bs\.st\.[A-Z]|\bstore\.[A-Z]\w*\(`)
 	files, err := filepath.Glob("*.go")
 	if err != nil {

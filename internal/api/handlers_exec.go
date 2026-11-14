@@ -12,7 +12,7 @@ import (
 )
 
 func (s *Server) getExecution(w http.ResponseWriter, r *http.Request) {
-	e, err := store.ExecutionByID(r.Context(), s.st.DB, id(r))
+	e, err := s.journal.Execution(r.Context(), id(r))
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -64,7 +64,7 @@ func toDTO(p store.Proposal) proposalDTO {
 }
 
 func (s *Server) listProposals(w http.ResponseWriter, r *http.Request) {
-	items, err := store.ListProposals(r.Context(), s.st.DB, r.URL.Query().Get("status"))
+	items, err := s.props.List(r.Context(), r.URL.Query().Get("status"))
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -77,7 +77,7 @@ func (s *Server) listProposals(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getProposal(w http.ResponseWriter, r *http.Request) {
-	p, err := store.ProposalByID(r.Context(), s.st.DB, id(r))
+	p, err := s.props.Get(r.Context(), id(r))
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -91,7 +91,7 @@ func (s *Server) lintProposal(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	writeJSON(w, 200, map[string]any{"lint": s.props.Check(r.Context(), s.st.DB, in, ""), "placeholders": catalog.PlaceholderNames(in.Template)})
+	writeJSON(w, 200, map[string]any{"lint": s.props.CheckDraft(r.Context(), in), "placeholders": catalog.PlaceholderNames(in.Template)})
 }
 
 type approveProposalInput struct {

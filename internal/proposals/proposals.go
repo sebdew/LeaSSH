@@ -43,6 +43,21 @@ func New(st *store.Store) *Service {
 	return &Service{st: st, Notify: func(string, store.Proposal) {}}
 }
 
+// List renvoie les propositions (filtre de statut optionnel).
+func (s *Service) List(ctx context.Context, status string) ([]store.Proposal, error) {
+	return store.ListProposals(ctx, s.st.DB, status)
+}
+
+// Get renvoie une proposition.
+func (s *Service) Get(ctx context.Context, id string) (store.Proposal, error) {
+	return store.ProposalByID(ctx, s.st.DB, id)
+}
+
+// CheckDraft applique le linter strict à un brouillon (éditeur « Modifier puis approuver »).
+func (s *Service) CheckDraft(ctx context.Context, p Payload) catalog.LintResult {
+	return s.Check(ctx, s.st.DB, p, "")
+}
+
 // Check applique le linter en mode proposition + les contrôles propres aux propositions.
 func (s *Service) Check(ctx context.Context, q store.Q, p Payload, ignoreSlugOf string) catalog.LintResult {
 	res := catalog.Lint(p.Template, p.Params, p.Risk, catalog.ModeProposal)

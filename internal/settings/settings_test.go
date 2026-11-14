@@ -1,8 +1,14 @@
 package settings
 
 import (
+	"context"
+	"database/sql"
+	"errors"
 	"net/netip"
+	"strings"
 	"testing"
+
+	"github.com/leassh-dev/leassh/internal/store"
 )
 
 func TestParseProxies(t *testing.T) {
@@ -73,5 +79,67 @@ func TestValidate(t *testing.T) {
 		if v.Validate() == nil {
 			t.Errorf("%s: valeur refusée attendue", name)
 		}
+	}
+}
+
+func TestUpdateAppliesAuditsAndHashesToken(t *testing.T) {
+	ctx := context.Background()
+	st, err := store.Open(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { st.Close() })
+	var u store.User
+	if err := st.Tx(ctx, func(tx *sql.Tx) (err error) {
+		u, err = store.InsertUser(ctx, tx, store.User{Username: "adm", Role: "admin", PasswordHash: "x"})
+		return
+	}); err != nil {
+		t.Fatal(err)
+	}
+	svc, err := New(ctx, st, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := Values{BaseURL: "https://leassh.example.com", SessionTTLHours: 4, ApprovalTTLMin: 30, LogRetentionDays: 90, LogLevel: "debug"}
+
+	var inv *InvalidError
+	bad := base
+	bad.SessionTTLHours = 0
+	if _, err := svc.Update(ctx, u, "192.0.2.1", UpdateInput{Values: bad}); !errors.As(err, &inv) {
+		t.Fatalf("valeur invalide: %v", err)
+	}
+	if _, err := svc.Update(ctx, u, "", UpdateInput{Values: base, MetricsToken: strings.Repeat("x", 257)}); !errors.As(err, &inv) {
+		t.Fatalf("jeton trop long: %v", err)
+	}
+	if svc.Get().SessionTTLHours == 4 {
+		t.Fatal("un refus ne doit rien appliquer")
+	}
+
+	nv, err := svc.Update(ctx, u, "192.0.2.1", UpdateInput{Values: base, MetricsToken: "jeton-metrics"})
+	if err != nil || nv.MetricsTokenHash == "" || nv.MetricsTokenHash == "jeton-metrics" {
+		t.Fatalf("jeton haché: %+v %v", nv, err)
+	}
+	if svc.Get().SessionTTLHours != 4 || !svc.CheckMetricsToken("jeton-metrics") {
+		t.Fatal("les réglages doivent être appliqués à chaud")
+	}
+	// jeton conservé si non fourni, supprimé sur demande
+	if nv, _ = svc.Update(ctx, u, "", UpdateInput{Values: base}); nv.MetricsTokenHash == "" {
+		t.Fatal("le jeton doit être conservé")
+	}
+	if nv, _ = svc.Update(ctx, u, "", UpdateInput{Values: base, ClearMetricsToken: true}); nv.MetricsTokenHash != "" || svc.CheckMetricsToken("jeton-metrics") {
+		t.Fatal("le jeton doit être supprimé")
+	}
+	var diffs string
+	rows, _ := st.DB.Query(`SELECT diff FROM audit_events WHERE action = 'settings.update'`)
+	defer rows.Close()
+	n := 0
+	for rows.Next() {
+		var d string
+		_ = rows.Scan(&d)
+		diffs += d
+		n++
+	}
+	if n != 3 || strings.Contains(diffs, "jeton-metrics") {
+		t.Fatalf("audit: %d événements, jeton exposé=%v", n, strings.Contains(diffs, "jeton-metrics"))
 	}
 }

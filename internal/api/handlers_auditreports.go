@@ -1,24 +1,13 @@
 package api
 
 import (
-	"context"
-	"database/sql"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
-	"strings"
-	"time"
 
-	"github.com/leassh-dev/leassh/internal/audit"
 	"github.com/leassh-dev/leassh/internal/auditreport"
 	"github.com/leassh-dev/leassh/internal/store"
-)
-
-const (
-	auditTagLabel   = "audit-report"
-	maxReportDays   = 400
-	maxVerifyUpload = 32 << 20
 )
 
 type reportInput struct {
@@ -26,22 +15,36 @@ type reportInput struct {
 	To   string `json:"to"`
 }
 
-func parseDay(v string) (time.Time, error) {
-	t, err := time.Parse("2006-01-02", strings.TrimSpace(v))
-	if err != nil {
-		return t, bad("invalid_period", "dates attendues au format AAAA-MM-JJ")
+// reportErr traduit les erreurs métier des rapports d'audit en erreurs d'API.
+func reportErr(err error) error {
+	var (
+		pe *auditreport.PeriodError
+		iu *auditreport.InvalidURLError
+		fe *auditreport.InvalidFileError
+		ae *auditreport.AIError
+	)
+	switch {
+	case errors.As(err, &pe):
+		return bad("invalid_period", pe.Msg)
+	case errors.As(err, &iu):
+		return bad("invalid_url", iu.Msg)
+	case errors.As(err, &fe):
+		return bad("invalid_file", fe.Msg)
+	case errors.Is(err, auditreport.ErrAIIncomplete):
+		return bad("incomplete", err.Error())
+	case errors.Is(err, auditreport.ErrAIDisabled):
+		return &apiError{Status: 409, Code: "ai_disabled", Message: err.Error()}
+	case errors.As(err, &ae):
+		return &apiError{Status: 502, Code: "ai_error", Message: ae.Error()}
 	}
-	return t, nil
+	return err
 }
 
 func (s *Server) listAuditReports(w http.ResponseWriter, r *http.Request) {
-	items, err := store.ListAuditReports(r.Context(), s.st.DB)
+	items, err := s.auditrep.List(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return
-	}
-	if items == nil {
-		items = []store.AuditReportMeta{}
 	}
 	writeJSON(w, 200, map[string]any{"items": items})
 }
@@ -52,62 +55,16 @@ func (s *Server) createAuditReport(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	today := time.Now().UTC()
-	to := today
-	var err error
-	if strings.TrimSpace(in.To) != "" {
-		if to, err = parseDay(in.To); err != nil {
-			s.fail(w, err)
-			return
-		}
-	}
-	from := to.AddDate(0, 0, -29)
-	if strings.TrimSpace(in.From) != "" {
-		if from, err = parseDay(in.From); err != nil {
-			s.fail(w, err)
-			return
-		}
-	}
-	switch {
-	case from.After(to):
-		s.fail(w, bad("invalid_period", "la date de début doit précéder la date de fin"))
-		return
-	case to.After(today):
-		s.fail(w, bad("invalid_period", "la date de fin ne peut pas être dans le futur"))
-		return
-	case to.Sub(from) > maxReportDays*24*time.Hour:
-		s.fail(w, bad("invalid_period", fmt.Sprintf("période limitée à %d jours", maxReportDays)))
+	meta, err := s.auditrep.Generate(r.Context(), currentUser(r), s.clientIP(r), in.From, in.To)
+	if err != nil {
+		s.fail(w, reportErr(err))
 		return
 	}
-	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-		snap, err := auditreport.Build(ctx, tx, auditreport.Params{Now: time.Now(), From: from, To: to, LeasshVersion: s.version,
-			RetentionDays: s.set.RetentionDays(), ApprovalTTL: s.set.ApprovalTTL(), SessionTTL: s.set.SessionTTL(), BaseURL: s.set.BaseURL()})
-		if err != nil {
-			return outcome{}, err
-		}
-		raw, err := auditreport.Marshal(snap)
-		if err != nil {
-			return outcome{}, err
-		}
-		h, m, l := auditreport.Counts(snap.Findings)
-		rep := store.AuditReport{CreatedBy: u.ID, CreatedByName: u.Username, PeriodFrom: snap.Period.From, PeriodTo: snap.Period.To, LeasshVersion: s.version,
-			SchemaVersion: snap.SchemaVersion, SHA256: auditreport.Digest(raw), Snapshot: string(raw), High: h, Medium: m, Low: l}
-		if rep, err = store.InsertAuditReport(ctx, tx, rep); err != nil {
-			return outcome{}, err
-		}
-		rep.HMAC = auditreport.Tag(s.box.Derive(auditTagLabel), rep.SHA256, rep.ID, rep.CreatedAt)
-		if err = store.SetAuditReportHMAC(ctx, tx, rep.ID, rep.HMAC); err != nil {
-			return outcome{}, err
-		}
-		meta := store.AuditReportMeta{AuditReport: rep}
-		return outcome{201, meta, &audit.Event{Action: "audit_report.generate", TargetType: "audit_report", TargetID: rep.ID, TargetName: rep.PeriodFrom + " → " + rep.PeriodTo,
-			Diff: map[string]any{"after": map[string]any{"period_from": rep.PeriodFrom, "period_to": rep.PeriodTo, "sha256": rep.SHA256, "findings_high": h, "findings_medium": m, "findings_low": l,
-				"integrity_ok": snap.Integrity.Executions.Verified.OK && snap.Integrity.Admin.Verified.OK}}}}, nil
-	})
+	writeJSON(w, 201, meta)
 }
 
 func (s *Server) loadReport(w http.ResponseWriter, r *http.Request) (store.AuditReport, bool) {
-	rep, err := store.AuditReportByID(r.Context(), s.st.DB, id(r))
+	rep, err := s.auditrep.Get(r.Context(), id(r))
 	if err != nil {
 		s.fail(w, err)
 		return rep, false
@@ -124,14 +81,6 @@ func (s *Server) getAuditReport(w http.ResponseWriter, r *http.Request) {
 		"snapshot": json.RawMessage(rep.Snapshot), "summary": rep.Summary})
 }
 
-func reportFileName(rep store.AuditReport, ext string) string {
-	id := rep.ID
-	if len(id) > 8 {
-		id = id[len(id)-8:]
-	}
-	return fmt.Sprintf("leassh-audit-%s_%s-%s.%s", rep.PeriodFrom, rep.PeriodTo, strings.ToLower(id), ext)
-}
-
 func (s *Server) htmlAuditReport(w http.ResponseWriter, r *http.Request) {
 	rep, ok := s.loadReport(w, r)
 	if !ok {
@@ -144,7 +93,7 @@ func (s *Server) htmlAuditReport(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if r.URL.Query().Get("download") == "1" {
-		w.Header().Set("Content-Disposition", `attachment; filename="`+reportFileName(rep, "html")+`"`)
+		w.Header().Set("Content-Disposition", `attachment; filename="`+auditreport.FileName(rep, "html")+`"`)
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write(page) //nolint:gosec // page produite par html/template (échappement automatique)
@@ -161,21 +110,21 @@ func (s *Server) jsonAuditReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Content-Disposition", `attachment; filename="`+reportFileName(rep, "json")+`"`)
+	w.Header().Set("Content-Disposition", `attachment; filename="`+auditreport.FileName(rep, "json")+`"`)
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write(out)
 }
 
 // verifyAuditReport contrôle un fichier JSON exporté (corps brut de la requête).
 func (s *Server) verifyAuditReport(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxVerifyUpload))
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, auditreport.MaxVerifyUpload))
 	if err != nil {
 		s.fail(w, bad("too_large", "fichier illisible ou trop volumineux"))
 		return
 	}
-	res, err := auditreport.Verify(body, s.box.Derive(auditTagLabel))
+	res, err := s.auditrep.Verify(body)
 	if err != nil {
-		s.fail(w, bad("invalid_file", err.Error()))
+		s.fail(w, reportErr(err))
 		return
 	}
 	writeJSON(w, 200, res)
@@ -183,25 +132,6 @@ func (s *Server) verifyAuditReport(w http.ResponseWriter, r *http.Request) {
 
 // summarizeAuditReport demande à l'IA configurée une synthèse rédigée à partir des seuls agrégats de l'instantané.
 func (s *Server) summarizeAuditReport(w http.ResponseWriter, r *http.Request) {
-	rep, ok := s.loadReport(w, r)
-	if !ok {
-		return
-	}
-	cfg, key, err := auditreport.LoadAIConfig(r.Context(), s.st.DB, s.box)
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	cfg, key = s.aiDefaults.Apply(cfg, key)
-	if !cfg.Enabled {
-		s.fail(w, &apiError{Status: 409, Code: "ai_disabled", Message: "la synthèse IA est désactivée: activez-la d'abord dans les réglages de l'audit"})
-		return
-	}
-	var snap auditreport.Snapshot
-	if err := json.Unmarshal([]byte(rep.Snapshot), &snap); err != nil {
-		s.fail(w, err)
-		return
-	}
 	lang := "fr"
 	if wantsEnglish(r) {
 		lang = "en"
@@ -215,27 +145,20 @@ func (s *Server) summarizeAuditReport(w http.ResponseWriter, r *http.Request) {
 	if in.Lang == "en" || in.Lang == "fr" {
 		lang = in.Lang
 	}
-	text, model, err := auditreport.Summarize(r.Context(), cfg, key, auditreport.BuildAIInput(snap), lang, auditreport.WithTransport(s.metrics.Transport("ai", nil))) // appel réseau hors transaction
+	text, model, err := s.auditrep.Summarize(r.Context(), currentUser(r), s.clientIP(r), id(r), lang)
 	if err != nil {
-		s.fail(w, &apiError{Status: 502, Code: "ai_error", Message: err.Error()})
+		s.fail(w, reportErr(err))
 		return
 	}
-	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-		if err := store.SetAuditReportSummary(ctx, tx, rep.ID, text, model); err != nil {
-			return outcome{}, err
-		}
-		return outcome{200, map[string]any{"summary": text, "model": model}, &audit.Event{Action: "audit_report.summary", TargetType: "audit_report", TargetID: rep.ID, TargetName: rep.PeriodFrom + " → " + rep.PeriodTo,
-			Diff: map[string]any{"after": map[string]any{"model": model, "ai_endpoint": cfg.URL, "had_summary": rep.Summary != ""}}}}, nil
-	})
+	writeJSON(w, 200, map[string]any{"summary": text, "model": model})
 }
 
 func (s *Server) getAuditAI(w http.ResponseWriter, r *http.Request) {
-	cfg, key, err := auditreport.LoadAIConfig(r.Context(), s.st.DB, s.box)
+	cfg, err := s.auditrep.AIConfig(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	cfg, _ = s.aiDefaults.Apply(cfg, key) // la clé elle-même n'est jamais renvoyée, seulement has_key
 	writeJSON(w, 200, map[string]any{"config": cfg})
 }
 
@@ -251,28 +174,10 @@ func (s *Server) putAuditAI(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	in.URL, in.Model, in.APIKey = strings.TrimSpace(in.URL), strings.TrimSpace(in.Model), strings.TrimSpace(in.APIKey)
-	if in.URL != "" {
-		if err := auditreport.ValidateAIURL(in.URL); err != nil {
-			s.fail(w, bad("invalid_url", err.Error()))
-			return
-		}
+	cfg, err := s.auditrep.UpdateAI(r.Context(), currentUser(r), s.clientIP(r), auditreport.AIUpdate{Enabled: in.Enabled, URL: in.URL, Model: in.Model, APIKey: in.APIKey})
+	if err != nil {
+		s.fail(w, reportErr(err))
+		return
 	}
-	s.mutate(w, r, func(ctx context.Context, tx *sql.Tx, u store.User) (outcome, error) {
-		old, _, err := auditreport.LoadAIConfig(ctx, tx, s.box)
-		if err != nil {
-			return outcome{}, err
-		}
-		if in.Enabled && (in.URL == "" || in.Model == "") {
-			return outcome{}, bad("incomplete", "une URL et un modèle sont requis pour activer la synthèse IA")
-		}
-		cfg := auditreport.AIConfig{Enabled: in.Enabled, URL: in.URL, Model: in.Model}
-		if err := auditreport.SaveAIConfig(ctx, tx, s.box, cfg, in.APIKey); err != nil {
-			return outcome{}, err
-		}
-		cfg.HasKey = old.HasKey || in.APIKey != ""
-		return outcome{200, map[string]any{"config": cfg}, &audit.Event{Action: "audit_ai.update", TargetType: "audit_ai", TargetName: in.URL,
-			Diff: map[string]any{"before": map[string]any{"enabled": old.Enabled, "url": old.URL, "model": old.Model},
-				"after": map[string]any{"enabled": in.Enabled, "url": in.URL, "model": in.Model, "api_key_changed": in.APIKey != ""}}}}, nil
-	})
+	writeJSON(w, 200, map[string]any{"config": cfg})
 }
