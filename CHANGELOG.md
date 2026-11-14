@@ -1,10 +1,11 @@
 # Journal des modifications
 
-Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage : [SemVer](https://semver.org/lang/fr/). Chaque entrée cite le ticket Gitea quand il existe (`sebastien/Leassh#N`).
+Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage : [SemVer](https://semver.org/lang/fr/). Chaque entrée cite le ticket GitHub quand il existe (`sebdew/LeaSSH#N`, numéros conservés lors de la migration depuis Gitea).
 
 ## [Non publié]
 
 ### Modifié
+- Dépôt migré de Gitea vers GitHub (`sebdew/LeaSSH`), chemin du module Go aligné (`github.com/sebdew/LeaSSH`) : CI dans `.github/workflows/`, image publiée sur `ghcr.io/sebdew/leassh`, liens et documentation mis à jour ; tickets et merge requests conservent leur numéro.
 - Documentation utilisateur migrée du wiki vers `docs/fr/` et `docs/en/` (captures dans `docs/images/`), architecture et exploitation sans copie ; le wiki peut être désactivé (#65).
 
 ### Ajouté
@@ -26,7 +27,7 @@ Première version étiquetée. Elle regroupe le socle (jalons M1 à M8 de `CLAUD
 - Rapport d'audit ISO 27001 / HDS avec synthèse IA facultative.
 - SSO OpenID Connect, interface bilingue français/anglais, thèmes clair et sombre.
 - Image Docker multi-architecture (distroless, non-root), `/health` et `/metrics`.
-- Intégration continue Gitea Actions : lint, tests, sshd réel, Playwright, gitleaks, Trivy, govulncheck, `npm audit` (#3, #9).
+- Intégration continue GitHub Actions : lint, tests, sshd réel, Playwright, gitleaks, Trivy, govulncheck, `npm audit` (#3, #9).
 - Documentation OpenAPI de l'API d'administration (#7).
 - ADR 0001 à 0003 (#1, #2, #7).
 
@@ -46,5 +47,5 @@ Première version étiquetée. Elle regroupe le socle (jalons M1 à M8 de `CLAUD
 - Mise à jour de Go vers 1.26.11 (GO-2026-6859) (#3, #35).
 - Déconnexion SSO sans réaffichage de la page de connexion (#26) ; comptage des refus au tableau de bord (#23) ; décisions sur sorties non fiables et URL sortantes documentées (#10).
 
-[Non publié]: https://gitea.dewarlez.fr/sebastien/Leassh/compare/v0.1.0...main
-[0.1.0]: https://gitea.dewarlez.fr/sebastien/Leassh/releases/tag/v0.1.0
+[Non publié]: https://github.com/sebdew/LeaSSH/compare/v0.1.0...main
+[0.1.0]: https://github.com/sebdew/LeaSSH/releases/tag/v0.1.0

@@ -33,7 +33,7 @@ Leassh est un serveur **MCP** open source qui donne à des agents d'IA un accès
 3. Parcourez le [manuel](manuel-utilisateur.md) selon vos besoins.
 4. Avant la mise en production : [sécurité](securite.md) et [exploitation](../exploitation.md).
 
-Code source et tickets : [dépôt Gitea](https://gitea.dewarlez.fr/sebastien/Leassh). Licence Apache 2.0.
+Code source et tickets : [dépôt GitHub](https://github.com/sebdew/LeaSSH). Licence Apache 2.0.
 
 ## Toutes les pages
 

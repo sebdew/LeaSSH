@@ -34,7 +34,7 @@ docker run -d --name leassh --restart unless-stopped \
   -p 127.0.0.1:8080:8080 \
   -v leassh-data:/data \
   -e LEASSH_MASTER_KEY \
-  gitea.dewarlez.fr/sebastien/leassh:latest
+  ghcr.io/sebdew/leassh:latest
 ```
 
 L'image est basée sur distroless, tourne en utilisateur non-root (65532) et expose le port 8080. Le port n'est publié que sur `127.0.0.1` : l'accès public passe par le reverse proxy.
@@ -51,7 +51,7 @@ LEASSH_SETUP_TOKEN=<sortie de openssl rand -base64 24>
 ```yaml
 services:
   leassh:
-    image: gitea.dewarlez.fr/sebastien/leassh:latest
+    image: ghcr.io/sebdew/leassh:latest
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:8080"

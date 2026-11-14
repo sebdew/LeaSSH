@@ -4,9 +4,9 @@ Note d'investigation du ticket #10. Source : `docs/revues/2026-11-07-revue.md`. 
 
 | Question | Décision |
 |---|---|
-| SEC-07 · injection de prompt par une sortie de commande | **Risque retenu** → ticket [#36](https://gitea.dewarlez.fr/sebastien/Leassh/issues/36) |
+| SEC-07 · injection de prompt par une sortie de commande | **Risque retenu** → ticket [#36](https://github.com/sebdew/LeaSSH/issues/36) |
 | SEC-08 · webhook, IA, bastion vers des adresses privées | **Accepté** : les adresses privées sont le cas d'usage de l'outil, décision assumée par l'[ADR 0006](adr/0006-adresses-privees-urls-sortantes.md) |
-| SEC-08 · test OIDC qui renvoie le corps d'une réponse distante | **Démontré** → ticket [#35](https://gitea.dewarlez.fr/sebastien/Leassh/issues/35) |
+| SEC-08 · test OIDC qui renvoie le corps d'une réponse distante | **Démontré** → ticket [#35](https://github.com/sebdew/LeaSSH/issues/35) |
 
 ## 1. SEC-07 : la sortie des commandes est renvoyée à l'agent
 

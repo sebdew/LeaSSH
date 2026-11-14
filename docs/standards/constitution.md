@@ -26,9 +26,9 @@ Un projet qui monte de niveau doit d'abord remplir les règles du nouveau niveau
   - chaque projet a sa propre clé, limitée aux modèles dont il a besoin.
 
   Changer de proxy ou de modèle ne demande ainsi qu'une modification du fichier `.env`.
-- [N1] **Code source** : Gitea, un dépôt par projet, créé à partir du dépôt modèle.
+- [N1] **Code source** : GitHub, un dépôt par projet, créé à partir du dépôt modèle.
 - [N2] **Supervision** : l'application expose `/health` et `/metrics` (format Prometheus), lisibles par Zabbix et Grafana. Pas d'outil de supervision embarqué.
-- [N2] **Images** : les images Docker sont publiées dans le registre de conteneurs de Gitea.
+- [N2] **Images** : les images Docker sont publiées dans le registre de conteneurs de GitHub (`ghcr.io`).
 
 ## Principe 2 — Réutiliser plutôt que réinventer
 
@@ -128,7 +128,7 @@ Les noms des sous-dossiers peuvent suivre les conventions du framework choisi, �
 
 ## Principe 10 — Traçabilité
 
-- [N2] Chaque modification part d'un ticket Gitea, se fait sur une branche dédiée (`feat/12-nom-court`, `fix/15-nom-court`) et arrive dans `main` par une merge request.
+- [N2] Chaque modification part d'un ticket GitHub, se fait sur une branche dédiée (`feat/12-nom-court`, `fix/15-nom-court`) et arrive dans `main` par une merge request.
 - [N2] Les messages de commit suivent Conventional Commits et citent le ticket : `feat: ajoute l'export CSV (#12)`.
 - [N2] Une revue de code par un agent passe sur la merge request, puis je relis le diff avant de fusionner.
 - [N2] Chaque version livrée porte un tag SemVer (`v1.2.0`) et une entrée dans `CHANGELOG.md`.

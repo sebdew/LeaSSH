@@ -4,7 +4,7 @@ Règles de la [constitution](docs/standards/constitution.md) (principe 10) et de
 
 ## Flux de travail
 
-1. **Un ticket Gitea** décrit le besoin (constat, critère de clôture).
+1. **Un ticket GitHub** décrit le besoin (constat, critère de clôture).
 2. **Une branche dédiée** depuis `main` à jour : `feat/12-nom-court`, `fix/15-nom-court`, `docs/11-nom-court`.
 3. **Le test d'abord** : pour un bug, un test qui reproduit le défaut et échoue ; pour une fonction, sa spécification dans `docs/specs/<nom>/` (`spec.md`, `plan.md`, `tasks.md`) avant le code. Les tests restent à côté du code qu'ils testent et ne sont jamais livrés dans le binaire ([ADR 0007](docs/adr/0007-tests-a-cote-du-code.md)).
 4. **Réutiliser plutôt que réinventer** (principe 2) : socle, bibliothèque standard, dépendance déjà présente, librairie reconnue, et seulement ensuite du code maison. Toute dépendance nouvelle est justifiée dans le plan.

@@ -7,7 +7,7 @@ English translation of [`docs/exploitation.md`](../exploitation.md), the French 
 ## Updating
 
 1. **Back up** (below): database migrations apply by themselves at start and are **one-way**.
-2. `docker pull gitea.dewarlez.fr/sebastien/leassh:<version>` then recreate the container (`docker compose up -d`), or replace the binary and restart the service.
+2. `docker pull ghcr.io/sebdew/leassh:<version>` then recreate the container (`docker compose up -d`), or replace the binary and restart the service.
 3. Check `GET /health`, the "leassh démarré" log line and `leassh version`.
 4. **Settings → General → Verify integrity**.
 
@@ -104,7 +104,7 @@ Useful alerts: `leassh_servers{host_key_status="mismatch"} > 0`; `leassh_pending
 
 ## Docker images
 
-The `Dockerfile` pins Node 24 LTS, Go and distroless by `@sha256:` digest. To update them: `docker buildx imagetools inspect <image>:<tag>`, replace the digest, rebuild and test. Publishing: `docker login gitea.dewarlez.fr` then `docker buildx build --platform linux/amd64,linux/arm64 -t gitea.dewarlez.fr/sebastien/leassh:<version> --push .`
+The `Dockerfile` pins Node 24 LTS, Go and distroless by `@sha256:` digest. To update them: `docker buildx imagetools inspect <image>:<tag>`, replace the digest, rebuild and test. Publishing: `echo $GHCR_TOKEN | docker login ghcr.io -u sebdew --password-stdin` then `docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/sebdew/leassh:<version> --push .`
 
 ## Sending logs to Wazuh (syslog)
 
