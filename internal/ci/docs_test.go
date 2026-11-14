@@ -32,10 +32,10 @@ func TestREADMEDeclareLeNiveauEtRenvoieVersLesStandards(t *testing.T) { // DOC-0
 	}
 }
 
-func TestREADMERenvoieVersLeWikiEtOffreUneVersionAnglaise(t *testing.T) {
+func TestREADMERenvoieVersLaDocumentationEtOffreUneVersionAnglaise(t *testing.T) {
 	readme := lire(t, "README.md")
-	if !strings.Contains(readme, "/wiki") {
-		t.Error("le README doit renvoyer vers le wiki du dépôt")
+	if !strings.Contains(readme, "docs/fr/") || !strings.Contains(readme, "docs/en/") {
+		t.Error("le README doit renvoyer vers docs/fr/ et docs/en/")
 	}
 	if !strings.Contains(readme, "README.en.md") {
 		t.Error("le README doit proposer la version anglaise")
@@ -123,7 +123,7 @@ func TestLiensRelatifsValides(t *testing.T) {
 	lien := regexp.MustCompile(`\]\(([^)#\s]+)(#[^)]*)?\)`)
 	fichiers := []string{"README.md", "README.en.md", "CHANGELOG.md", "CONTRIBUTING.md", "CLAUDE.md",
 		"docs/architecture.md", "docs/exploitation.md", "docs/README.md", "docs/specs/README.md", "docs/specs/SPEC.md"}
-	for _, motif := range []string{"docs/adr/*.md", "docs/specs/*/*.md"} {
+	for _, motif := range []string{"docs/adr/*.md", "docs/specs/*/*.md", "docs/fr/*.md", "docs/en/*.md"} {
 		m, _ := filepath.Glob(filepath.Join(racine, motif))
 		for _, p := range m {
 			r, _ := filepath.Rel(racine, p)
@@ -143,17 +143,17 @@ func TestLiensRelatifsValides(t *testing.T) {
 	}
 }
 
-// DOC : le README du dossier docs explique la structure du dépôt et renvoie vers le wiki.
+// DOC : le README du dossier docs explique la structure du dépôt et renvoie vers la documentation utilisateur.
 func TestREADMEDocsExpliqueLaStructure(t *testing.T) {
 	d := lire(t, "docs/README.md")
-	for _, mot := range []string{"Structure du dépôt", "Repository layout", "/wiki", "specs/SPEC.md", "adr/"} {
+	for _, mot := range []string{"Structure du dépôt", "Repository layout", "fr/README.md", "en/README.md", "specs/SPEC.md", "adr/"} {
 		if !strings.Contains(d, mot) {
 			t.Errorf("docs/README.md doit contenir : %s", mot)
 		}
 	}
 	for _, f := range []string{"docs/INSTALL.md", "specs/README.md"} {
 		if _, err := os.Stat(filepath.Join(racine, f)); err == nil && f == "docs/INSTALL.md" {
-			t.Errorf("%s est obsolète (migré vers le wiki)", f)
+			t.Errorf("%s est obsolète (migré vers docs/fr et docs/en)", f)
 		}
 	}
 }
@@ -172,68 +172,24 @@ func TestReferencesDocumentairesAJour(t *testing.T) {
 	}
 }
 
-// dossierWiki renvoie le clone local du wiki (LEASSH_WIKI_DIR ou ../leassh-wiki) ou saute le test.
-func dossierWiki(t *testing.T) string {
-	t.Helper()
-	d := os.Getenv("LEASSH_WIKI_DIR")
-	if d == "" {
-		d = filepath.Join(racine, "..", "leassh-wiki")
-	}
-	if _, err := os.Stat(filepath.Join(d, "FR-Architecture.md")); err != nil {
-		t.Skip("wiki absent (définir LEASSH_WIKI_DIR pour le contrôler)")
-	}
-	return d
-}
-
-func pagesWiki(t *testing.T, d string) map[string]string {
-	t.Helper()
-	fichiers, _ := filepath.Glob(filepath.Join(d, "*.md"))
-	pages := map[string]string{}
-	for _, f := range fichiers {
-		b, err := os.ReadFile(f)
-		if err != nil {
-			t.Fatal(err)
-		}
-		pages[filepath.Base(f)] = string(b)
-	}
-	return pages
-}
-
-// DOC-11, DOC-12, DOC-15 : le wiki ne contient ni commande inexécutable, ni URL factice, ni adresse privée.
-func TestWikiSansCommandesInexecutablesNiAdressePrivee(t *testing.T) {
+// DOC-11, DOC-12, DOC-15 : la documentation utilisateur ne contient ni commande inexécutable, ni URL factice, ni adresse privée.
+func TestDocsUtilisateurSansCommandesInexecutablesNiAdressePrivee(t *testing.T) {
 	interdits := map[string]*regexp.Regexp{
 		"docker exec … leassh <sous-commande> (l'exécutable de l'image est /leassh, hors PATH)": regexp.MustCompile(`docker exec\b[^\n]*?\bleassh leassh `),
 		"URL de binaire factice (aucune release publiée)":                                       regexp.MustCompile(`https://…/`),
 		"adresse du réseau local (utiliser 192.0.2.0/24)":                                       regexp.MustCompile(`\b(192\.168|10\.\d+|172\.(1[6-9]|2\d|3[01]))\.\d+\.\d+`),
 	}
-	for nom, page := range pagesWiki(t, dossierWiki(t)) {
-		for motif, re := range interdits {
-			if re.MatchString(page) {
-				t.Errorf("%s : %s", nom, motif)
+	for _, motif := range []string{"docs/fr/*.md", "docs/en/*.md", "docs/exploitation.md"} {
+		m, _ := filepath.Glob(filepath.Join(racine, motif))
+		for _, p := range m {
+			r, _ := filepath.Rel(racine, p)
+			page := lire(t, r)
+			for nom, re := range interdits {
+				if re.MatchString(page) {
+					t.Errorf("%s : %s", r, nom)
+				}
 			}
 		}
-	}
-}
-
-// DOC-14 : docs/architecture.md et la page du wiki restent identiques (liens relatifs mis à part).
-func TestArchitectureWikiIdentiqueADocs(t *testing.T) {
-	d := dossierWiki(t)
-	corps := func(s string) string {
-		if i := strings.Index(s, "\n## "); i >= 0 {
-			s = s[i:]
-		}
-		if i := strings.LastIndex(s, "\n---\n"); i >= 0 { // pied de navigation du wiki
-			s = s[:i]
-		}
-		return strings.TrimSpace(s)
-	}
-	wiki, err := os.ReadFile(filepath.Join(d, "FR-Architecture.md"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	w := strings.ReplaceAll(string(wiki), "https://gitea.dewarlez.fr/sebastien/Leassh/src/branch/main/docs/", "")
-	if corps(w) != corps(lire(t, "docs/architecture.md")) {
-		t.Error("docs/architecture.md et FR-Architecture.md (wiki) divergent : resynchroniser la copie")
 	}
 }
 

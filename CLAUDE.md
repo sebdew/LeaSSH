@@ -2,7 +2,7 @@
 
 Projet : **Leassh**, serveur MCP open source qui donne à des agents IA un accès SSH limité à un catalogue de commandes validées.
 Niveau du projet : **N3** (voir `docs/standards/constitution.md` et `CONTRIBUTING.md`).
-Lire d'abord : `README.md`, `docs/specs/SPEC.md` (fonctionnel, référence), `docs/specs/UX.md` (interface), `docs/architecture.md`. La documentation utilisateur vit dans le **wiki** du dépôt (français et anglais).
+Lire d'abord : `README.md`, `docs/specs/SPEC.md` (fonctionnel, référence), `docs/specs/UX.md` (interface), `docs/architecture.md`. La documentation utilisateur vit dans `docs/fr/` et `docs/en/` (français et anglais, captures dans `docs/images/`).
 
 ## Stack
 

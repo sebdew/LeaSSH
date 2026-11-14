@@ -1,6 +1,8 @@
+**Français** · [English](en/architecture.md)
+
 # Architecture de Leassh
 
-Version détaillée et illustrée : [wiki, page Architecture](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Architecture). Ce fichier est la référence versionnée avec le code (constitution, principe 11) ; il est mis à jour dans la même merge request que le code qu'il décrit.
+Ce fichier est la référence versionnée avec le code (constitution, principe 11) ; il est mis à jour dans la même merge request que le code qu'il décrit.
 
 ## Composants
 

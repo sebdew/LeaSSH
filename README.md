@@ -5,7 +5,7 @@
 
 **Niveau : N3** (exposé ou destiné à l'entreprise) — règles de la [constitution](docs/standards/constitution.md) et de la [checklist de revue](docs/standards/checklist-revue.md) dans [`docs/standards/`](docs/standards/). · [English version](README.en.md)
 
-![Tableau de bord de Leassh](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/raw/images/fr/01-dashboard.png)
+![Tableau de bord de Leassh](docs/images/fr/01-dashboard.png)
 
 ## Présentation
 
@@ -59,17 +59,17 @@ Ouvrez l'URL, créez le compte administrateur avec le jeton d'initialisation, pu
 
 > **Conservez `LEASSH_MASTER_KEY`** (hors de la sauvegarde de la base) : elle chiffre les clés privées SSH. Sans elle, ces secrets sont irrécupérables.
 
-## Documentation complète : le wiki
+## Documentation
 
-Toute la documentation est dans le **[wiki du projet](https://gitea.dewarlez.fr/sebastien/Leassh/wiki)**, en français et en anglais (sélecteur de langue en haut de chaque page) :
+La documentation complète est dans le dossier [`docs/`](docs/README.md), en français ([`docs/fr/`](docs/fr/README.md)) et en anglais ([`docs/en/`](docs/en/README.md)) :
 
 | | |
 |---|---|
-| [Présentation et concepts](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Presentation) | [Installation détaillée](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Installation) |
-| [Premiers pas](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Premiers-pas) | [Manuel utilisateur, écran par écran](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Manuel-utilisateur) |
-| [Agents et outils MCP](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Agents-MCP) | [Sécurité](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Securite) |
-| [SSO (Keycloak pas à pas)](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-SSO) | [Exploitation : sauvegarde, mise à jour, supervision](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Exploitation) |
-| [Architecture](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Architecture) | [Référence de l'API](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-API) |
+| [Présentation et concepts](docs/fr/presentation.md) | [Installation détaillée](docs/fr/installation.md) |
+| [Premiers pas](docs/fr/premiers-pas.md) | [Manuel utilisateur, écran par écran](docs/fr/manuel-utilisateur.md) |
+| [Agents et outils MCP](docs/fr/agents-mcp.md) | [Sécurité](docs/fr/securite.md) |
+| [SSO (Keycloak pas à pas)](docs/fr/sso.md) | [Exploitation : sauvegarde, mise à jour, supervision](docs/exploitation.md) |
+| [Architecture](docs/architecture.md) | [Référence de l'API](docs/fr/api.md) |
 
 ## Connecter un agent
 
@@ -87,7 +87,7 @@ Endpoint MCP en HTTP streamable `https://leassh.example.com/mcp`, authentifié p
 }
 ```
 
-Cinq outils : `list_servers`, `list_commands`, `run_command`, `get_execution`, `propose_command` ([détail](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Agents-MCP)).
+Cinq outils : `list_servers`, `list_commands`, `run_command`, `get_execution`, `propose_command` ([détail](docs/fr/agents-mcp.md)).
 
 ## Sécurité en bref
 
@@ -97,7 +97,7 @@ Cinq outils : `list_servers`, `list_commands`, `run_command`, `get_execution`, `
 - Secrets chiffrés au repos (AES-256-GCM), jamais journalisés ; mots de passe en argon2id.
 - Clés d'hôte épinglées ; toute divergence bloque le serveur.
 
-Voir [Sécurité](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/FR-Securite) et [`docs/specs/SPEC.md`](docs/specs/SPEC.md).
+Voir [Sécurité](docs/fr/securite.md) et [`docs/specs/SPEC.md`](docs/specs/SPEC.md).
 
 ## Développement
 

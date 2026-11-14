@@ -2,7 +2,7 @@
 
 **Français** · [English](#english)
 
-La documentation **utilisateur** (installation, manuel écran par écran, SSO, exploitation, dépannage) est dans le **[wiki](https://gitea.dewarlez.fr/sebastien/Leassh/wiki)**, en français et en anglais. Ce dossier `docs/` contient ce qui doit évoluer **avec le code** et être relu en merge request.
+La documentation **utilisateur** (installation, manuel écran par écran, SSO, exploitation, dépannage) est dans ce dossier : **[français](fr/README.md)** ou **[English](en/README.md)**. Tout évolue **avec le code** et se relit en merge request.
 
 ## Structure du dépôt
 
@@ -35,6 +35,7 @@ La documentation **utilisateur** (installation, manuel écran par écran, SSO, e
 
 | Chemin | Rôle |
 |---|---|
+| [`fr/`](fr/README.md), [`en/`](en/README.md), `images/` | Documentation utilisateur bilingue : installation, manuel écran par écran, SSO, sécurité, API, dépannage, captures d'écran |
 | [`specs/SPEC.md`](specs/SPEC.md) | Cahier des charges fonctionnel et technique, **référence normative** |
 | [`specs/UX.md`](specs/UX.md) | Guide UX/UI et design system (tokens de couleur) |
 | [`specs/<fonctionnalité>/`](specs/README.md) | Une spécification par fonctionnalité : `spec.md`, `plan.md`, `tasks.md` (SSO, rapport d'audit, provisioning) |
@@ -49,14 +50,14 @@ La documentation **utilisateur** (installation, manuel écran par écran, SSO, e
 
 ## Où maintenir quoi ?
 
-- **Une seule source par information.** Le wiki ne répète pas ce dossier : ses pages Architecture et Exploitation en sont des copies à régénérer, jamais à éditer à la main.
-- Un changement de comportement met à jour **dans la même merge request** : le code, `specs/SPEC.md`, l'ADR ou l'architecture concernés, `CHANGELOG.md`, et la page du wiki si l'usage change.
+- **Une seule source par information.** Architecture et exploitation ne vivent que dans `architecture.md` et `exploitation.md` ; les pages `fr/` et `en/` y renvoient au lieu de les copier.
+- Un changement de comportement met à jour **dans la même merge request** : le code, `specs/SPEC.md`, l'ADR ou l'architecture concernés, `CHANGELOG.md`, et les pages `fr/` et `en/` si l'usage change.
 
 <a id="english"></a>
 
 ## English
 
-**User** documentation (installation, screen-by-screen manual, SSO, operations, troubleshooting) lives in the **[wiki](https://gitea.dewarlez.fr/sebastien/Leassh/wiki/EN-Home)**, in French and English. This `docs/` folder holds what must evolve **with the code** and be reviewed in merge requests.
+**User** documentation (installation, screen-by-screen manual, SSO, operations, troubleshooting) lives in this folder: **[English](en/README.md)** or **[français](fr/README.md)**. Everything evolves **with the code** and is reviewed in merge requests.
 
 ### Repository layout
 
@@ -89,5 +90,5 @@ La documentation **utilisateur** (installation, manuel écran par écran, SSO, e
 
 ### Where to maintain what
 
-- **One source per piece of information.** The wiki does not repeat this folder: its Architecture and Operations pages are copies to regenerate, never to edit by hand.
-- A behaviour change updates **in the same merge request**: the code, `specs/SPEC.md`, the relevant ADR or architecture file, `CHANGELOG.md`, and the wiki page if usage changes.
+- **One source per piece of information.** The French architecture and operations guides live only in `architecture.md` and `exploitation.md`; the pages in `fr/` and `en/` link to them instead of copying them.
+- A behaviour change updates **in the same merge request**: the code, `specs/SPEC.md`, the relevant ADR or architecture file, `CHANGELOG.md`, and the `fr/` and `en/` pages if usage changes.

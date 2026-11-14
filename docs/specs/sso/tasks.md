@@ -9,5 +9,5 @@
 - [x] SSO obligatoire et commande `enable-local-login` (ticket #1)
 - [x] Remplacement du code maison par `go-oidc` et `x/oauth2` (ticket #2)
 - [x] Audit : `oidc.update`, `oidc.test`, `user.sso_login`, `user.sso_login_failed`
-- [x] Guide Keycloak pas à pas (wiki)
+- [x] Guide Keycloak pas à pas (`docs/fr/sso.md`)
 - [ ] Plusieurs fournisseurs, SCIM (hors périmètre actuel)
