@@ -227,3 +227,13 @@ func TestADRTestsACoteDuCode(t *testing.T) {
 		t.Error("CONTRIBUTING.md doit renvoyer vers l'ADR sur l'emplacement des tests")
 	}
 }
+
+// DOC-05 (#52) : la revue par agent est consignée en commentaire de merge request ; l'approbation et la fusion restent humaines.
+func TestContributingFixeLaTraceDeRevue(t *testing.T) {
+	c := lire(t, "CONTRIBUTING.md")
+	for _, mot := range []string{"commentaire de la merge request", "ni n'approuve ni ne fusionne"} {
+		if !strings.Contains(c, mot) {
+			t.Errorf("CONTRIBUTING.md doit préciser : %s", mot)
+		}
+	}
+}

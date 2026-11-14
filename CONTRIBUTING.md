@@ -11,7 +11,7 @@ Règles de la [constitution](docs/standards/constitution.md) (principe 10) et de
 5. **Vérifier** : `make lint` et `make test` (et `make e2e` pour l'interface). Relire la modification au regard de l'OWASP Top 10 et des invariants de sécurité de [`CLAUDE.md`](CLAUDE.md).
 6. **Commits Conventional Commits citant le ticket** : `fix: ne relaie plus le corps distant (#35)`.
 7. **Une merge request** par modification, dont la description contient `Closes #N`. La documentation (README, `docs/fr/` et `docs/en/`, `SPEC.md`, `architecture.md`, ADR, `CHANGELOG.md`) est mise à jour **dans la même merge request**.
-8. **Revue par un agent** (commande `/code-review`, plus `/security-review` en N3), puis **relecture humaine du diff** avant fusion. `main` est protégée : CI verte obligatoire.
+8. **Revue par un agent** (commande `/code-review`, plus `/security-review` en N3), dont le résultat est posté en **commentaire de la merge request** (trace de la revue), puis **relecture humaine du diff** avant fusion. L'agent commente seulement, ni n'approuve ni ne fusionne ; la décision de fusion reste humaine (développeur seul : pas d'approbation tierce exigée, `required_approvals` vaut 0). `main` est protégée : CI verte obligatoire.
 9. **Version** : une entrée dans [`CHANGELOG.md`](CHANGELOG.md) et un tag SemVer (`vMAJEUR.MINEUR.CORRECTIF`) à chaque livraison.
 
 ## Décisions et documentation
