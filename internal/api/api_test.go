@@ -64,8 +64,10 @@ func do(t *testing.T, c *http.Client, method, url string, body any, hdr map[stri
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	checkContract(t, req, resp, raw)
 	var out map[string]any
-	_ = json.NewDecoder(resp.Body).Decode(&out)
+	_ = json.Unmarshal(raw, &out)
 	return resp, out
 }
 
