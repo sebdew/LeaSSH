@@ -1,4 +1,9 @@
-# Leassh
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo/leassh-sombre-fr.png">
+    <img src="docs/images/logo/leassh-clair-fr.png" alt="LeaSSH, serveur MCP, actions sécurisées pour agents IA" width="450">
+  </picture>
+</h1>
 
 > **Donnez à vos agents IA un accès SSH… en laisse.**
 > Un catalogue de commandes validées, des droits clairs, et un journal de tout ce qui a été lancé, par qui et où.
