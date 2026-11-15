@@ -4,11 +4,14 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 
 ## [Non publié]
 
+## [1.0.0] - 2026-11-15
+
 ### Modifié
 - Dépôt migré de Gitea vers GitHub (`sebdew/LeaSSH`), chemin du module Go aligné (`github.com/sebdew/LeaSSH`) : CI dans `.github/workflows/`, image publiée sur `ghcr.io/sebdew/leassh`, liens et documentation mis à jour ; tickets et merge requests conservent leur numéro.
 - Documentation utilisateur migrée du wiki vers `docs/fr/` et `docs/en/` (captures dans `docs/images/`), architecture et exploitation sans copie ; le wiki peut être désactivé (#65).
 
 ### Ajouté
+- Versions et packages automatiques : à chaque merge dans `main` (CI verte), version SemVer déduite des Conventional Commits, tag, image `ghcr.io/sebdew/leassh:<version>` multi-architecture, binaires Linux et release GitHub ; la 1.0.0 se déclenche à la main (#87).
 - Migrations de base : test de mise à niveau depuis une base v0.1.0 avec données, garde-fou contre la modification d'une migration déjà publiée (empreintes dans `internal/store/testdata`), refus de démarrer sur une base plus récente que le programme, procédure documentée dans `CONTRIBUTING.md` et `docs/exploitation.md` (#88).
 - Interface : un bandeau signale qu'une version plus récente est publiée. Le serveur interroge l'API des releases GitHub une fois par jour (aucune donnée d'instance) ; `LEASSH_UPDATE_CHECK=false` désactive l'appel (#86).
 - Interface : la version en cours, l'auteur et un lien vers le dépôt GitHub s'affichent en bas de la barre latérale ; `GET /api/v1/meta` expose `version`, `author` et `repository_url` (#43).
