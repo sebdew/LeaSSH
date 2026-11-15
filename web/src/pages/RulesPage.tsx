@@ -29,7 +29,7 @@ export function RulesPage() {
       {rules.data?.length === 0 ? <Empty text={t("rules.empty")} action={<Button onClick={() => setEditing("new")}>{t("rules.add")}</Button>} /> : (
         <div className="grid gap-3">
           {rules.data?.filter((r) => showInactive || ruleActive(r)).map((r) => (
-            <div key={r.id} className={`rounded-card border border-border bg-surface p-4 ${r.enabled ? "" : "opacity-60"}`}>
+            <div key={r.id} className="min-w-0 break-words rounded-card border border-border bg-surface p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <h3 className="font-semibold">{r.name} {!r.enabled && <Badge>{t("common.disabled")}</Badge>}</h3>
                 <div className="flex items-center gap-2">

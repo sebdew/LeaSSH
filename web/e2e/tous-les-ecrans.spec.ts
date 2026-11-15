@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 // Balayage automatique de tous les écrans : thème clair/sombre × bureau/mobile.
 // Les routes sont lues dans src/App.tsx : toute page ajoutée est testée sans toucher à ce fichier.
-// Ce fichier passe après parcours.spec.ts (ordre alphabétique) qui crée le compte administrateur.
+// Projet « balayage » : il passe après « parcours » (compte administrateur) et « fonctionnel » (données créées).
 const admin = { user: "admin", password: "Correct-Horse-Battery-9" };
 
 // Routes à paramètre : une URL d'exemple est obligatoire (le test échoue tant qu'elle manque).
