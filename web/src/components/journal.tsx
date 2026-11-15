@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Bot, X } from "lucide-react";
@@ -51,7 +52,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 interface Step { label: string; at: string; detail?: string }
 
-export function timeline(e: Execution, t: (k: string, o?: Record<string, unknown>) => string): Step[] {
+export function timeline(e: Execution, t: TFunction): Step[] {
   const who = e.key_name || e.decided_by_name || t("journal.user");
   const steps: Step[] = [{ label: t("journal.tl.requested", { who }), at: e.requested_at }];
   if (e.status === "denied") return [...steps, { label: t("journal.tl.denied"), at: e.finished_at || e.requested_at, detail: e.denial_reason }];

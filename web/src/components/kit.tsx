@@ -146,7 +146,7 @@ export async function copyToClipboard(text: string, host: HTMLElement): Promise<
   ta.focus();
   ta.select();
   ta.setSelectionRange(0, text.length);
-  let ok = false;
+  let ok: boolean;
   try { ok = document.execCommand("copy"); } catch { ok = false; }
   host.removeChild(ta);
   return ok;

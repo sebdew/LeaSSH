@@ -307,7 +307,7 @@ func (s *Server) setFlowCookie(w http.ResponseWriter, r *http.Request, f *flow) 
 		val, maxAge = base64.RawURLEncoding.EncodeToString(sealed), int(oidcFlowTTL.Seconds())
 	}
 	// Lax (et non Strict): le retour du fournisseur est une navigation inter-sites qui doit porter ce cookie.
-	http.SetCookie(w, &http.Cookie{Name: oidcCookie, Value: val, Path: "/api/v1/auth/oidc", HttpOnly: true, Secure: s.isHTTPS(r), SameSite: http.SameSiteLaxMode, MaxAge: maxAge})
+	http.SetCookie(w, &http.Cookie{Name: oidcCookie, Value: val, Path: "/api/v1/auth/oidc", HttpOnly: true, Secure: s.isHTTPS(r), SameSite: http.SameSiteLaxMode, MaxAge: maxAge}) //nolint:gosec // G124 : Secure suit le schéma réel (isHTTPS)
 	return nil
 }
 
@@ -372,7 +372,7 @@ func (s *Server) oidcStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	http.Redirect(w, r, loc, http.StatusFound)
+	http.Redirect(w, r, loc, http.StatusFound) //nolint:gosec // G710 : loc vient de l'émetteur OIDC configuré par l'admin, pas d'une saisie utilisateur
 }
 
 func (s *Server) oidcCallback(w http.ResponseWriter, r *http.Request) {

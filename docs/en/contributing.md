@@ -18,7 +18,7 @@ Leassh is a **level N3** project governed by a [constitution](../standards/const
 
 ## Development environment
 
-Go ≥ 1.26, Node ≥ 20.
+Go ≥ 1.26, Node ≥ 24.
 
 ```bash
 make dev     # backend with reload + Vite (API proxy)

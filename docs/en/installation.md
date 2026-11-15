@@ -114,7 +114,7 @@ sudo systemctl enable --now leassh
 journalctl -u leassh | head      # setup token
 ```
 
-Building it yourself: `make build` (Go ≥ 1.26, Node ≥ 20) produces `bin/leassh`, which embeds the interface.
+Building it yourself: `make build` (Go ≥ 1.26, Node ≥ 24) produces `bin/leassh`, which embeds the interface.
 
 ## 5. Reverse proxy
 
