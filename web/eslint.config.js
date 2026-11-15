@@ -14,12 +14,6 @@ export default tseslint.config(
     plugins: { "react-hooks": reactHooks },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      // Règles « React Compiler » ajoutées par eslint-plugin-react-hooks 7 : en avertissement le
-      // temps de réécrire les effets concernés (rules-of-hooks et exhaustive-deps restent bloquantes).
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/refs": "warn",
-      "react-hooks/purity": "warn",
-      "react-hooks/preserve-manual-memoization": "warn",
       // `const { secret: _x, ...body } = c` sert à retirer des champs avant l'envoi à l'API.
       "@typescript-eslint/no-unused-vars": ["error", { ignoreRestSiblings: true }],
     },

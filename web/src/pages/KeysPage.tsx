@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
+import { useNow } from "../lib/useNow";
 import { Button, ErrorBox, Field } from "../components/ui";
 import { Badge, Check2, CodeBlock, ConfirmDialog, Empty, ListSearch, Modal, MultiPick, PageHeader, Select, ShowInactiveToggle, SortTh, Tabs, when } from "../components/kit";
 import { toast } from "../components/Toaster";
@@ -27,11 +28,12 @@ export function KeysPage() {
   const [token, setToken] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<McpKey | null>(null);
   const revoke = useApiMutation<{ id: string }>("POST", (v) => `/keys/${v.id}/revoke`, ["/keys"]);
+  const now = useNow();
   const ruleName = (id: string) => rules.data?.find((r) => r.id === id)?.name ?? id;
-  const state = (k: McpKey): "revoked" | "expired" | "active" => k.disabled ? "revoked" : k.expires_at && new Date(k.expires_at) < new Date() ? "expired" : "active";
+  const state = (k: McpKey): "revoked" | "expired" | "active" => k.disabled ? "revoked" : k.expires_at && new Date(k.expires_at).getTime() < now ? "expired" : "active";
   const rel = (iso: string) => {
     if (!iso) return t("keys.never");
-    const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    const m = Math.round((now - new Date(iso).getTime()) / 60000);
     return m < 1 ? t("keys.justNow") : m < 60 ? t("keys.minutesAgo", { count: m }) : m < 1440 ? t("keys.hoursAgo", { count: Math.round(m / 60) }) : t("keys.daysAgo", { count: Math.round(m / 1440) });
   };
   const visible = (keys.data ?? []).filter((k) => showInactive || keyActive(k));

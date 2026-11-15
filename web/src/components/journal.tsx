@@ -87,11 +87,15 @@ function Output({ stdout, stderr, truncated }: { stdout: string; stderr: string;
   );
 }
 
+function parseParams(raw?: string): [string, unknown][] {
+  try { return Object.entries(JSON.parse(raw || "{}") as Record<string, unknown>); } catch { return []; }
+}
+
 export function ExecDrawer({ id, onClose, onFilter }: { id: string; onClose: () => void; onFilter: (patch: Record<string, string>) => void }) {
   const { t } = useTranslation();
   const q = useQuery({ queryKey: ["exec-detail", id], queryFn: () => api<Execution>(`/executions/${id}`), refetchInterval: (query) => (["running", "pending_approval"].includes(query.state.data?.status ?? "") ? 2000 : false) });
   const e = q.data;
-  const params = useMemo(() => { try { return Object.entries(JSON.parse(e?.params || "{}") as Record<string, unknown>); } catch { return []; } }, [e?.params]);
+  const params = parseParams(e?.params);
   return (
     <Drawer title={e ? `${e.command_slug} @ ${e.server_slug}` : t("errors.loading")} onClose={onClose}>
       {q.isError && <p role="alert" className="text-destructive">{t("errors.generic")}</p>}

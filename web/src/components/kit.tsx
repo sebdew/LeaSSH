@@ -198,7 +198,9 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, body, confirmWo
 }) {
   const { t } = useTranslation();
   const [typed, setTyped] = useState("");
-  useEffect(() => { if (!open) setTyped(""); }, [open]);
+  // remise à zéro à la fermeture, pendant le rendu (https://react.dev/learn/you-might-not-need-an-effect)
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) { setWasOpen(open); if (!open) setTyped(""); }
   const ok = !confirmWord || typed === confirmWord;
   return (
     <Modal open={open} onClose={onClose} title={title}>

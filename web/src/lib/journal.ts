@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent } from "react";
 
 // État du Journal, entièrement porté par l'URL (partageable, persistant au rafraîchissement).
 export interface JournalSearch {
@@ -67,13 +67,12 @@ export function diffRows(diff: Record<string, unknown> | null | undefined, inclu
 // ---- direct (SSE) ----
 // Rappelle onEvent à chaque changement d'exécution, sauf en pause. Reconnexion gérée par EventSource.
 export function useLiveExecutions(enabled: boolean, onEvent: (id: string) => void) {
-  const cb = useRef(onEvent);
-  cb.current = onEvent;
+  const notify = useEffectEvent(onEvent);
   useEffect(() => {
     if (!enabled || typeof EventSource === "undefined") return;
     const es = new EventSource("/api/v1/executions/stream");
     es.addEventListener("execution", (e) => {
-      try { cb.current((JSON.parse((e as MessageEvent).data) as { id: string }).id); } catch { /* événement illisible */ }
+      try { notify((JSON.parse((e as MessageEvent).data) as { id: string }).id); } catch { /* événement illisible */ }
     });
     return () => es.close();
   }, [enabled]);
