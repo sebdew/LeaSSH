@@ -60,3 +60,16 @@ func TestLLMBaseURLMustBeHTTP(t *testing.T) {
 		t.Fatal("LLM_BASE_URL non http(s) acceptée")
 	}
 }
+
+func TestUpdateCheckEnabledByDefaultAndDisablable(t *testing.T) {
+	key := base64.StdEncoding.EncodeToString(make([]byte, 32))
+	for val, want := range map[string]bool{"": true, "true": true, "false": false, "0": false} {
+		c, err := Load(env(map[string]string{"LEASSH_MASTER_KEY": key, "LEASSH_UPDATE_CHECK": val}))
+		if err != nil || c.UpdateCheck != want {
+			t.Fatalf("LEASSH_UPDATE_CHECK=%q: %v %v", val, c, err)
+		}
+	}
+	if _, err := Load(env(map[string]string{"LEASSH_MASTER_KEY": key, "LEASSH_UPDATE_CHECK": "peut-être"})); err == nil {
+		t.Fatal("valeur invalide acceptée")
+	}
+}

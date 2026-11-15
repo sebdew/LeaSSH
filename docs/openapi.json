@@ -7928,6 +7928,16 @@
           },
           "repository_url": {
             "type": "string"
+          },
+          "update_available": {
+            "type": "boolean",
+            "description": "Une release plus récente est publiée (faux si la vérification est désactivée ou injoignable)."
+          },
+          "latest_version": {
+            "type": "string"
+          },
+          "release_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -7936,7 +7946,10 @@
           "log_retention_days",
           "version",
           "author",
-          "repository_url"
+          "repository_url",
+          "update_available",
+          "latest_version",
+          "release_url"
         ]
       }
     },

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 )
 
 type Config struct {
@@ -16,6 +17,8 @@ type Config struct {
 	MasterKey []byte
 	// SetupToken: jeton d'initialisation à usage unique (LEASSH_SETUP_TOKEN). Vide = généré au démarrage si l'instance est neuve.
 	SetupToken string
+	// UpdateCheck: interroge GitHub pour signaler une nouvelle version (LEASSH_UPDATE_CHECK, vrai par défaut; mettre false hors ligne).
+	UpdateCheck bool
 	// LLM_*: valeurs par défaut de la synthèse IA (API compatible OpenAI). Les réglages saisis dans l'interface les surchargent.
 	LLMBaseURL, LLMAPIKey, LLMModel string
 }
@@ -34,6 +37,14 @@ func Load(getenv func(string) string) (*Config, error) {
 		if u, err := url.Parse(c.LLMBaseURL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 			return nil, errors.New("LLM_BASE_URL doit être une URL http(s) (ex. http://litellm:4000/v1)")
 		}
+	}
+	c.UpdateCheck = true
+	if v := getenv("LEASSH_UPDATE_CHECK"); v != "" {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, errors.New("LEASSH_UPDATE_CHECK doit valoir true ou false")
+		}
+		c.UpdateCheck = b
 	}
 	raw := getenv("LEASSH_MASTER_KEY")
 	if raw == "" {

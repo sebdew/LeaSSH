@@ -1142,6 +1142,7 @@
   "about": {
     "version": "Version {{version}}",
     "by": "by {{author}}",
-    "newTab": "(opens in a new tab)"
+    "newTab": "(opens in a new tab)",
+    "updateAvailable": "Version {{version}} available"
   }
 }

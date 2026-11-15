@@ -39,6 +39,7 @@ type env struct {
 	st    *store.Store
 	exec  *executions.Service
 	props *proposals.Service
+	srv   *Server
 }
 
 func init() { provisioning.Register(warpgate.Type()) }
@@ -81,7 +82,7 @@ func newEnv(t *testing.T) *env {
 	srv.Attach(Services{Box: box, Pool: pool, Acc: acc, Exec: ex, Props: props, Packs: pk, Hook: hook, Syslog: sl, Prov: provisioning.New(st, box, log), MCP: m.Handler(), Metrics: reg, Version: "test"})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
-	e := &env{t: t, ts: ts, c: client(), ssh: sshtest.New(t), st: st, exec: ex, props: props}
+	e := &env{t: t, ts: ts, c: client(), ssh: sshtest.New(t), st: st, exec: ex, props: props, srv: srv}
 	_, out := do(t, e.c, "POST", ts.URL+"/api/v1/setup", setupBody("admin", "un-mot-de-passe-solide"), nil)
 	e.csrf = out["csrf_token"].(string)
 	return e

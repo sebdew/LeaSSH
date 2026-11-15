@@ -18,6 +18,7 @@ De zéro à la première exécution par un agent en moins de 10 minutes.
 | `LEASSH_LISTEN` | `:8080` | Adresse d'écoute (interface et MCP). |
 | `LEASSH_DATA_DIR` | `/data` | Dossier de la base SQLite (`leassh.db`). |
 | `LEASSH_SETUP_TOKEN` | généré au démarrage | Jeton d'initialisation d'une instance neuve ; affiché une fois dans les logs s'il n'est pas fourni. |
+| `LEASSH_UPDATE_CHECK` | `true` | Interroge l'API publique des releases GitHub (une fois par jour, sans donnée d'instance) pour signaler une nouvelle version dans l'interface. Mettre `false` hors ligne. |
 | `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` | vides | Valeurs par défaut de la synthèse IA du rapport d'audit (facultatif). |
 
 Tout le reste (URL publique, reverse proxies de confiance, durée de session, rétention des journaux…) se règle dans l'interface, **Réglages → Général**.

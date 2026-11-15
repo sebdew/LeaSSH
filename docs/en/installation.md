@@ -18,6 +18,7 @@ From zero to a first agent execution in under 10 minutes.
 | `LEASSH_LISTEN` | `:8080` | Listen address (interface and MCP). |
 | `LEASSH_DATA_DIR` | `/data` | Folder of the SQLite database (`leassh.db`). |
 | `LEASSH_SETUP_TOKEN` | generated at start | Setup token for a fresh instance; printed once in the logs if not provided. |
+| `LEASSH_UPDATE_CHECK` | `true` | Queries the public GitHub releases API (once a day, no instance data) to flag a new version in the interface. Set `false` when offline. |
 | `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` | empty | Defaults for the audit report's AI summary (optional). |
 
 Everything else (public URL, trusted reverse proxies, session lifetime, log retention…) is set in the interface, **Settings → General**.
