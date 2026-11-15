@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bot, Check, Clock, X } from "lucide-react";
@@ -8,13 +8,13 @@ import { toast } from "../components/Toaster";
 import { api } from "../lib/api";
 import { errorMessage, useList } from "../lib/queries";
 import { useMe } from "../lib/useAuth";
+import { useNow } from "../lib/useNow";
 import type { Execution } from "../lib/types";
 
 const TERMINAL = ["succeeded", "failed", "timeout", "error", "rejected", "expired", "denied"];
 
 export function useCountdown(requestedAt: string, ttlSeconds: number) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => { const h = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(h); }, []);
+  const now = useNow(1000);
   return Math.max(0, Math.floor((new Date(requestedAt).getTime() + ttlSeconds * 1000 - now) / 1000));
 }
 

@@ -30,6 +30,10 @@ export function Highlighted({ template }: { template: string }) {
 }
 
 // Mode proposition (« Modifier puis approuver »): même éditeur, linter strict, risque définitif et groupes au moment d'approuver.
+const NO_LINT: LintResult = { errors: [], warnings: [] };
+const NO_NAMES: string[] = [];
+const NO_PREVIEW = { ok: false } as { ok: boolean; rendered?: string; error?: string };
+
 export function CommandEditor({ id, proposal }: { id?: string; proposal?: Proposal }) {
   const { t } = useTranslation();
   const nav = useNavigate();
@@ -53,50 +57,51 @@ export function CommandEditor({ id, proposal }: { id?: string; proposal?: Propos
   const [saveError, setSaveError] = useState<{ message: string; detail?: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (proposal && !loaded) {
-      const p = proposal.payload;
-      setSlug(p.slug); setName(p.name); setDescription(p.description); setRisk(p.risk); setTemplate(p.template); setParams(p.params ?? {});
-      setLoaded(true);
-    }
-    if (current && !loaded) {
-      setSlug(current.slug); setName(current.name); setDescription(current.description); setRisk(current.risk);
-      setTemplate(current.template); setParams(current.params); setTimeoutS(current.timeout_s); setMaxKB(current.max_output_kb);
-      setEnabled(current.status === "enabled"); setLoaded(true);
-    }
-  }, [current, loaded]);
+  // chargement initial du formulaire, une seule fois, pendant le rendu (pas d'effet : https://react.dev/learn/you-might-not-need-an-effect)
+  if (!loaded && proposal) {
+    const p = proposal.payload;
+    setSlug(p.slug); setName(p.name); setDescription(p.description); setRisk(p.risk); setTemplate(p.template); setParams(p.params ?? {});
+    setLoaded(true);
+  } else if (!loaded && current) {
+    setSlug(current.slug); setName(current.name); setDescription(current.description); setRisk(current.risk);
+    setTemplate(current.template); setParams(current.params); setTimeoutS(current.timeout_s); setMaxKB(current.max_output_kb);
+    setEnabled(current.status === "enabled"); setLoaded(true);
+  }
 
   // linter en direct + détection des placeholders
-  const [lint, setLint] = useState<LintResult>({ errors: [], warnings: [] });
-  const [placeholders, setPlaceholders] = useState<string[]>([]);
+  const [lintRes, setLintRes] = useState<{ lint: LintResult; placeholders: string[] } | null>(null);
   const dTemplate = useDebounced(template, 250);
   const dParams = useDebounced(params, 250);
+  const lintActive = loaded && !!dTemplate;
+  const lint = lintActive && lintRes ? lintRes.lint : NO_LINT;
+  const placeholders = lintActive && lintRes ? lintRes.placeholders : NO_NAMES;
   useEffect(() => {
-    if (!loaded || !dTemplate) { setLint({ errors: [], warnings: [] }); setPlaceholders([]); return; }
+    if (!loaded || !dTemplate) return;
     let live = true;
     api<{ lint: LintResult; placeholders: string[] }>(proposal ? "/proposals/lint" : "/commands/lint", { method: "POST", body: proposal ? { slug, name, description, template: dTemplate, params: dParams, risk } : { template: dTemplate, params: dParams, risk } })
-      .then((r) => { if (live) { setLint({ errors: r.lint?.errors ?? [], warnings: r.lint?.warnings ?? [] }); setPlaceholders(r.placeholders ?? []); } })
+      .then((r) => {
+        if (!live) return;
+        const placeholders = r.placeholders ?? [];
+        setLintRes({ lint: { errors: r.lint?.errors ?? [], warnings: r.lint?.warnings ?? [] }, placeholders });
+        // paramètres détectés automatiquement depuis le template
+        setParams((cur) => {
+          const next: Record<string, ParamDef> = {};
+          for (const n of placeholders) next[n] = cur[n] ?? { type: "identifier" };
+          const same = Object.keys(next).length === Object.keys(cur).length && Object.keys(next).every((k) => cur[k] === next[k]);
+          return same ? cur : next;
+        });
+      })
       .catch(() => undefined);
     return () => { live = false; };
   }, [dTemplate, dParams, risk, loaded, proposal, slug, name, description]);
 
-  // paramètres détectés automatiquement depuis le template
-  useEffect(() => {
-    if (!loaded) return;
-    setParams((cur) => {
-      const next: Record<string, ParamDef> = {};
-      for (const n of placeholders) next[n] = cur[n] ?? { type: "identifier" };
-      const same = Object.keys(next).length === Object.keys(cur).length && Object.keys(next).every((k) => cur[k] === next[k]);
-      return same ? cur : next;
-    });
-  }, [placeholders, loaded]);
-
   // aperçu avec l'échappement réel
   const [values, setValues] = useState<Record<string, string>>({});
   const dValues = useDebounced(values, 250);
-  const [preview, setPreview] = useState<{ ok: boolean; rendered?: string; error?: string }>({ ok: false });
+  const [previewRes, setPreview] = useState<{ ok: boolean; rendered?: string; error?: string }>({ ok: false });
+  const preview = dTemplate ? previewRes : NO_PREVIEW;
   useEffect(() => {
-    if (!dTemplate) { setPreview({ ok: false }); return; }
+    if (!dTemplate) return;
     let live = true;
     const typed: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(dValues)) typed[k] = params[k]?.type === "int" && v !== "" && !Number.isNaN(Number(v)) ? Number(v) : v;

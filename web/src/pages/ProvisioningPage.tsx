@@ -66,8 +66,8 @@ export function ProvisioningPage() {
         <ProvisionerForm key={editing && editing !== "new" ? editing.id : "new"} p={editing && editing !== "new" ? editing : null} types={types.data ?? []}
           identities={identities.data ?? []} rules={(rules.data ?? []).filter(ruleActive)} onClose={() => setEditing(null)} />
       </Modal>
-      <TestDialog p={testing} onClose={() => setTesting(null)} />
-      <SyncDialog p={syncing} onClose={() => setSyncing(null)} />
+      <TestDialog key={testing?.id ?? "none"} p={testing} onClose={() => setTesting(null)} />
+      <SyncDialog key={syncing?.id ?? "none"} p={syncing} onClose={() => setSyncing(null)} />
       <ConfirmDialog open={!!deleting} onClose={() => setDeleting(null)} title={t("provisioning.deleteTitle")} body={t("provisioning.deleteBody", { name: deleting?.name })} confirmWord={deleting?.name} busy={del.isPending}
         onConfirm={() => deleting && del.mutate({ id: deleting.id }, { onSuccess: () => { setDeleting(null); toast(t("common.deleted")); } })} />
     </>
@@ -153,7 +153,6 @@ function TestDialog({ p, onClose }: { p: Provisioner | null; onClose: () => void
   const [res, setRes] = useState<TestResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  useEffect(() => { setRes(null); setErr(""); }, [p?.id]);
   const run = async () => {
     if (!p) return;
     setBusy(true); setErr("");
@@ -200,20 +199,18 @@ function SyncDialog({ p, onClose }: { p: Provisioner | null; onClose: () => void
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [rep, setRep] = useState<SyncReport | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(!!p); // le dialogue est remonté (key) à chaque changement de fournisseur
   const [err, setErr] = useState("");
   const [confirm, setConfirm] = useState(false);
   useEffect(() => {
-    setRep(null); setErr(""); setConfirm(false);
     if (!p) return;
     let cancelled = false;
-    setBusy(true);
     api<SyncReport>(`/provisioners/${p.id}/preview`, { method: "POST" })
       .then((r) => { if (!cancelled) setRep(r); })
       .catch((e) => { if (!cancelled) setErr(errorMessage(e)); })
       .finally(() => { if (!cancelled) setBusy(false); });
     return () => { cancelled = true; };
-  }, [p?.id]);
+  }, [p]);
   const apply = async () => {
     if (!p) return;
     setBusy(true); setErr("");

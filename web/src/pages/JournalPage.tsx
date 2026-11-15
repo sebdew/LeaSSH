@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Pause, Play, Radio, X } from "lucide-react";
@@ -19,12 +19,14 @@ interface Page<T> { items: T[]; next_cursor: string }
 
 function useDebouncedInput(value: string, commit: (v: string) => void) {
   const [local, setLocal] = useState(value);
-  useEffect(() => setLocal(value), [value]);
+  const [seen, setSeen] = useState(value);
+  if (value !== seen) { setSeen(value); setLocal(value); } // valeur de l'URL changée de l'extérieur
+  const onCommit = useEffectEvent(commit);
   useEffect(() => {
     if (local === value) return;
-    const h = setTimeout(() => commit(local), 300);
+    const h = setTimeout(() => onCommit(local), 300);
     return () => clearTimeout(h);
-  }, [local, value, commit]);
+  }, [local, value]);
   return [local, setLocal] as const;
 }
 
@@ -65,10 +67,7 @@ function FilterBar({ tab, search, setFilters, clear }: { tab: "exec" | "admin"; 
   const commands = useList<Command>("/commands");
   const users = useList<UserAccount>("/users"); // réservé aux admins: la liste reste vide pour les autres
   const searchRef = useRef<HTMLInputElement>(null);
-  const latest = useRef(setFilters);
-  latest.current = setFilters;
-  const commitQ = useCallback((v: string) => latest.current({ q: v || undefined }), []);
-  const [q, setQ] = useDebouncedInput(search.q ?? "", commitQ);
+  const [q, setQ] = useDebouncedInput(search.q ?? "", (v) => setFilters({ q: v || undefined }));
   const statuses = (search.status ?? "").split(",").filter(Boolean);
   const toggleStatus = (s: string) => setFilters({ status: (statuses.includes(s) ? statuses.filter((x) => x !== s) : [...statuses, s]).join(",") || undefined });
   const custom = !!(search.from || search.to);

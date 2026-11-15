@@ -28,18 +28,18 @@ export function Layout({ user, onLogout }: { user: User; onLogout: () => void })
   const fullWidth = useRouterState({ select: (s) => s.location.pathname.startsWith("/journal") });
   const [drawer, setDrawer] = useState(false);
   const [palette, setPalette] = useState(false);
-  const [theme, setTheme] = useState<ThemeChoice>(getTheme());
+  // première visite sur ce navigateur : reprendre le thème mémorisé côté serveur
+  const serverTheme = user.theme === "light" || user.theme === "dark" ? user.theme : null;
+  const [adoptServerTheme] = useState(() => {
+    try { return serverTheme !== null && !localStorage.getItem("leassh-theme"); } catch { return serverTheme !== null; }
+  });
+  const [theme, setTheme] = useState<ThemeChoice>(() => (adoptServerTheme && serverTheme ? serverTheme : getTheme()));
   const pending = useList<Execution>("/executions?status=pending_approval", { refetchInterval: 15000 });
   const pendingCount = pending.data?.length ?? 0;
   const proposalsPending = useList<{ id: string }>("/proposals?status=pending", { refetchInterval: 30000 });
   const proposalCount = proposalsPending.data?.length ?? 0;
 
-  // première visite sur ce navigateur: reprendre le thème mémorisé côté serveur
-  useEffect(() => {
-    let local: string | null = null;
-    try { local = localStorage.getItem("leassh-theme"); } catch { /* stockage indisponible */ }
-    if (!local && (user.theme === "light" || user.theme === "dark")) { applyTheme(user.theme); setTheme(user.theme); }
-  }, [user.theme]);
+  useEffect(() => { if (adoptServerTheme && serverTheme) applyTheme(serverTheme); }, [adoptServerTheme, serverTheme]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
