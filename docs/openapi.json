@@ -7918,12 +7918,25 @@
           },
           "log_retention_days": {
             "type": "integer"
+          },
+          "version": {
+            "type": "string",
+            "description": "Version de Leassh en cours d'exécution (dev sans tag)."
+          },
+          "author": {
+            "type": "string"
+          },
+          "repository_url": {
+            "type": "string"
           }
         },
         "required": [
           "approval_ttl_seconds",
           "base_url",
-          "log_retention_days"
+          "log_retention_days",
+          "version",
+          "author",
+          "repository_url"
         ]
       }
     },

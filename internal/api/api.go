@@ -126,6 +126,12 @@ func New(set *settings.Service, st *store.Store, log *slog.Logger, static http.H
 	return &Server{set: set, st: st, accounts: accounts.New(st), journal: journal.New(st), commands: commands.New(st), groups: groups.New(st), log: log, lim: accounts.NewLimiter(st, "account", maxFailures, failWindow), limIP: accounts.NewLimiter(st, "ip", maxFailuresPerIP, failWindow), static: static, oidc: oidc.New()}, nil
 }
 
+// Identité du projet affichée dans l'interface (voir NOTICE, Apache License 2.0 §4).
+const (
+	projectAuthor     = "Sébastien Dewarlez"
+	projectRepository = "https://github.com/sebdew/LeaSSH"
+)
+
 func (s *Server) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Use(s.securityHeaders)
@@ -138,7 +144,8 @@ func (s *Server) Handler() http.Handler {
 		r.Use(s.originCheck)
 		r.Get("/setup/status", s.setupStatus)
 		r.With(s.requireSession).Get("/meta", func(w http.ResponseWriter, _ *http.Request) {
-			writeJSON(w, 200, map[string]any{"approval_ttl_seconds": int(s.set.ApprovalTTL().Seconds()), "base_url": s.set.BaseURL(), "log_retention_days": s.set.RetentionDays()})
+			writeJSON(w, 200, map[string]any{"approval_ttl_seconds": int(s.set.ApprovalTTL().Seconds()), "base_url": s.set.BaseURL(), "log_retention_days": s.set.RetentionDays(),
+				"version": s.version, "author": projectAuthor, "repository_url": projectRepository})
 		})
 		r.Post("/setup", s.setup)
 		r.Post("/auth/login", s.login)

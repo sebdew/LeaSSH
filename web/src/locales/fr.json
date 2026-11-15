@@ -1139,5 +1139,10 @@
     "metricsOpen": "Aucun : /metrics est fermé",
     "metricsHelp": "Sans jeton, /metrics est fermé (401). Avec un jeton, /metrics exige « Authorization: Bearer <jeton> ». Seule son empreinte est conservée.",
     "metricsClear": "Supprimer le jeton (fermer /metrics)"
+  },
+  "about": {
+    "version": "Version {{version}}",
+    "by": "par {{author}}",
+    "newTab": "(s'ouvre dans un nouvel onglet)"
   }
 }
