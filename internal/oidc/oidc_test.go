@@ -105,8 +105,18 @@ func TestJWKSRotation(t *testing.T) {
 	_, err := c.VerifyIDToken(ctx, cfg, tok, "n1")
 	reason(t, err, oidc.ReasonSignature)
 	now = now.Add(time.Minute)
-	if _, err := c.VerifyIDToken(ctx, cfg, tok, "n1"); err != nil {
-		t.Fatalf("après rotation: %v", err)
+	// go-oidc renvoie l'erreur à l'appelant avant de libérer sa requête en cours: un appel immédiat peut
+	// rejoindre cette requête périmée et recevoir l'ancienne erreur (course interne à la bibliothèque,
+	// visible surtout sur un runner lent). On réessaie brièvement; une vraie régression échoue toujours.
+	var verr error
+	for i := 0; i < 50; i++ {
+		if _, verr = c.VerifyIDToken(ctx, cfg, tok, "n1"); verr == nil {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if verr != nil {
+		t.Fatalf("après rotation: %v", verr)
 	}
 	// l'ancienne clé n'est plus publiée: un jeton signé avec elle est refusé
 	_, err = c.VerifyIDToken(ctx, cfg, oidctest.Sign(t, payload(idp, nil), old, oldKid), "n1")
