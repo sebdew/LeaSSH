@@ -9,6 +9,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 - Documentation utilisateur migrée du wiki vers `docs/fr/` et `docs/en/` (captures dans `docs/images/`), architecture et exploitation sans copie ; le wiki peut être désactivé (#65).
 
 ### Ajouté
+- Interface : un bandeau signale qu'une version plus récente est publiée. Le serveur interroge l'API des releases GitHub une fois par jour (aucune donnée d'instance) ; `LEASSH_UPDATE_CHECK=false` désactive l'appel (#86).
 - Interface : la version en cours, l'auteur et un lien vers le dépôt GitHub s'affichent en bas de la barre latérale ; `GET /api/v1/meta` expose `version`, `author` et `repository_url` (#43).
 - ADR 0007 : les fichiers de test restent à côté du code, jamais livrés dans le binaire (#45).
 - Documentation : wiki bilingue (français / anglais), `CONTRIBUTING.md`, `docs/architecture.md`, `docs/exploitation.md`, `docs/specs/`, ADR 0004 et 0005, versionnement de `docs/standards/` (#11).

@@ -1143,6 +1143,7 @@
   "about": {
     "version": "Version {{version}}",
     "by": "par {{author}}",
-    "newTab": "(s'ouvre dans un nouvel onglet)"
+    "newTab": "(s'ouvre dans un nouvel onglet)",
+    "updateAvailable": "Version {{version}} disponible"
   }
 }

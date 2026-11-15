@@ -22,4 +22,19 @@ describe("pied de barre latérale (#43)", () => {
     renderApp(<VersionFooter />);
     expect(screen.queryByRole("link", { name: /GitHub/ })).toBeNull();
   });
+
+  it("signale une nouvelle version avec un lien vers sa release (#86)", async () => {
+    mockApi({ "GET /meta": () => ({ body: { version: "v0.1.0", author: "A", repository_url: "https://github.com/sebdew/LeaSSH", update_available: true, latest_version: "v0.2.0", release_url: "https://github.com/sebdew/LeaSSH/releases/tag/v0.2.0" } }) });
+    renderApp(<VersionFooter />);
+    const link = await screen.findByRole("link", { name: /v0\.2\.0/ });
+    expect(link).toHaveAttribute("href", "https://github.com/sebdew/LeaSSH/releases/tag/v0.2.0");
+    expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
+  });
+
+  it("ne signale rien quand la version est à jour", async () => {
+    mockApi({ "GET /meta": () => ({ body: { version: "v0.2.0", author: "A", repository_url: "https://github.com/sebdew/LeaSSH", update_available: false, latest_version: "v0.2.0", release_url: "https://github.com/sebdew/LeaSSH/releases/tag/v0.2.0" } }) });
+    renderApp(<VersionFooter />);
+    await screen.findByText(/v0\.2\.0/);
+    expect(screen.queryByRole("link", { name: /disponible|available/i })).toBeNull();
+  });
 });

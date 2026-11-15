@@ -33,6 +33,7 @@ import (
 	"github.com/sebdew/LeaSSH/internal/sshexec"
 	"github.com/sebdew/LeaSSH/internal/store"
 	"github.com/sebdew/LeaSSH/internal/syslog"
+	"github.com/sebdew/LeaSSH/internal/updatecheck"
 	"github.com/sebdew/LeaSSH/internal/webhook"
 )
 
@@ -77,6 +78,7 @@ type Server struct {
 
 	metrics *metrics.Registry
 	version string
+	updates updateStatus // vérification de nouvelle version (nil = rien à signaler)
 
 	setupTokenHash string // SHA-256 du jeton d'initialisation; vide = /setup refusé
 }
@@ -96,6 +98,7 @@ type Services struct {
 
 	Metrics    *metrics.Registry
 	Version    string
+	Updates    *updatecheck.Checker
 	AIDefaults auditreport.AIDefaults
 }
 
@@ -105,6 +108,9 @@ func (s *Server) Attach(sv Services) {
 	s.prov, s.sysl = sv.Prov, sv.Syslog
 	s.infra = infra.New(s.st, sv.Box, sv.Pool, sv.Exec)
 	s.metrics, s.version = sv.Metrics, sv.Version
+	if sv.Updates != nil {
+		s.updates = sv.Updates
+	}
 	s.auditrep = auditreport.NewService(s.st, sv.Box, sv.Version, s.set, sv.AIDefaults, s.metrics.Transport("ai", nil))
 	s.oidc.HTTP.Transport = s.metrics.Transport("idp", s.oidc.HTTP.Transport) // durée des appels au fournisseur d'identité
 }
@@ -126,6 +132,9 @@ func New(set *settings.Service, st *store.Store, log *slog.Logger, static http.H
 	return &Server{set: set, st: st, accounts: accounts.New(st), journal: journal.New(st), commands: commands.New(st), groups: groups.New(st), log: log, lim: accounts.NewLimiter(st, "account", maxFailures, failWindow), limIP: accounts.NewLimiter(st, "ip", maxFailuresPerIP, failWindow), static: static, oidc: oidc.New()}, nil
 }
 
+// updateStatus: état de la vérification de version (implémenté par updatecheck.Checker).
+type updateStatus interface{ Status() updatecheck.Status }
+
 // Identité du projet affichée dans l'interface (voir NOTICE, Apache License 2.0 §4).
 const (
 	projectAuthor     = "Sébastien Dewarlez"
@@ -144,7 +153,11 @@ func (s *Server) Handler() http.Handler {
 		r.Use(s.originCheck)
 		r.Get("/setup/status", s.setupStatus)
 		r.With(s.requireSession).Get("/meta", func(w http.ResponseWriter, _ *http.Request) {
-			writeJSON(w, 200, map[string]any{"approval_ttl_seconds": int(s.set.ApprovalTTL().Seconds()), "base_url": s.set.BaseURL(), "log_retention_days": s.set.RetentionDays(),
+			up := updatecheck.Status{}
+			if s.updates != nil {
+				up = s.updates.Status()
+			}
+			writeJSON(w, 200, map[string]any{"update_available": up.Available, "latest_version": up.Latest, "release_url": up.URL, "approval_ttl_seconds": int(s.set.ApprovalTTL().Seconds()), "base_url": s.set.BaseURL(), "log_retention_days": s.set.RetentionDays(),
 				"version": s.version, "author": projectAuthor, "repository_url": projectRepository})
 		})
 		r.Post("/setup", s.setup)

@@ -35,6 +35,7 @@ import (
 	"github.com/sebdew/LeaSSH/internal/sshexec"
 	"github.com/sebdew/LeaSSH/internal/store"
 	"github.com/sebdew/LeaSSH/internal/syslog"
+	"github.com/sebdew/LeaSSH/internal/updatecheck"
 	"github.com/sebdew/LeaSSH/internal/webhook"
 )
 
@@ -128,6 +129,8 @@ func serve(cfg *config.Config, set *settings.Service, st *store.Store, log *slog
 		return err
 	}
 	go hook.Run(ctx)
+	upd := updatecheck.New(cfg.UpdateCheck, version, reg.Transport("update", nil))
+	go upd.Run(ctx)
 	go sl.Run(ctx)
 	provisioning.Register(warpgate.Type())
 	prov := provisioning.New(st, box, log)
@@ -144,7 +147,7 @@ func serve(cfg *config.Config, set *settings.Service, st *store.Store, log *slog
 	if err := configureSetupToken(context.Background(), srv, cfg, st); err != nil {
 		return err
 	}
-	srv.Attach(api.Services{Box: box, Pool: pool, Acc: acc, Exec: exec, Props: props, Packs: pk, Hook: hook, Syslog: sl, Prov: prov, MCP: mcp.Handler(), Metrics: reg, Version: version,
+	srv.Attach(api.Services{Box: box, Pool: pool, Acc: acc, Exec: exec, Props: props, Packs: pk, Hook: hook, Syslog: sl, Prov: prov, MCP: mcp.Handler(), Metrics: reg, Version: version, Updates: upd,
 		AIDefaults: auditreport.AIDefaults{URL: cfg.LLMBaseURL, Model: cfg.LLMModel, APIKey: cfg.LLMAPIKey}})
 
 	// Les flux longs (SSE du journal, attentes de get_execution) se terminent à l'arrêt: sans cela Shutdown attendrait le délai complet.
