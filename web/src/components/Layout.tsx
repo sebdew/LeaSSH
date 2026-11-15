@@ -9,6 +9,7 @@ import { api, type User } from "../lib/api";
 import { applyTheme, getTheme, type ThemeChoice } from "../lib/theme";
 import { Toaster } from "./Toaster";
 import { CommandPalette } from "./CommandPalette";
+import { VersionFooter } from "./VersionFooter";
 
 interface NavItem { to: string; key: string; icon: LucideIcon }
 const sections: { title?: string; items: NavItem[] }[] = [
@@ -90,6 +91,7 @@ export function Layout({ user, onLogout }: { user: User; onLogout: () => void })
       <aside className={`fixed inset-y-0 left-0 z-30 w-60 overflow-y-auto border-r border-border bg-surface p-3 transition-transform md:translate-x-0 ${drawer ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="mb-4 px-3 py-2 text-fg"><Logo compact className="h-9 w-auto" title={t("app.name")} /></div>
         {nav}
+        <VersionFooter />
       </aside>
       {drawer && <div className="fixed inset-0 z-20 bg-black/40 md:hidden" onClick={() => setDrawer(false)} aria-hidden />}
       <div className="md:pl-60">

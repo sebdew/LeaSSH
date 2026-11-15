@@ -1138,5 +1138,10 @@
     "metricsOpen": "None: /metrics is closed",
     "metricsHelp": "Without a token, /metrics is closed (401). With a token, /metrics requires \"Authorization: Bearer <token>\". Only its hash is stored.",
     "metricsClear": "Remove the token (close /metrics)"
+  },
+  "about": {
+    "version": "Version {{version}}",
+    "by": "by {{author}}",
+    "newTab": "(opens in a new tab)"
   }
 }
