@@ -12,13 +12,26 @@ Règles de la [constitution](docs/standards/constitution.md) (principe 10) et de
 6. **Commits Conventional Commits citant le ticket** : `fix: ne relaie plus le corps distant (#35)`.
 7. **Une merge request** par modification, dont la description contient `Closes #N`. La documentation (README, `docs/fr/` et `docs/en/`, `SPEC.md`, `architecture.md`, ADR, `CHANGELOG.md`) est mise à jour **dans la même merge request**.
 8. **Revue par un agent** (commande `/code-review`, plus `/security-review` en N3), dont le résultat est posté en **commentaire de la merge request** (trace de la revue), puis **relecture humaine du diff** avant fusion. L'agent commente seulement, ni n'approuve ni ne fusionne ; la décision de fusion reste humaine (développeur seul : pas d'approbation tierce exigée, `required_approvals` vaut 0). `main` est protégée : CI verte obligatoire.
-9. **Version** : une entrée dans [`CHANGELOG.md`](CHANGELOG.md) et un tag SemVer (`vMAJEUR.MINEUR.CORRECTIF`) à chaque livraison.
+9. **Version** : décrire le changement dans [`CHANGELOG.md`](CHANGELOG.md), section « Non publié ». Le tag SemVer et le package sont créés automatiquement au merge (voir « Versions et packages »).
 
 ## Décisions et documentation
 
 - Décision structurante → un [ADR](docs/adr/README.md) numéroté, avant le code.
 - Documentation utilisateur → [`docs/fr/`](docs/fr/README.md) **et** [`docs/en/`](docs/en/README.md), en français et en anglais (mêmes pages, mêmes captures dans `docs/images/`).
 - Comportement normatif → [`docs/specs/SPEC.md`](docs/specs/SPEC.md).
+
+## Versions et packages
+
+Chaque merge dans `main` dont la CI est verte déclenche le job `release` de `.github/workflows/ci.yml`. Il déduit la version `vA.B.C` des Conventional Commits mergés depuis le dernier tag, pousse le tag, publie l'image `ghcr.io/sebdew/leassh:<version>` (+ `latest`, amd64 et arm64) et crée la release GitHub (binaires Linux, `SHA256SUMS`, notes générées).
+
+| Commit | Effet |
+| --- | --- |
+| `BREAKING CHANGE:` en pied de commit (ou `!` après le type) | **A** : version majeure |
+| `feat:` | **B** : nouvelle fonctionnalité |
+| `fix:` | **C** : correctif (bug ou sécurité) |
+| tout autre type (`docs:`, `test:`, `chore:`, `ci:`, `refactor:`…) | aucune version |
+
+Le type du commit décide donc de la version : choisir `feat` ou `fix` avec soin. Les merges GitHub (« Merge pull request … ») sont ignorés, ce sont les commits de la branche qui comptent (avec un squash, le titre de la PR). Un jalon se force à la main : **Actions → ci → Run workflow** sur `main`, champ `version` (ex. `1.0.0`). La CI complète tourne d'abord, le package n'est publié que si elle est verte. Le `CHANGELOG.md` reste rédigé à la main : on renomme « Non publié » en numéro de version lors des jalons.
 
 ## Migrations de base
 
