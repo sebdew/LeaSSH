@@ -155,7 +155,7 @@ export function CommandEditor({ id, proposal }: { id?: string; proposal?: Propos
               <div role="radiogroup" className="inline-flex gap-1 rounded-field border border-border p-1">
                 {RISKS.map((r) => (
                   <button key={r} type="button" role="radio" aria-checked={risk === r} onClick={() => setRisk(r)}
-                    className={`rounded-field px-3 py-1 ${risk === r ? "bg-surface-2 ring-2 ring-primary" : "opacity-70 hover:opacity-100"}`}><RiskBadge risk={r} /></button>
+                    className={`rounded-field px-3 py-1 ${risk === r ? "bg-surface-2 ring-2 ring-primary" : "ring-1 ring-border hover:bg-surface-2"}`}><RiskBadge risk={r} /></button>
                 ))}
               </div>
             </fieldset>
