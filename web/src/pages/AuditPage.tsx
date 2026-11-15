@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, ExternalLink, FileCheck2, FileUp, Sparkles } from "lucide-react";
@@ -164,7 +165,7 @@ function AICard({ config }: { config?: AuditAIConfig }) {
   return <AIForm key={JSON.stringify(config ?? {})} config={config} t={t} />;
 }
 
-function AIForm({ config, t }: { config?: AuditAIConfig; t: (k: string, o?: Record<string, unknown>) => string }) {
+function AIForm({ config, t }: { config?: AuditAIConfig; t: TFunction }) {
   const [enabled, setEnabled] = useState(config?.enabled ?? false);
   const [url, setUrl] = useState(config?.url ?? "");
   const [model, setModel] = useState(config?.model ?? "");

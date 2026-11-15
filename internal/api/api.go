@@ -275,7 +275,7 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request, u store.Us
 	if err != nil {
 		return "", err
 	}
-	http.SetCookie(w, &http.Cookie{
+	http.SetCookie(w, &http.Cookie{ //nolint:gosec // G124 : Secure suit le schéma réel (isHTTPS), l'appli sert aussi en HTTP local
 		Name: cookieName, Value: id, Path: "/", HttpOnly: true, Secure: s.isHTTPS(r),
 		SameSite: http.SameSiteStrictMode, MaxAge: int(s.set.SessionTTL().Seconds()),
 	})
@@ -442,7 +442,7 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie(cookieName); err == nil {
 		_ = s.accounts.CloseSession(r.Context(), c.Value)
 	}
-	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: s.isHTTPS(r), SameSite: http.SameSiteStrictMode})
+	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: s.isHTTPS(r), SameSite: http.SameSiteStrictMode}) //nolint:gosec // G124 : Secure suit le schéma réel (isHTTPS)
 	// Compte SSO: si le fournisseur sait fermer sa propre session, l'interface y est renvoyée (RP-Initiated Logout).
 	if u := currentUser(r); u.AuthProvider == "oidc" {
 		if oc, cfg, ok, err := s.oidcLoaded(r.Context()); err == nil && ok && oc.EndSession {

@@ -114,7 +114,7 @@ sudo systemctl enable --now leassh
 journalctl -u leassh | head      # jeton d'initialisation
 ```
 
-Construire soi-même : `make build` (Go ≥ 1.26, Node ≥ 20) produit `bin/leassh`, qui embarque l'interface.
+Construire soi-même : `make build` (Go ≥ 1.26, Node ≥ 24) produit `bin/leassh`, qui embarque l'interface.
 
 ## 5. Reverse proxy
 

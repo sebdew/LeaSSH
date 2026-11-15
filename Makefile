@@ -17,7 +17,7 @@ test:
 	go test ./...
 	cd web && npm test
 
-GOLANGCI_LINT ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4
+GOLANGCI_LINT ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 
 lint:
 	go vet ./...
