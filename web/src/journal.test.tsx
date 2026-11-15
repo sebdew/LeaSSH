@@ -89,12 +89,12 @@ describe("journal des exécutions", () => {
     expect(screen.getByRole("link", { name: /NDJSON/ })).toHaveAttribute("href", expect.stringContaining("format=ndjson"));
   });
 
-  it("atténue une ligne refusée et donne la raison au survol", async () => {
+  it("distingue une ligne refusée et donne la raison au survol", async () => {
     mockApi(baseRoutes([exec({ id: "E2", status: "denied", denial_reason: "profile_forbids_risk", exit_code: null, duration_ms: null })]));
     renderApp(<Harness />);
     const row = (await screen.findAllByRole("row"))[1];
     expect(row).toHaveAttribute("title", "profile_forbids_risk");
-    expect(row.className).toContain("opacity-70");
+    expect(row.className).toContain("bg-surface-2");
   });
 
   it("ouvre le tiroir: raison, commande rendue, chronologie, sortie, liens de filtre", async () => {

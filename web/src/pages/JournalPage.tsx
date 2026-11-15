@@ -207,7 +207,7 @@ function ExecList({ search, live, onOpen }: { search: JournalSearch; live: boole
   if (q.isPending) return <p className="text-muted">{t("errors.loading")}</p>;
   if (q.isError) return <p role="alert" className="text-destructive">{t("errors.generic")}</p>;
   if (rows.length === 0) return <Empty text={qs ? t("journal.emptyFiltered") : t("journal.empty")} />;
-  const dim = (r: Execution) => (r.status === "denied" ? "opacity-70" : "");
+  const dim = (r: Execution) => (r.status === "denied" ? "bg-surface-2" : "");
   const hl = (r: Execution) => (fresh.has(r.id) ? "bg-primary/10" : "");
 
   return (
