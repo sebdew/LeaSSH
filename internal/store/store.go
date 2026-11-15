@@ -47,11 +47,33 @@ func OpenPath(ctx context.Context, file string) (*Store, error) {
 		db.Close()
 		return nil, fmt.Errorf("dialecte goose: %w", err)
 	}
+	if err := refuseNewerDatabase(ctx, db); err != nil {
+		db.Close()
+		return nil, err
+	}
 	if err := goose.UpContext(ctx, db, "migrations"); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("migrations: %w", err)
 	}
 	return &Store{DB: db}, nil
+}
+
+// refuseNewerDatabase empêche un binaire ancien de tourner sur une base migrée par une version plus récente (retour arrière
+// sans restauration): les migrations sont à sens unique, le schéma ne correspondrait plus au code.
+func refuseNewerDatabase(ctx context.Context, db *sql.DB) error {
+	ms, err := goose.CollectMigrations("migrations", 0, goose.MaxVersion)
+	if err != nil || len(ms) == 0 {
+		return fmt.Errorf("lecture des migrations: %w", err)
+	}
+	last := ms[len(ms)-1].Version
+	cur, err := goose.GetDBVersionContext(ctx, db)
+	if err != nil {
+		return fmt.Errorf("version de la base: %w", err)
+	}
+	if cur > last {
+		return fmt.Errorf("la base est à la version de schéma %d, plus récente que ce programme (%d): installez une version de Leassh au moins aussi récente, ou restaurez la sauvegarde faite avant la mise à jour", cur, last)
+	}
+	return nil
 }
 
 func (s *Store) Close() error { return s.DB.Close() }

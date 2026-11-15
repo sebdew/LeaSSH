@@ -20,6 +20,15 @@ Règles de la [constitution](docs/standards/constitution.md) (principe 10) et de
 - Documentation utilisateur → [`docs/fr/`](docs/fr/README.md) **et** [`docs/en/`](docs/en/README.md), en français et en anglais (mêmes pages, mêmes captures dans `docs/images/`).
 - Comportement normatif → [`docs/specs/SPEC.md`](docs/specs/SPEC.md).
 
+## Migrations de base
+
+Les bases déjà déployées ne repartent jamais de zéro : chaque évolution du schéma est une **nouvelle** migration goose dans `internal/store/migrations/` (numéro suivant, section `Up` obligatoire).
+
+- Une migration livrée dans une release ne se modifie jamais. `TestPublishedMigrationsAreImmutable` compare leurs empreintes à `internal/store/testdata/published_migrations.sha256`.
+- **À chaque release**, ajouter au manifeste les migrations nouvellement livrées : `cd internal/store/migrations && sha256sum 000NN_*.sql >> ../testdata/published_migrations.sha256`.
+- Si la migration change le sens de données existantes, compléter `internal/store/testdata/seed_v0.1.0.sql` ou ajouter un jeu de données de la version concernée, pour que `TestUpgradeFromV010KeepsData` le prouve.
+- Pas de migration descendante : un programme plus ancien que la base refuse de démarrer (voir `docs/exploitation.md`).
+
 ## Sécurité
 
 Une vulnérabilité ne se signale pas dans un ticket public : contactez directement le mainteneur (dépôt d'origine dans [`NOTICE`](NOTICE)).
